@@ -2,13 +2,27 @@
 
 /**
  * md-tldr CLI - Token-efficient markdown analysis
+ *
+ * CORE COMMANDS
+ *   mdtldr index [path]           Index markdown files (default: .)
+ *   mdtldr search <query> [path]  Search by meaning or structure
+ *   mdtldr context <files...>     Get LLM-ready summary
+ *   mdtldr tree [path|file]       Show files or document outline
+ *
+ * LINK ANALYSIS
+ *   mdtldr links <file>           What does this link to?
+ *   mdtldr backlinks <file>       What links to this?
+ *
+ * INSPECTION
+ *   mdtldr stats [path]           Index statistics
  */
 
-import * as fs from 'node:fs/promises'
+import * as fs from 'node:fs'
+import * as fsPromises from 'node:fs/promises'
 import * as path from 'node:path'
-import { Command, Options } from '@effect/cli'
+import { Args, Command, Options } from '@effect/cli'
 import { NodeContext, NodeRuntime } from '@effect/platform-node'
-import { Console, Effect, Option } from 'effect'
+import { Console, Effect } from 'effect'
 import type { MdSection } from '../core/types.js'
 import {
   buildEmbeddings,
@@ -22,7 +36,7 @@ import {
 } from '../index/indexer.js'
 import { watchDirectory } from '../index/watcher.js'
 import { parseFile } from '../parser/parser.js'
-import { formatContextForLLM, getContext, search } from '../search/searcher.js'
+import { search } from '../search/searcher.js'
 import {
   assembleContext,
   formatAssembledContext,
@@ -38,25 +52,13 @@ const formatJson = (obj: unknown, pretty: boolean): string => {
   return pretty ? JSON.stringify(obj, null, 2) : JSON.stringify(obj)
 }
 
-const printSection = (section: MdSection, indent: number = 0): string => {
-  const prefix = '  '.repeat(indent)
-  const bullet = section.level === 1 ? '#' : '-'
-  let output = `${prefix}${bullet} ${section.heading} (${section.metadata.tokenCount} tokens)\n`
-
-  for (const child of section.children) {
-    output += printSection(child, indent + 1)
-  }
-
-  return output
-}
-
 const isMarkdownFile = (filename: string): boolean => {
   return filename.endsWith('.md') || filename.endsWith('.mdx')
 }
 
 const walkDir = async (dir: string): Promise<string[]> => {
   const files: string[] = []
-  const entries = await fs.readdir(dir, { withFileTypes: true })
+  const entries = await fsPromises.readdir(dir, { withFileTypes: true })
 
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name)
@@ -77,8 +79,29 @@ const walkDir = async (dir: string): Promise<string[]> => {
   return files
 }
 
+/**
+ * Check if a query looks like a regex pattern
+ */
+const isRegexPattern = (query: string): boolean => {
+  // Has regex special characters (excluding simple spaces and common punctuation)
+  return /[.*+?^${}()|[\]\\]/.test(query)
+}
+
+/**
+ * Check if embeddings exist for a directory
+ */
+const hasEmbeddings = async (dir: string): Promise<boolean> => {
+  const embeddingsPath = path.join(dir, '.tldr', 'embeddings.bin')
+  try {
+    await fsPromises.access(embeddingsPath)
+    return true
+  } catch {
+    return false
+  }
+}
+
 // ============================================================================
-// Command Options
+// Shared Options
 // ============================================================================
 
 const jsonOption = Options.boolean('json').pipe(
@@ -91,179 +114,36 @@ const prettyOption = Options.boolean('pretty').pipe(
   Options.withDefault(true),
 )
 
-// ============================================================================
-// Parse Command
-// ============================================================================
-
-const parseCommand = Command.make(
-  'parse',
-  {
-    file: Options.file('file').pipe(Options.withAlias('f')),
-    json: jsonOption,
-    pretty: prettyOption,
-  },
-  ({ file, json, pretty }) =>
-    Effect.gen(function* () {
-      const result = yield* parseFile(file).pipe(
-        Effect.mapError((e) => new Error(`${e._tag}: ${e.message}`)),
-      )
-
-      if (json) {
-        yield* Console.log(formatJson(result, pretty))
-      } else {
-        yield* Console.log(`Document: ${result.title}`)
-        yield* Console.log(`Path: ${result.path}`)
-        yield* Console.log(`Tokens: ${result.metadata.tokenCount}`)
-        yield* Console.log(`Sections: ${result.metadata.headingCount}`)
-        yield* Console.log(`Links: ${result.metadata.linkCount}`)
-        yield* Console.log(`Code Blocks: ${result.metadata.codeBlockCount}`)
-        yield* Console.log('')
-        yield* Console.log('Structure:')
-        for (const section of result.sections) {
-          yield* Console.log(printSection(section))
-        }
-      }
-    }),
-)
-
-// ============================================================================
-// Tree Command
-// ============================================================================
-
-const treeCommand = Command.make(
-  'tree',
-  {
-    dir: Options.directory('dir').pipe(
-      Options.withAlias('d'),
-      Options.withDefault('.'),
-    ),
-    json: jsonOption,
-    pretty: prettyOption,
-  },
-  ({ dir, json, pretty }) =>
-    Effect.gen(function* () {
-      const resolvedDir = path.resolve(dir)
-
-      const files = yield* Effect.promise(() => walkDir(resolvedDir))
-
-      const tree: { path: string; relativePath: string }[] = files
-        .sort()
-        .map((f) => ({
-          path: f,
-          relativePath: path.relative(resolvedDir, f),
-        }))
-
-      if (json) {
-        yield* Console.log(formatJson(tree, pretty))
-      } else {
-        yield* Console.log(`Markdown files in ${resolvedDir}:`)
-        yield* Console.log('')
-        for (const file of tree) {
-          yield* Console.log(`  ${file.relativePath}`)
-        }
-        yield* Console.log('')
-        yield* Console.log(`Total: ${tree.length} files`)
-      }
-    }),
-)
-
-// ============================================================================
-// Structure Command
-// ============================================================================
-
-const structureCommand = Command.make(
-  'structure',
-  {
-    file: Options.file('file').pipe(Options.withAlias('f')),
-    json: jsonOption,
-    pretty: prettyOption,
-  },
-  ({ file, json, pretty }) =>
-    Effect.gen(function* () {
-      const result = yield* parseFile(file).pipe(
-        Effect.mapError((e) => new Error(`${e._tag}: ${e.message}`)),
-      )
-
-      const extractStructure = (
-        section: MdSection,
-      ): {
-        heading: string
-        level: number
-        tokens: number
-        children: unknown[]
-      } => ({
-        heading: section.heading,
-        level: section.level,
-        tokens: section.metadata.tokenCount,
-        children: section.children.map(extractStructure),
-      })
-
-      const structure = {
-        title: result.title,
-        path: result.path,
-        totalTokens: result.metadata.tokenCount,
-        sections: result.sections.map(extractStructure),
-      }
-
-      if (json) {
-        yield* Console.log(formatJson(structure, pretty))
-      } else {
-        yield* Console.log(`# ${result.title}`)
-        yield* Console.log(`Total tokens: ${result.metadata.tokenCount}`)
-        yield* Console.log('')
-
-        const printOutline = (
-          section: MdSection,
-          depth: number = 0,
-        ): Effect.Effect<void> =>
-          Effect.gen(function* () {
-            const indent = '  '.repeat(depth)
-            const marker = '#'.repeat(section.level)
-            yield* Console.log(
-              `${indent}${marker} ${section.heading} [${section.metadata.tokenCount} tokens]`,
-            )
-            for (const child of section.children) {
-              yield* printOutline(child, depth + 1)
-            }
-          })
-
-        for (const section of result.sections) {
-          yield* printOutline(section)
-        }
-      }
-    }),
-)
-
-// ============================================================================
-// Index Command
-// ============================================================================
-
 const forceOption = Options.boolean('force').pipe(
   Options.withDescription('Force full rebuild, ignoring cache'),
   Options.withDefault(false),
 )
 
-const watchOption = Options.boolean('watch').pipe(
-  Options.withAlias('w'),
-  Options.withDescription('Watch for changes and re-index automatically'),
-  Options.withDefault(false),
-)
+// ============================================================================
+// INDEX Command
+// ============================================================================
 
 const indexCommand = Command.make(
   'index',
   {
-    dir: Options.directory('dir').pipe(
-      Options.withAlias('d'),
-      Options.withDefault('.'),
+    path: Args.directory({ name: 'path' }).pipe(Args.withDefault('.')),
+    embed: Options.boolean('embed').pipe(
+      Options.withAlias('e'),
+      Options.withDescription('Also build semantic embeddings'),
+      Options.withDefault(false),
+    ),
+    watch: Options.boolean('watch').pipe(
+      Options.withAlias('w'),
+      Options.withDescription('Watch for changes'),
+      Options.withDefault(false),
     ),
     force: forceOption,
-    watch: watchOption,
     json: jsonOption,
     pretty: prettyOption,
   },
-  ({ dir, force, watch: watchMode, json, pretty }) =>
+  ({ path: dirPath, embed, watch: watchMode, force, json, pretty }) =>
     Effect.gen(function* () {
-      const resolvedDir = path.resolve(dir)
+      const resolvedDir = path.resolve(dirPath)
 
       if (watchMode) {
         yield* Console.log(`Watching ${resolvedDir} for changes...`)
@@ -286,7 +166,6 @@ const indexCommand = Command.make(
           },
         })
 
-        // Keep the process running until Ctrl+C
         yield* Effect.async<never, never>(() => {
           process.on('SIGINT', () => {
             watcher.stop()
@@ -299,9 +178,7 @@ const indexCommand = Command.make(
 
         const result = yield* buildIndex(resolvedDir, { force })
 
-        if (json) {
-          yield* Console.log(formatJson(result, pretty))
-        } else {
+        if (!json) {
           yield* Console.log('')
           yield* Console.log(`Indexed ${result.documentsIndexed} documents`)
           yield* Console.log(`  Sections: ${result.sectionsIndexed}`)
@@ -316,18 +193,295 @@ const indexCommand = Command.make(
             }
           }
         }
+
+        // Build embeddings if requested
+        if (embed) {
+          yield* Console.log('')
+          yield* Console.log('Building embeddings...')
+
+          const embedResult = yield* buildEmbeddings(resolvedDir, { force })
+
+          if (!json) {
+            yield* Console.log(
+              `Embedded ${embedResult.sectionsEmbedded} sections`,
+            )
+            yield* Console.log(`  Tokens used: ${embedResult.tokensUsed}`)
+            yield* Console.log(`  Cost: $${embedResult.cost.toFixed(6)}`)
+            yield* Console.log(`  Duration: ${embedResult.duration}ms`)
+          }
+        }
+
+        if (json) {
+          yield* Console.log(formatJson(result, pretty))
+        }
       }
     }),
-)
+).pipe(Command.withDescription('Index markdown files'))
 
 // ============================================================================
-// Links Command
+// SEARCH Command
+// ============================================================================
+
+const searchCommand = Command.make(
+  'search',
+  {
+    query: Args.text({ name: 'query' }),
+    path: Args.directory({ name: 'path' }).pipe(Args.withDefault('.')),
+    structural: Options.boolean('structural').pipe(
+      Options.withAlias('s'),
+      Options.withDescription('Force structural search (heading regex)'),
+      Options.withDefault(false),
+    ),
+    limit: Options.integer('limit').pipe(
+      Options.withAlias('n'),
+      Options.withDescription('Maximum results'),
+      Options.withDefault(10),
+    ),
+    threshold: Options.float('threshold').pipe(
+      Options.withDescription('Similarity threshold for semantic search (0-1)'),
+      Options.withDefault(0.5),
+    ),
+    json: jsonOption,
+    pretty: prettyOption,
+  },
+  ({ query, path: dirPath, structural, limit, threshold, json, pretty }) =>
+    Effect.gen(function* () {
+      const resolvedDir = path.resolve(dirPath)
+
+      // Auto-detect: structural if --structural flag, regex chars, or no embeddings
+      const embedsExist = yield* Effect.promise(() =>
+        hasEmbeddings(resolvedDir),
+      )
+      const useStructural = structural || isRegexPattern(query) || !embedsExist
+
+      if (useStructural) {
+        // Structural search (heading regex)
+        const results = yield* search(resolvedDir, {
+          heading: query,
+          limit,
+        })
+
+        if (json) {
+          const output = results.map((r) => ({
+            path: r.section.documentPath,
+            heading: r.section.heading,
+            level: r.section.level,
+            tokens: r.section.tokenCount,
+            line: r.section.startLine,
+          }))
+          yield* Console.log(formatJson(output, pretty))
+        } else {
+          yield* Console.log(`Structural search: "${query}"`)
+          yield* Console.log(`Results: ${results.length}`)
+          yield* Console.log('')
+
+          for (const result of results) {
+            const levelMarker = '#'.repeat(result.section.level)
+            yield* Console.log(
+              `  ${result.section.documentPath}:${result.section.startLine}`,
+            )
+            yield* Console.log(
+              `    ${levelMarker} ${result.section.heading} (${result.section.tokenCount} tokens)`,
+            )
+            yield* Console.log('')
+          }
+        }
+      } else {
+        // Semantic search
+        const results = yield* semanticSearch(resolvedDir, query, {
+          limit,
+          threshold,
+        })
+
+        if (json) {
+          yield* Console.log(formatJson(results, pretty))
+        } else {
+          yield* Console.log(`Semantic search: "${query}"`)
+          yield* Console.log(`Results: ${results.length}`)
+          yield* Console.log('')
+
+          for (const result of results) {
+            const similarity = (result.similarity * 100).toFixed(1)
+            yield* Console.log(`  ${result.documentPath}`)
+            yield* Console.log(`    ${result.heading} (${similarity}% match)`)
+            yield* Console.log('')
+          }
+        }
+      }
+    }),
+).pipe(Command.withDescription('Search by meaning or structure'))
+
+// ============================================================================
+// CONTEXT Command
+// ============================================================================
+
+const contextCommand = Command.make(
+  'context',
+  {
+    files: Args.file({ name: 'files' }).pipe(Args.repeated),
+    tokens: Options.integer('tokens').pipe(
+      Options.withAlias('t'),
+      Options.withDescription('Token budget'),
+      Options.withDefault(2000),
+    ),
+    brief: Options.boolean('brief').pipe(
+      Options.withDescription('Minimal output'),
+      Options.withDefault(false),
+    ),
+    full: Options.boolean('full').pipe(
+      Options.withDescription('Include full content'),
+      Options.withDefault(false),
+    ),
+    json: jsonOption,
+    pretty: prettyOption,
+  },
+  ({ files, tokens, brief, full, json, pretty }) =>
+    Effect.gen(function* () {
+      // Effect CLI Args.repeated returns an array
+      const fileList: string[] = Array.isArray(files) ? files : []
+
+      if (fileList.length === 0) {
+        yield* Console.log('Error: At least one file is required')
+        yield* Console.log('Usage: mdtldr context <file> [files...]')
+        return
+      }
+
+      // Determine level
+      const level = full ? 'full' : brief ? 'brief' : 'summary'
+
+      const firstFile = fileList[0]
+      if (fileList.length === 1 && firstFile) {
+        // Single file: use summarizeFile
+        const filePath = path.resolve(firstFile)
+        const summary = yield* summarizeFile(filePath, {
+          level: level as 'brief' | 'summary' | 'full',
+          maxTokens: tokens,
+        })
+
+        if (json) {
+          yield* Console.log(formatJson(summary, pretty))
+        } else {
+          yield* Console.log(formatSummary(summary))
+        }
+      } else {
+        // Multiple files: use assembleContext
+        const root = process.cwd()
+        const assembled = yield* assembleContext(root, fileList, {
+          budget: tokens,
+          level: level as 'brief' | 'summary' | 'full',
+        })
+
+        if (json) {
+          yield* Console.log(formatJson(assembled, pretty))
+        } else {
+          yield* Console.log(formatAssembledContext(assembled))
+        }
+      }
+    }),
+).pipe(Command.withDescription('Get LLM-ready summary'))
+
+// ============================================================================
+// TREE Command
+// ============================================================================
+
+const treeCommand = Command.make(
+  'tree',
+  {
+    pathArg: Args.text({ name: 'path' }).pipe(Args.withDefault('.')),
+    json: jsonOption,
+    pretty: prettyOption,
+  },
+  ({ pathArg, json, pretty }) =>
+    Effect.gen(function* () {
+      const resolvedPath = path.resolve(pathArg)
+
+      // Auto-detect: file or directory
+      const stat = yield* Effect.try(() => fs.statSync(resolvedPath))
+
+      if (stat.isFile()) {
+        // Show document outline
+        const result = yield* parseFile(resolvedPath).pipe(
+          Effect.mapError((e) => new Error(`${e._tag}: ${e.message}`)),
+        )
+
+        const extractStructure = (
+          section: MdSection,
+        ): {
+          heading: string
+          level: number
+          tokens: number
+          children: unknown[]
+        } => ({
+          heading: section.heading,
+          level: section.level,
+          tokens: section.metadata.tokenCount,
+          children: section.children.map(extractStructure),
+        })
+
+        if (json) {
+          const structure = {
+            title: result.title,
+            path: result.path,
+            totalTokens: result.metadata.tokenCount,
+            sections: result.sections.map(extractStructure),
+          }
+          yield* Console.log(formatJson(structure, pretty))
+        } else {
+          yield* Console.log(`# ${result.title}`)
+          yield* Console.log(`Total tokens: ${result.metadata.tokenCount}`)
+          yield* Console.log('')
+
+          const printOutline = (
+            section: MdSection,
+            depth: number = 0,
+          ): Effect.Effect<void> =>
+            Effect.gen(function* () {
+              const indent = '  '.repeat(depth)
+              const marker = '#'.repeat(section.level)
+              yield* Console.log(
+                `${indent}${marker} ${section.heading} [${section.metadata.tokenCount} tokens]`,
+              )
+              for (const child of section.children) {
+                yield* printOutline(child, depth + 1)
+              }
+            })
+
+          for (const section of result.sections) {
+            yield* printOutline(section)
+          }
+        }
+      } else {
+        // Show file list
+        const files = yield* Effect.promise(() => walkDir(resolvedPath))
+
+        const tree = files.sort().map((f) => ({
+          path: f,
+          relativePath: path.relative(resolvedPath, f),
+        }))
+
+        if (json) {
+          yield* Console.log(formatJson(tree, pretty))
+        } else {
+          yield* Console.log(`Markdown files in ${resolvedPath}:`)
+          yield* Console.log('')
+          for (const file of tree) {
+            yield* Console.log(`  ${file.relativePath}`)
+          }
+          yield* Console.log('')
+          yield* Console.log(`Total: ${tree.length} files`)
+        }
+      }
+    }),
+).pipe(Command.withDescription('Show files or document outline'))
+
+// ============================================================================
+// LINKS Command
 // ============================================================================
 
 const linksCommand = Command.make(
   'links',
   {
-    file: Options.file('file').pipe(Options.withAlias('f')),
+    file: Args.file({ name: 'file' }),
     root: Options.directory('root').pipe(
       Options.withAlias('r'),
       Options.withDefault('.'),
@@ -359,16 +513,16 @@ const linksCommand = Command.make(
         yield* Console.log(`Total: ${links.length} links`)
       }
     }),
-)
+).pipe(Command.withDescription('What does this link to?'))
 
 // ============================================================================
-// Backlinks Command
+// BACKLINKS Command
 // ============================================================================
 
 const backlinksCommand = Command.make(
   'backlinks',
   {
-    file: Options.file('file').pipe(Options.withAlias('f')),
+    file: Args.file({ name: 'file' }),
     root: Options.directory('root').pipe(
       Options.withAlias('r'),
       Options.withDefault('.'),
@@ -402,359 +556,28 @@ const backlinksCommand = Command.make(
         yield* Console.log(`Total: ${links.length} backlinks`)
       }
     }),
-)
+).pipe(Command.withDescription('What links to this?'))
 
 // ============================================================================
-// Search Command
-// ============================================================================
-
-const headingOption = Options.text('heading').pipe(
-  Options.withAlias('h'),
-  Options.withDescription('Filter by heading pattern (regex)'),
-  Options.optional,
-)
-
-const pathOption = Options.text('path').pipe(
-  Options.withAlias('p'),
-  Options.withDescription('Filter by file path pattern (glob-like)'),
-  Options.optional,
-)
-
-const hasCodeOption = Options.boolean('has-code').pipe(
-  Options.withDescription('Only sections with code blocks'),
-  Options.withDefault(false),
-)
-
-const hasListOption = Options.boolean('has-list').pipe(
-  Options.withDescription('Only sections with lists'),
-  Options.withDefault(false),
-)
-
-const hasTableOption = Options.boolean('has-table').pipe(
-  Options.withDescription('Only sections with tables'),
-  Options.withDefault(false),
-)
-
-const limitOption = Options.integer('limit').pipe(
-  Options.withAlias('l'),
-  Options.withDescription('Maximum number of results'),
-  Options.withDefault(100),
-)
-
-const searchCommand = Command.make(
-  'search',
-  {
-    root: Options.directory('root').pipe(
-      Options.withAlias('r'),
-      Options.withDefault('.'),
-    ),
-    heading: headingOption,
-    pathPattern: pathOption,
-    hasCode: hasCodeOption,
-    hasList: hasListOption,
-    hasTable: hasTableOption,
-    limit: limitOption,
-    json: jsonOption,
-    pretty: prettyOption,
-  },
-  ({
-    root,
-    heading,
-    pathPattern,
-    hasCode,
-    hasList,
-    hasTable,
-    limit,
-    json,
-    pretty,
-  }) =>
-    Effect.gen(function* () {
-      const resolvedRoot = path.resolve(root)
-
-      // Build search options - only include filters that are actively set
-      const searchOptions: Parameters<typeof search>[1] = {
-        heading: Option.getOrUndefined(heading),
-        pathPattern: Option.getOrUndefined(pathPattern),
-        hasCode: hasCode ? true : undefined,
-        hasList: hasList ? true : undefined,
-        hasTable: hasTable ? true : undefined,
-        limit,
-      }
-
-      const results = yield* search(resolvedRoot, searchOptions)
-
-      if (json) {
-        const output = results.map((r) => ({
-          path: r.section.documentPath,
-          heading: r.section.heading,
-          level: r.section.level,
-          tokens: r.section.tokenCount,
-          line: r.section.startLine,
-          hasCode: r.section.hasCode,
-          hasList: r.section.hasList,
-          hasTable: r.section.hasTable,
-        }))
-        yield* Console.log(formatJson(output, pretty))
-      } else {
-        yield* Console.log(`Search results (${results.length}):`)
-        yield* Console.log('')
-
-        for (const result of results) {
-          const levelMarker = '#'.repeat(result.section.level)
-          const meta: string[] = []
-          if (result.section.hasCode) meta.push('code')
-          if (result.section.hasList) meta.push('list')
-          if (result.section.hasTable) meta.push('table')
-          const metaStr = meta.length > 0 ? ` [${meta.join(', ')}]` : ''
-
-          yield* Console.log(
-            `  ${result.section.documentPath}:${result.section.startLine}`,
-          )
-          yield* Console.log(
-            `    ${levelMarker} ${result.section.heading}${metaStr} (${result.section.tokenCount} tokens)`,
-          )
-          yield* Console.log('')
-        }
-      }
-    }),
-)
-
-// ============================================================================
-// Summarize Command
-// ============================================================================
-
-const tokensOption = Options.integer('tokens').pipe(
-  Options.withAlias('t'),
-  Options.withDescription('Maximum tokens to include'),
-  Options.optional,
-)
-
-const levelOption = Options.choice('level', ['brief', 'summary', 'full']).pipe(
-  Options.withDescription('Compression level'),
-  Options.withDefault('summary' as const),
-)
-
-const summarizeCommand = Command.make(
-  'summarize',
-  {
-    file: Options.file('file').pipe(Options.withAlias('f')),
-    level: levelOption,
-    tokens: tokensOption,
-    json: jsonOption,
-    pretty: prettyOption,
-  },
-  ({ file, level, tokens, json, pretty }) =>
-    Effect.gen(function* () {
-      const maxTokens = Option.getOrUndefined(tokens)
-
-      const summary = yield* summarizeFile(file, {
-        level: level as 'brief' | 'summary' | 'full',
-        maxTokens,
-      })
-
-      if (json) {
-        yield* Console.log(formatJson(summary, pretty))
-      } else {
-        yield* Console.log(formatSummary(summary))
-      }
-    }),
-)
-
-// ============================================================================
-// Context Command (single file)
-// ============================================================================
-
-const contextCommand = Command.make(
-  'context',
-  {
-    file: Options.file('file').pipe(Options.withAlias('f')),
-    root: Options.directory('root').pipe(
-      Options.withAlias('r'),
-      Options.withDefault('.'),
-    ),
-    tokens: tokensOption,
-    level: levelOption,
-    json: jsonOption,
-    pretty: prettyOption,
-  },
-  ({ file, root, tokens, level, json, pretty }) =>
-    Effect.gen(function* () {
-      const resolvedRoot = path.resolve(root)
-      const maxTokens = Option.getOrUndefined(tokens)
-
-      const context = yield* getContext(resolvedRoot, file, {
-        maxTokens,
-        level: level as 'brief' | 'summary' | 'full',
-        includeContent: level === 'full',
-      })
-
-      if (json) {
-        yield* Console.log(formatJson(context, pretty))
-      } else {
-        yield* Console.log(formatContextForLLM(context))
-      }
-    }),
-)
-
-// ============================================================================
-// Assemble Command (multi-file context)
-// ============================================================================
-
-const sourcesOption = Options.text('sources').pipe(
-  Options.withAlias('s'),
-  Options.withDescription('Comma-separated list of source files'),
-)
-
-const budgetOption = Options.integer('budget').pipe(
-  Options.withAlias('b'),
-  Options.withDescription('Total token budget'),
-  Options.withDefault(2000),
-)
-
-const assembleCommand = Command.make(
-  'assemble',
-  {
-    sources: sourcesOption,
-    root: Options.directory('root').pipe(
-      Options.withAlias('r'),
-      Options.withDefault('.'),
-    ),
-    budget: budgetOption,
-    level: levelOption,
-    json: jsonOption,
-    pretty: prettyOption,
-  },
-  ({ sources, root, budget, level, json, pretty }) =>
-    Effect.gen(function* () {
-      const resolvedRoot = path.resolve(root)
-      const sourcePaths = sources.split(',').map((s) => s.trim())
-
-      const assembled = yield* assembleContext(resolvedRoot, sourcePaths, {
-        budget,
-        level: level as 'brief' | 'summary' | 'full',
-      })
-
-      if (json) {
-        yield* Console.log(formatJson(assembled, pretty))
-      } else {
-        yield* Console.log(formatAssembledContext(assembled))
-      }
-    }),
-)
-
-// ============================================================================
-// Embed Command
-// ============================================================================
-
-const embedCommand = Command.make(
-  'embed',
-  {
-    root: Options.directory('root').pipe(
-      Options.withAlias('r'),
-      Options.withDefault('.'),
-    ),
-    force: forceOption,
-    json: jsonOption,
-    pretty: prettyOption,
-  },
-  ({ root, force, json, pretty }) =>
-    Effect.gen(function* () {
-      const resolvedRoot = path.resolve(root)
-
-      yield* Console.log(`Building embeddings for ${resolvedRoot}...`)
-
-      const result = yield* buildEmbeddings(resolvedRoot, { force })
-
-      if (json) {
-        yield* Console.log(formatJson(result, pretty))
-      } else {
-        yield* Console.log('')
-        yield* Console.log(`Embedded ${result.sectionsEmbedded} sections`)
-        yield* Console.log(`  Tokens used: ${result.tokensUsed}`)
-        yield* Console.log(`  Cost: $${result.cost.toFixed(6)}`)
-        yield* Console.log(`  Duration: ${result.duration}ms`)
-      }
-    }),
-)
-
-// ============================================================================
-// Semantic Search Command
-// ============================================================================
-
-const queryArg = Options.text('query').pipe(
-  Options.withAlias('q'),
-  Options.withDescription('Natural language query for semantic search'),
-)
-
-const thresholdOption = Options.float('threshold').pipe(
-  Options.withDescription('Minimum similarity threshold (0-1)'),
-  Options.withDefault(0.5),
-)
-
-const semanticCommand = Command.make(
-  'semantic',
-  {
-    query: queryArg,
-    root: Options.directory('root').pipe(
-      Options.withAlias('r'),
-      Options.withDefault('.'),
-    ),
-    limit: limitOption,
-    threshold: thresholdOption,
-    pathPattern: pathOption,
-    json: jsonOption,
-    pretty: prettyOption,
-  },
-  ({ query, root, limit, threshold, pathPattern, json, pretty }) =>
-    Effect.gen(function* () {
-      const resolvedRoot = path.resolve(root)
-
-      const results = yield* semanticSearch(resolvedRoot, query, {
-        limit,
-        threshold,
-        pathPattern: Option.getOrUndefined(pathPattern),
-      })
-
-      if (json) {
-        yield* Console.log(formatJson(results, pretty))
-      } else {
-        yield* Console.log(`Semantic search results for: "${query}"`)
-        yield* Console.log(`Results: ${results.length}`)
-        yield* Console.log('')
-
-        for (const result of results) {
-          const similarity = (result.similarity * 100).toFixed(1)
-          yield* Console.log(`  ${result.documentPath}`)
-          yield* Console.log(`    ${result.heading} (${similarity}% match)`)
-          yield* Console.log('')
-        }
-      }
-    }),
-)
-
-// ============================================================================
-// Embedding Stats Command
+// STATS Command
 // ============================================================================
 
 const statsCommand = Command.make(
   'stats',
   {
-    root: Options.directory('root').pipe(
-      Options.withAlias('r'),
-      Options.withDefault('.'),
-    ),
+    path: Args.directory({ name: 'path' }).pipe(Args.withDefault('.')),
     json: jsonOption,
     pretty: prettyOption,
   },
-  ({ root, json, pretty }) =>
+  ({ path: dirPath, json, pretty }) =>
     Effect.gen(function* () {
-      const resolvedRoot = path.resolve(root)
+      const resolvedRoot = path.resolve(dirPath)
       const stats = yield* getEmbeddingStats(resolvedRoot)
 
       if (json) {
         yield* Console.log(formatJson(stats, pretty))
       } else {
-        yield* Console.log('Embedding stats:')
+        yield* Console.log('Index statistics:')
         yield* Console.log('')
         if (stats.hasEmbeddings) {
           yield* Console.log(`  Vectors: ${stats.count}`)
@@ -764,31 +587,27 @@ const statsCommand = Command.make(
           yield* Console.log(`  Total cost: $${stats.totalCost.toFixed(6)}`)
         } else {
           yield* Console.log('  No embeddings found.')
-          yield* Console.log("  Run 'mdtldr embed' to build embeddings.")
+          yield* Console.log(
+            "  Run 'mdtldr index --embed' to build embeddings.",
+          )
         }
       }
     }),
-)
+).pipe(Command.withDescription('Index statistics'))
 
 // ============================================================================
 // Main CLI
 // ============================================================================
 
 const mainCommand = Command.make('mdtldr').pipe(
-  Command.withDescription('Token-efficient markdown analysis tool for LLMs'),
+  Command.withDescription('Token-efficient markdown analysis for LLMs'),
   Command.withSubcommands([
-    parseCommand,
-    treeCommand,
-    structureCommand,
     indexCommand,
-    linksCommand,
-    backlinksCommand,
     searchCommand,
     contextCommand,
-    summarizeCommand,
-    assembleCommand,
-    embedCommand,
-    semanticCommand,
+    treeCommand,
+    linksCommand,
+    backlinksCommand,
     statsCommand,
   ]),
 )
