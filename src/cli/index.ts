@@ -20,9 +20,9 @@
 import * as fs from 'node:fs'
 import * as fsPromises from 'node:fs/promises'
 import * as path from 'node:path'
-import { Args, Command, Options } from '@effect/cli'
+import { Args, CliConfig, Command, Options } from '@effect/cli'
 import { NodeContext, NodeRuntime } from '@effect/platform-node'
-import { Console, Effect } from 'effect'
+import { Console, Effect, Layer } from 'effect'
 import type { MdSection } from '../core/types.js'
 import {
   buildEmbeddings,
@@ -126,7 +126,10 @@ const forceOption = Options.boolean('force').pipe(
 const indexCommand = Command.make(
   'index',
   {
-    path: Args.directory({ name: 'path' }).pipe(Args.withDefault('.')),
+    path: Args.directory({ name: 'path' }).pipe(
+      Args.withDescription('Directory to index'),
+      Args.withDefault('.'),
+    ),
     embed: Options.boolean('embed').pipe(
       Options.withAlias('e'),
       Options.withDescription('Also build semantic embeddings'),
@@ -225,8 +228,13 @@ const indexCommand = Command.make(
 const searchCommand = Command.make(
   'search',
   {
-    query: Args.text({ name: 'query' }),
-    path: Args.directory({ name: 'path' }).pipe(Args.withDefault('.')),
+    query: Args.text({ name: 'query' }).pipe(
+      Args.withDescription('Search query (natural language or regex pattern)'),
+    ),
+    path: Args.directory({ name: 'path' }).pipe(
+      Args.withDescription('Directory to search in'),
+      Args.withDefault('.'),
+    ),
     structural: Options.boolean('structural').pipe(
       Options.withAlias('s'),
       Options.withDescription('Force structural search (heading regex)'),
@@ -318,7 +326,10 @@ const searchCommand = Command.make(
 const contextCommand = Command.make(
   'context',
   {
-    files: Args.file({ name: 'files' }).pipe(Args.repeated),
+    files: Args.file({ name: 'files' }).pipe(
+      Args.withDescription('Markdown file(s) to summarize'),
+      Args.repeated,
+    ),
     tokens: Options.integer('tokens').pipe(
       Options.withAlias('t'),
       Options.withDescription('Token budget'),
@@ -387,7 +398,10 @@ const contextCommand = Command.make(
 const treeCommand = Command.make(
   'tree',
   {
-    pathArg: Args.text({ name: 'path' }).pipe(Args.withDefault('.')),
+    pathArg: Args.text({ name: 'path' }).pipe(
+      Args.withDescription('Directory (shows files) or file (shows outline)'),
+      Args.withDefault('.'),
+    ),
     json: jsonOption,
     pretty: prettyOption,
   },
@@ -481,9 +495,12 @@ const treeCommand = Command.make(
 const linksCommand = Command.make(
   'links',
   {
-    file: Args.file({ name: 'file' }),
+    file: Args.file({ name: 'file' }).pipe(
+      Args.withDescription('Markdown file to analyze'),
+    ),
     root: Options.directory('root').pipe(
       Options.withAlias('r'),
+      Options.withDescription('Root directory for resolving relative links'),
       Options.withDefault('.'),
     ),
     json: jsonOption,
@@ -522,9 +539,12 @@ const linksCommand = Command.make(
 const backlinksCommand = Command.make(
   'backlinks',
   {
-    file: Args.file({ name: 'file' }),
+    file: Args.file({ name: 'file' }).pipe(
+      Args.withDescription('Markdown file to find references to'),
+    ),
     root: Options.directory('root').pipe(
       Options.withAlias('r'),
+      Options.withDescription('Root directory for resolving relative links'),
       Options.withDefault('.'),
     ),
     json: jsonOption,
@@ -565,7 +585,10 @@ const backlinksCommand = Command.make(
 const statsCommand = Command.make(
   'stats',
   {
-    path: Args.directory({ name: 'path' }).pipe(Args.withDefault('.')),
+    path: Args.directory({ name: 'path' }).pipe(
+      Args.withDescription('Directory to show stats for'),
+      Args.withDefault('.'),
+    ),
     json: jsonOption,
     pretty: prettyOption,
   },
@@ -617,8 +640,68 @@ const cli = Command.run(mainCommand, {
   version: '0.1.0',
 })
 
-// Run
+// Clean CLI config: hide built-in options from help
+const cliConfigLayer = CliConfig.layer({
+  showBuiltIns: false,
+})
+
+// Custom error formatter
+const formatCliError = (error: unknown): string => {
+  if (error && typeof error === 'object') {
+    // Handle Effect CLI validation errors
+    const err = error as Record<string, unknown>
+    if (err._tag === 'ValidationError' && err.error) {
+      const validationError = err.error as Record<string, unknown>
+      // Extract the actual error message
+      if (validationError._tag === 'Paragraph' && validationError.value) {
+        const paragraph = validationError.value as Record<string, unknown>
+        if (paragraph._tag === 'Text' && typeof paragraph.value === 'string') {
+          return paragraph.value
+        }
+      }
+    }
+    // Handle MissingValue errors
+    if (err._tag === 'MissingValue' && err.error) {
+      const missingError = err.error as Record<string, unknown>
+      if (missingError._tag === 'Paragraph' && missingError.value) {
+        const paragraph = missingError.value as Record<string, unknown>
+        if (paragraph._tag === 'Text' && typeof paragraph.value === 'string') {
+          return paragraph.value
+        }
+      }
+    }
+  }
+  return String(error)
+}
+
+// Check if error is a CLI validation error (should show friendly message)
+const isValidationError = (error: unknown): boolean => {
+  if (error && typeof error === 'object') {
+    const err = error as Record<string, unknown>
+    return (
+      err._tag === 'ValidationError' ||
+      err._tag === 'MissingValue' ||
+      err._tag === 'InvalidValue'
+    )
+  }
+  return false
+}
+
+// Run with clean config and friendly errors
 Effect.suspend(() => cli(process.argv)).pipe(
-  Effect.provide(NodeContext.layer),
+  Effect.provide(Layer.merge(NodeContext.layer, cliConfigLayer)),
+  Effect.catchAll((error) =>
+    Effect.sync(() => {
+      // Only show friendly error for validation errors
+      if (isValidationError(error)) {
+        const message = formatCliError(error)
+        console.error(`\nError: ${message}`)
+        console.error('\nRun "mdtldr --help" for usage information.')
+        process.exit(1)
+      }
+      // Re-throw other errors to be handled normally
+      throw error
+    }),
+  ),
   NodeRuntime.runMain,
 )
