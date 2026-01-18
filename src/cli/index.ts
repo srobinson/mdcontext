@@ -5,13 +5,14 @@
 
 import { Command, Options } from "@effect/cli";
 import { NodeContext, NodeRuntime } from "@effect/platform-node";
-import { Console, Effect } from "effect";
+import { Console, Effect, Option } from "effect";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
 import { parseFile } from "../parser/parser.js";
 import { buildIndex, getOutgoingLinks, getIncomingLinks } from "../index/indexer.js";
 import { watchDirectory } from "../index/watcher.js";
+import { search, getContext, formatContextForLLM } from "../search/searcher.js";
 import type { MdSection } from "../core/types.js";
 
 // ============================================================================
@@ -377,6 +378,158 @@ const backlinksCommand = Command.make(
 );
 
 // ============================================================================
+// Search Command
+// ============================================================================
+
+const headingOption = Options.text("heading").pipe(
+  Options.withAlias("h"),
+  Options.withDescription("Filter by heading pattern (regex)"),
+  Options.optional
+);
+
+const pathOption = Options.text("path").pipe(
+  Options.withAlias("p"),
+  Options.withDescription("Filter by file path pattern (glob-like)"),
+  Options.optional
+);
+
+const hasCodeOption = Options.boolean("has-code").pipe(
+  Options.withDescription("Only sections with code blocks"),
+  Options.withDefault(false)
+);
+
+const hasListOption = Options.boolean("has-list").pipe(
+  Options.withDescription("Only sections with lists"),
+  Options.withDefault(false)
+);
+
+const hasTableOption = Options.boolean("has-table").pipe(
+  Options.withDescription("Only sections with tables"),
+  Options.withDefault(false)
+);
+
+const limitOption = Options.integer("limit").pipe(
+  Options.withAlias("l"),
+  Options.withDescription("Maximum number of results"),
+  Options.withDefault(100)
+);
+
+const searchCommand = Command.make(
+  "search",
+  {
+    root: Options.directory("root").pipe(
+      Options.withAlias("r"),
+      Options.withDefault(".")
+    ),
+    heading: headingOption,
+    pathPattern: pathOption,
+    hasCode: hasCodeOption,
+    hasList: hasListOption,
+    hasTable: hasTableOption,
+    limit: limitOption,
+    json: jsonOption,
+    pretty: prettyOption,
+  },
+  ({ root, heading, pathPattern, hasCode, hasList, hasTable, limit, json, pretty }) =>
+    Effect.gen(function* () {
+      const resolvedRoot = path.resolve(root);
+
+      // Build search options - only include filters that are actively set
+      const searchOptions: Parameters<typeof search>[1] = {
+        heading: Option.getOrUndefined(heading),
+        pathPattern: Option.getOrUndefined(pathPattern),
+        hasCode: hasCode ? true : undefined,
+        hasList: hasList ? true : undefined,
+        hasTable: hasTable ? true : undefined,
+        limit,
+      };
+
+      const results = yield* search(resolvedRoot, searchOptions);
+
+      if (json) {
+        const output = results.map((r) => ({
+          path: r.section.documentPath,
+          heading: r.section.heading,
+          level: r.section.level,
+          tokens: r.section.tokenCount,
+          line: r.section.startLine,
+          hasCode: r.section.hasCode,
+          hasList: r.section.hasList,
+          hasTable: r.section.hasTable,
+        }));
+        yield* Console.log(formatJson(output, pretty));
+      } else {
+        yield* Console.log(`Search results (${results.length}):`);
+        yield* Console.log("");
+
+        for (const result of results) {
+          const levelMarker = "#".repeat(result.section.level);
+          const meta: string[] = [];
+          if (result.section.hasCode) meta.push("code");
+          if (result.section.hasList) meta.push("list");
+          if (result.section.hasTable) meta.push("table");
+          const metaStr = meta.length > 0 ? ` [${meta.join(", ")}]` : "";
+
+          yield* Console.log(
+            `  ${result.section.documentPath}:${result.section.startLine}`
+          );
+          yield* Console.log(
+            `    ${levelMarker} ${result.section.heading}${metaStr} (${result.section.tokenCount} tokens)`
+          );
+          yield* Console.log("");
+        }
+      }
+    })
+);
+
+// ============================================================================
+// Context Command
+// ============================================================================
+
+const tokensOption = Options.integer("tokens").pipe(
+  Options.withAlias("t"),
+  Options.withDescription("Maximum tokens to include"),
+  Options.optional
+);
+
+const levelOption = Options.choice("level", ["brief", "summary", "full"]).pipe(
+  Options.withDescription("Compression level"),
+  Options.withDefault("summary" as const)
+);
+
+const contextCommand = Command.make(
+  "context",
+  {
+    file: Options.file("file").pipe(Options.withAlias("f")),
+    root: Options.directory("root").pipe(
+      Options.withAlias("r"),
+      Options.withDefault(".")
+    ),
+    tokens: tokensOption,
+    level: levelOption,
+    json: jsonOption,
+    pretty: prettyOption,
+  },
+  ({ file, root, tokens, level, json, pretty }) =>
+    Effect.gen(function* () {
+      const resolvedRoot = path.resolve(root);
+      const maxTokens = Option.getOrUndefined(tokens);
+
+      const context = yield* getContext(resolvedRoot, file, {
+        maxTokens,
+        level: level as "brief" | "summary" | "full",
+        includeContent: level === "full",
+      });
+
+      if (json) {
+        yield* Console.log(formatJson(context, pretty));
+      } else {
+        yield* Console.log(formatContextForLLM(context));
+      }
+    })
+);
+
+// ============================================================================
 // Main CLI
 // ============================================================================
 
@@ -389,6 +542,8 @@ const mainCommand = Command.make("mdtldr").pipe(
     indexCommand,
     linksCommand,
     backlinksCommand,
+    searchCommand,
+    contextCommand,
   ])
 );
 
