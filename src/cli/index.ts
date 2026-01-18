@@ -10,6 +10,8 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
 import { parseFile } from "../parser/parser.js";
+import { buildIndex, getOutgoingLinks, getIncomingLinks } from "../index/indexer.js";
+import { watchDirectory } from "../index/watcher.js";
 import type { MdSection } from "../core/types.js";
 
 // ============================================================================
@@ -209,12 +211,185 @@ const structureCommand = Command.make(
 );
 
 // ============================================================================
+// Index Command
+// ============================================================================
+
+const forceOption = Options.boolean("force").pipe(
+  Options.withDescription("Force full rebuild, ignoring cache"),
+  Options.withDefault(false)
+);
+
+const watchOption = Options.boolean("watch").pipe(
+  Options.withAlias("w"),
+  Options.withDescription("Watch for changes and re-index automatically"),
+  Options.withDefault(false)
+);
+
+const indexCommand = Command.make(
+  "index",
+  {
+    dir: Options.directory("dir").pipe(
+      Options.withAlias("d"),
+      Options.withDefault(".")
+    ),
+    force: forceOption,
+    watch: watchOption,
+    json: jsonOption,
+    pretty: prettyOption,
+  },
+  ({ dir, force, watch: watchMode, json, pretty }) =>
+    Effect.gen(function* () {
+      const resolvedDir = path.resolve(dir);
+
+      if (watchMode) {
+        yield* Console.log(`Watching ${resolvedDir} for changes...`);
+        yield* Console.log("Press Ctrl+C to stop.");
+        yield* Console.log("");
+
+        const watcher = yield* watchDirectory(resolvedDir, {
+          force,
+          onIndex: (result) => {
+            if (json) {
+              console.log(formatJson(result, pretty));
+            } else {
+              console.log(`Re-indexed ${result.documentsIndexed} documents (${result.duration}ms)`);
+            }
+          },
+          onError: (error) => {
+            console.error(`Watch error: ${error.message}`);
+          },
+        });
+
+        // Keep the process running until Ctrl+C
+        yield* Effect.async<never, never>(() => {
+          process.on("SIGINT", () => {
+            watcher.stop();
+            console.log("\nStopped watching.");
+            process.exit(0);
+          });
+        });
+      } else {
+        yield* Console.log(`Indexing ${resolvedDir}...`);
+
+        const result = yield* buildIndex(resolvedDir, { force });
+
+        if (json) {
+          yield* Console.log(formatJson(result, pretty));
+        } else {
+          yield* Console.log("");
+          yield* Console.log(`Indexed ${result.documentsIndexed} documents`);
+          yield* Console.log(`  Sections: ${result.sectionsIndexed}`);
+          yield* Console.log(`  Links: ${result.linksIndexed}`);
+          yield* Console.log(`  Duration: ${result.duration}ms`);
+
+          if (result.errors.length > 0) {
+            yield* Console.log("");
+            yield* Console.log(`Errors (${result.errors.length}):`);
+            for (const error of result.errors) {
+              yield* Console.log(`  ${error.path}: ${error.message}`);
+            }
+          }
+        }
+      }
+    })
+);
+
+// ============================================================================
+// Links Command
+// ============================================================================
+
+const linksCommand = Command.make(
+  "links",
+  {
+    file: Options.file("file").pipe(Options.withAlias("f")),
+    root: Options.directory("root").pipe(
+      Options.withAlias("r"),
+      Options.withDefault(".")
+    ),
+    json: jsonOption,
+    pretty: prettyOption,
+  },
+  ({ file, root, json, pretty }) =>
+    Effect.gen(function* () {
+      const resolvedRoot = path.resolve(root);
+      const resolvedFile = path.resolve(file);
+      const relativePath = path.relative(resolvedRoot, resolvedFile);
+
+      const links = yield* getOutgoingLinks(resolvedRoot, resolvedFile);
+
+      if (json) {
+        yield* Console.log(formatJson({ file: relativePath, links }, pretty));
+      } else {
+        yield* Console.log(`Outgoing links from ${relativePath}:`);
+        yield* Console.log("");
+        if (links.length === 0) {
+          yield* Console.log("  (none)");
+        } else {
+          for (const link of links) {
+            yield* Console.log(`  -> ${link}`);
+          }
+        }
+        yield* Console.log("");
+        yield* Console.log(`Total: ${links.length} links`);
+      }
+    })
+);
+
+// ============================================================================
+// Backlinks Command
+// ============================================================================
+
+const backlinksCommand = Command.make(
+  "backlinks",
+  {
+    file: Options.file("file").pipe(Options.withAlias("f")),
+    root: Options.directory("root").pipe(
+      Options.withAlias("r"),
+      Options.withDefault(".")
+    ),
+    json: jsonOption,
+    pretty: prettyOption,
+  },
+  ({ file, root, json, pretty }) =>
+    Effect.gen(function* () {
+      const resolvedRoot = path.resolve(root);
+      const resolvedFile = path.resolve(file);
+      const relativePath = path.relative(resolvedRoot, resolvedFile);
+
+      const links = yield* getIncomingLinks(resolvedRoot, resolvedFile);
+
+      if (json) {
+        yield* Console.log(formatJson({ file: relativePath, backlinks: links }, pretty));
+      } else {
+        yield* Console.log(`Incoming links to ${relativePath}:`);
+        yield* Console.log("");
+        if (links.length === 0) {
+          yield* Console.log("  (none)");
+        } else {
+          for (const link of links) {
+            yield* Console.log(`  <- ${link}`);
+          }
+        }
+        yield* Console.log("");
+        yield* Console.log(`Total: ${links.length} backlinks`);
+      }
+    })
+);
+
+// ============================================================================
 // Main CLI
 // ============================================================================
 
 const mainCommand = Command.make("mdtldr").pipe(
   Command.withDescription("Token-efficient markdown analysis tool for LLMs"),
-  Command.withSubcommands([parseCommand, treeCommand, structureCommand])
+  Command.withSubcommands([
+    parseCommand,
+    treeCommand,
+    structureCommand,
+    indexCommand,
+    linksCommand,
+    backlinksCommand,
+  ])
 );
 
 const cli = Command.run(mainCommand, {
