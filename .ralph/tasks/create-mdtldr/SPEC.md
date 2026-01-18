@@ -68,6 +68,13 @@ Build **md-tldr**: A token-efficient markdown analysis tool for LLM consumption.
 - [ ] `md_structure` tool for document outlines
 - [ ] Works with Claude Desktop and Claude Code
 
+### Phase 7: Quality & Documentation (REQUIRED)
+- [ ] `npm run check` passes (format + lint + typecheck)
+- [ ] `npm run test` passes with collocated tests
+- [ ] Tests are collocated (e.g., `src/parser/parser.test.ts` next to `parser.ts`)
+- [ ] README.md - Professional, AI-engineer focused (see reference below)
+- [ ] docs/USAGE.md - Detailed command reference and examples
+
 ## Constraints
 
 - **TypeScript + Effect** — Matches HumanWork ecosystem
@@ -182,6 +189,9 @@ Phase 3          Phase 4          │
              │
              ▼
          Phase 6
+             │
+             ▼
+         Phase 7 (Quality + Docs)
 ```
 
 ### Reference Implementation
@@ -190,6 +200,31 @@ See `/Users/alphab/Dev/LLM/DEV/llm-tldr` for architectural patterns:
 - MCP server implementation
 - CLI structure
 - `.tldrignore` pattern
+
+### README Requirements
+**Reference:** `/Users/alphab/Dev/LLM/DEV/llm-tldr/README.md`
+
+Write for **AI engineers**, not marketing. Structure:
+1. **One-liner** - Install + index + query in one command
+2. **Problem statement** - Why raw markdown wastes tokens
+3. **How it works** - ASCII architecture diagram showing the pipeline
+4. **Quick examples** - Real commands, real output
+5. **Command reference** - Tables, not prose
+6. **MCP integration** - Claude Desktop + Claude Code config
+7. **Configuration** - `.mdtldrignore`, settings
+8. **Performance** - Token savings metrics
+
+**Tone:**
+- Technical, direct
+- No marketing fluff ("revolutionary", "game-changing")
+- Show, don't tell
+- Code examples over explanations
+
+**docs/ structure:**
+```
+docs/
+  USAGE.md      # Detailed command reference + workflows
+```
 
 ### Project Location
 Standalone project at `/Users/alphab/Dev/LLM/DEV/md-tldr` (not part of HumanWork monorepo).
@@ -208,6 +243,7 @@ Final acceptance:
 - Semantic search returns relevant results in top-3 90%+ of time
 - Token reduction of 80%+ achieved
 - MCP server works with Claude Code
+- **Phase 7 complete**: Quality gates pass, README.md + docs/USAGE.md exist
 
 ---
 

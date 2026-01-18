@@ -1,0 +1,5 @@
+ignoredBuiltDependencies:
+  - '@parcel/watcher'
+  - esbuild
+  - hnswlib-node
+  - msgpackr-extract
