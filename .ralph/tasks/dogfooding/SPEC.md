@@ -29,10 +29,15 @@ Fix the 4 prioritized issues from the dogfooding findings to make mdtldr's disco
 - [x] Budget enforcement accounts for formatting overhead (not just raw content)
 
 ### Phase 4: Improve Stats Without Embeddings (P3 - Low)
-- [ ] `mdtldr stats` shows useful information without embeddings enabled
-- [ ] Basic stats include: document count, total tokens, avg tokens/doc
-- [ ] Section depth analysis (how many h1, h2, h3, etc.)
-- [ ] File size distribution or token distribution summary
+- [x] `mdtldr stats` shows useful information without embeddings enabled
+- [x] Basic stats include: document count, total tokens, avg tokens/doc
+- [x] Section depth analysis (how many h1, h2, h3, etc.)
+- [x] File size distribution or token distribution summary
+
+### Phase 5: Testing Inbox Comms (Meta)
+- [ ] Worker receives directives via automatic injection (no polling)
+- [ ] Worker responds to orchestrator commands promptly
+- [ ] Bidirectional communication flow verified
 
 ## Constraints
 
