@@ -1,0 +1,13 @@
+/**
+ * Commands barrel export
+ *
+ * Re-exports all CLI commands for use in main.ts.
+ */
+
+export { backlinksCommand } from './backlinks.js'
+export { contextCommand } from './context.js'
+export { indexCommand } from './index-cmd.js'
+export { linksCommand } from './links.js'
+export { searchCommand } from './search.js'
+export { statsCommand } from './stats.js'
+export { treeCommand } from './tree.js'

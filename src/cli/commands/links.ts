@@ -1,0 +1,52 @@
+/**
+ * LINKS Command
+ *
+ * Show what a file links to (outgoing links).
+ */
+
+import * as path from 'node:path'
+import { Args, Command, Options } from '@effect/cli'
+import { Console, Effect } from 'effect'
+import { getOutgoingLinks } from '../../index/indexer.js'
+import { jsonOption, prettyOption } from '../options.js'
+import { formatJson } from '../utils.js'
+
+export const linksCommand = Command.make(
+  'links',
+  {
+    file: Args.file({ name: 'file' }).pipe(
+      Args.withDescription('Markdown file to analyze'),
+    ),
+    root: Options.directory('root').pipe(
+      Options.withAlias('r'),
+      Options.withDescription('Root directory for resolving relative links'),
+      Options.withDefault('.'),
+    ),
+    json: jsonOption,
+    pretty: prettyOption,
+  },
+  ({ file, root, json, pretty }) =>
+    Effect.gen(function* () {
+      const resolvedRoot = path.resolve(root)
+      const resolvedFile = path.resolve(file)
+      const relativePath = path.relative(resolvedRoot, resolvedFile)
+
+      const links = yield* getOutgoingLinks(resolvedRoot, resolvedFile)
+
+      if (json) {
+        yield* Console.log(formatJson({ file: relativePath, links }, pretty))
+      } else {
+        yield* Console.log(`Outgoing links from ${relativePath}:`)
+        yield* Console.log('')
+        if (links.length === 0) {
+          yield* Console.log('  (none)')
+        } else {
+          for (const link of links) {
+            yield* Console.log(`  -> ${link}`)
+          }
+        }
+        yield* Console.log('')
+        yield* Console.log(`Total: ${links.length} links`)
+      }
+    }),
+).pipe(Command.withDescription('What does this link to?'))

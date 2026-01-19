@@ -220,4 +220,40 @@ describe('mdtldr CLI e2e', () => {
       expect(output.toLowerCase()).toMatch(/error|not found|no such/i)
     })
   })
+
+  describe('flexible flag positioning', () => {
+    it('search: allows query before flags', () => {
+      // Traditional: search -n 3 "query"
+      // Flexible: search "query" -n 3
+      const output = run('search "memory" -n 2 docs/')
+      expect(output).toContain('Structural search')
+      expect(output).toContain('Results:')
+    })
+
+    it('search: allows path after flags', () => {
+      const output = run('search -s "Architecture" docs/')
+      expect(output).toContain('Structural search')
+    })
+
+    it('context: allows files before flags', () => {
+      const output = run('context docs/DESIGN.md --brief')
+      expect(output).toContain('# ')
+    })
+
+    it('context: allows -t flag after file', () => {
+      const output = run('context docs/DESIGN.md -t 500')
+      expect(output).toContain('Tokens:')
+    })
+
+    it('tree: allows path before --json flag', () => {
+      const output = run('tree docs/ --json')
+      expect(output).toContain('[')
+      expect(output).toContain('relativePath')
+    })
+
+    it('search: handles --limit=value syntax', () => {
+      const output = run('search "memory" --limit=2 docs/')
+      expect(output).toContain('Structural search')
+    })
+  })
 })

@@ -6,11 +6,11 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "mdtldr": "./dist/cli/index.js",
+    "mdtldr": "./dist/cli/main.js",
     "mdtldr-mcp": "./dist/mcp/server.js"
   },
   "scripts": {
-    "build": "tsup src/cli/index.ts src/mcp/server.ts src/index.ts --format esm --dts",
+    "build": "tsup src/cli/main.ts src/mcp/server.ts src/index.ts --format esm --dts",
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",
