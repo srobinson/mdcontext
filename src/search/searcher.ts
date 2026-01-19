@@ -20,6 +20,8 @@ import type { DocumentEntry, SectionEntry } from '../index/types.js'
 export interface SearchOptions {
   /** Filter by heading pattern (regex) */
   readonly heading?: string | undefined
+  /** Search within section content (regex) */
+  readonly content?: string | undefined
   /** Filter by file path pattern (glob-like) */
   readonly pathPattern?: string | undefined
   /** Only sections with code blocks */
@@ -36,10 +38,21 @@ export interface SearchOptions {
   readonly limit?: number | undefined
 }
 
+export interface ContentMatch {
+  /** The line number where match was found (1-based) */
+  readonly lineNumber: number
+  /** The matching line text */
+  readonly line: string
+  /** Snippet showing match context (lines before and after) */
+  readonly snippet: string
+}
+
 export interface SearchResult {
   readonly section: SectionEntry
   readonly document: DocumentEntry
-  readonly content?: string
+  readonly sectionContent?: string
+  /** Matches found within the content (when content search is used) */
+  readonly matches?: readonly ContentMatch[]
 }
 
 // ============================================================================
@@ -142,7 +155,174 @@ export const search = (
   })
 
 // ============================================================================
-// Search with Content
+// Content Search Implementation
+// ============================================================================
+
+/**
+ * Search within section content using regex.
+ * This loads file content and searches within each section.
+ */
+export const searchContent = (
+  rootPath: string,
+  options: SearchOptions = {},
+): Effect.Effect<readonly SearchResult[], Error> =>
+  Effect.gen(function* () {
+    const storage = createStorage(rootPath)
+
+    const docIndex = yield* loadDocumentIndex(storage)
+    const sectionIndex = yield* loadSectionIndex(storage)
+
+    if (!docIndex || !sectionIndex) {
+      return []
+    }
+
+    const contentRegex = options.content
+      ? new RegExp(options.content, 'gi')
+      : null
+    const headingRegex = options.heading
+      ? new RegExp(options.heading, 'i')
+      : null
+
+    const results: SearchResult[] = []
+
+    // Group sections by document for efficient file reading
+    const sectionsByDoc: Record<string, SectionEntry[]> = {}
+    for (const section of Object.values(sectionIndex.sections)) {
+      const docSections = sectionsByDoc[section.documentPath]
+      if (docSections) {
+        docSections.push(section)
+      } else {
+        sectionsByDoc[section.documentPath] = [section]
+      }
+    }
+
+    // Process each document
+    for (const [docPath, sections] of Object.entries(sectionsByDoc)) {
+      // Apply path filter early
+      if (options.pathPattern && !matchPath(docPath, options.pathPattern)) {
+        continue
+      }
+
+      const document = docIndex.documents[docPath]
+      if (!document) continue
+
+      // Load file content for content search
+      let fileContent: string | null = null
+      let fileLines: string[] = []
+
+      if (contentRegex) {
+        const filePath = path.join(storage.rootPath, docPath)
+        try {
+          fileContent = yield* Effect.promise(() =>
+            fs.readFile(filePath, 'utf-8'),
+          )
+          fileLines = fileContent.split('\n')
+        } catch {
+          continue // Skip files that can't be read
+        }
+      }
+
+      for (const section of sections) {
+        // Apply heading filter
+        if (headingRegex && !headingRegex.test(section.heading)) {
+          continue
+        }
+
+        // Apply other filters
+        if (
+          options.hasCode !== undefined &&
+          section.hasCode !== options.hasCode
+        ) {
+          continue
+        }
+        if (
+          options.hasList !== undefined &&
+          section.hasList !== options.hasList
+        ) {
+          continue
+        }
+        if (
+          options.hasTable !== undefined &&
+          section.hasTable !== options.hasTable
+        ) {
+          continue
+        }
+        if (
+          options.minLevel !== undefined &&
+          section.level < options.minLevel
+        ) {
+          continue
+        }
+        if (
+          options.maxLevel !== undefined &&
+          section.level > options.maxLevel
+        ) {
+          continue
+        }
+
+        // Content search
+        if (contentRegex && fileContent) {
+          const sectionLines = fileLines.slice(
+            section.startLine - 1,
+            section.endLine,
+          )
+          const sectionContent = sectionLines.join('\n')
+
+          // Find all matches in this section
+          const matches: ContentMatch[] = []
+          for (let i = 0; i < sectionLines.length; i++) {
+            const line = sectionLines[i]
+            if (line && contentRegex.test(line)) {
+              // Reset regex lastIndex for next test
+              contentRegex.lastIndex = 0
+
+              const absoluteLineNum = section.startLine + i
+
+              // Create snippet with context (1 line before/after)
+              const snippetStart = Math.max(0, i - 1)
+              const snippetEnd = Math.min(sectionLines.length, i + 2)
+              const snippetLines = sectionLines.slice(snippetStart, snippetEnd)
+              const snippet = snippetLines.join('\n')
+
+              matches.push({
+                lineNumber: absoluteLineNum,
+                line: line,
+                snippet,
+              })
+            }
+          }
+
+          if (matches.length > 0) {
+            results.push({
+              section,
+              document,
+              sectionContent,
+              matches,
+            })
+
+            if (
+              options.limit !== undefined &&
+              results.length >= options.limit
+            ) {
+              return results
+            }
+          }
+        } else if (!contentRegex) {
+          // No content search, heading-only search
+          results.push({ section, document })
+
+          if (options.limit !== undefined && results.length >= options.limit) {
+            return results
+          }
+        }
+      }
+    }
+
+    return results
+  })
+
+// ============================================================================
+// Search with Content (legacy, uses heading-only search)
 // ============================================================================
 
 export const searchWithContent = (
@@ -170,7 +350,7 @@ export const searchWithContent = (
 
         resultsWithContent.push({
           ...result,
-          content: sectionContent,
+          sectionContent,
         })
       } catch {
         // If file can't be read, include result without content

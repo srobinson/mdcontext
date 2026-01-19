@@ -84,6 +84,7 @@ export const searchSchema: CommandSchema = {
   name: 'search',
   flags: [
     { name: 'structural', type: 'boolean', alias: 's', description: 'Force structural search' },
+    { name: 'heading-only', type: 'boolean', alias: 'H', description: 'Search headings only' },
     { name: 'limit', type: 'string', alias: 'n', description: 'Maximum results' },
     { name: 'threshold', type: 'string', description: 'Similarity threshold' },
     jsonFlag,
