@@ -60,9 +60,9 @@ Search by meaning (semantic) or structure (regex).
 
 ```bash
 mdtldr search "how to authenticate"        # Semantic search (if embeddings exist)
-mdtldr search "auth.*flow" -s              # Structural search (heading regex)
-mdtldr search "setup" -n 5                 # Limit to 5 results
-mdtldr search "deploy" --threshold 0.8     # Higher similarity threshold
+mdtldr search -s "auth.*flow"              # Structural search (heading regex)
+mdtldr search -n 5 "setup"                 # Limit to 5 results
+mdtldr search --threshold 0.8 "deploy"     # Higher similarity threshold
 ```
 
 Auto-detection: Uses semantic search if embeddings exist and query looks like natural language. Use `-s` to force structural search.
@@ -75,9 +75,9 @@ Get LLM-ready summaries from one or more files.
 mdtldr context README.md                   # Single file
 mdtldr context README.md docs/api.md       # Multiple files
 mdtldr context docs/*.md                   # Glob patterns work
-mdtldr context README.md -t 500            # Token budget
-mdtldr context README.md --brief           # Minimal output
-mdtldr context README.md --full            # Include full content
+mdtldr context -t 500 README.md            # Token budget
+mdtldr context --brief README.md           # Minimal output
+mdtldr context --full README.md            # Include full content
 ```
 
 ### tree
@@ -119,14 +119,14 @@ mdtldr stats ./docs                # Specific path
 ```bash
 mdtldr tree docs/                          # See what's available
 mdtldr tree docs/api.md                    # Check document structure
-mdtldr context docs/api.md -t 500          # Get summary within token budget
+mdtldr context -t 500 docs/api.md          # Get summary within token budget
 ```
 
 ### Finding Documentation
 
 ```bash
 mdtldr search "authentication"             # By meaning
-mdtldr search "Setup|Install" -s           # By heading pattern
+mdtldr search -s "Setup|Install"           # By heading pattern
 ```
 
 ### Setting Up Semantic Search

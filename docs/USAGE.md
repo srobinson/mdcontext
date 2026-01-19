@@ -108,7 +108,7 @@ mdtldr index --force
 Search by meaning (semantic) or by structure (heading patterns).
 
 ```bash
-mdtldr search <query> [path] [options]
+mdtldr search [options] <query> [path]
 ```
 
 **Arguments:**
@@ -136,13 +136,13 @@ mdtldr search <query> [path] [options]
 mdtldr search "how to authenticate"
 
 # Structural search (heading regex)
-mdtldr search "Setup|Install" -s
+mdtldr search -s "Setup|Install"
 
 # Limit results
-mdtldr search "api" -n 5
+mdtldr search -n 5 "api"
 
 # Higher similarity threshold
-mdtldr search "deploy" --threshold 0.8
+mdtldr search --threshold 0.8 "deploy"
 
 # Search in specific directory
 mdtldr search "config" ./docs
@@ -155,7 +155,7 @@ mdtldr search "config" ./docs
 Get LLM-ready context from one or more files.
 
 ```bash
-mdtldr context <files...> [options]
+mdtldr context [options] <files...>
 ```
 
 **Arguments:**
@@ -184,13 +184,13 @@ mdtldr context README.md docs/api.md docs/setup.md
 mdtldr context docs/*.md
 
 # With token budget
-mdtldr context README.md -t 500
+mdtldr context -t 500 README.md
 
 # Brief summary
-mdtldr context README.md --brief
+mdtldr context --brief README.md
 
 # Full content
-mdtldr context README.md --full
+mdtldr context --full README.md
 ```
 
 **Output includes:**
@@ -432,10 +432,10 @@ mdtldr tree ./docs
 mdtldr tree docs/api.md
 
 # 3. Get context for specific file
-mdtldr context docs/api.md -t 500
+mdtldr context -t 500 docs/api.md
 
 # 4. Or combine multiple files
-mdtldr context README.md docs/setup.md docs/api.md -t 2000
+mdtldr context -t 2000 README.md docs/setup.md docs/api.md
 ```
 
 ### Finding Related Documentation
@@ -487,10 +487,10 @@ mdtldr tree docs/large-doc.md
 mdtldr context docs/large-doc.md --brief
 
 # Or set explicit budget
-mdtldr context docs/large-doc.md -t 200
+mdtldr context -t 200 docs/large-doc.md
 
 # Combine multiple files with shared budget
-mdtldr context a.md b.md c.md -t 1000
+mdtldr context -t 1000 a.md b.md c.md
 ```
 
 ---

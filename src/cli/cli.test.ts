@@ -47,6 +47,54 @@ describe('mdtldr CLI e2e', () => {
     })
   })
 
+  describe('subcommand --help', () => {
+    const subcommands = ['index', 'search', 'context', 'tree', 'links', 'backlinks', 'stats']
+
+    for (const cmd of subcommands) {
+      it(`${cmd} --help shows examples and options`, () => {
+        const output = run(`${cmd} --help`)
+        expect(output).toContain('USAGE')
+        expect(output).toContain('EXAMPLES')
+        expect(output).toContain('OPTIONS')
+        expect(output).toContain(`mdtldr ${cmd}`)
+        // Should NOT contain Effect CLI boilerplate
+        expect(output).not.toContain('A true or false value')
+        expect(output).not.toContain('This setting is optional')
+      })
+    }
+
+    it('index help shows embedding and watch options', () => {
+      const output = run('index --help')
+      expect(output).toContain('--embed')
+      expect(output).toContain('--watch')
+      expect(output).toContain('--force')
+    })
+
+    it('search help shows structural and limit options', () => {
+      const output = run('search --help')
+      expect(output).toContain('--structural')
+      expect(output).toContain('--limit')
+      expect(output).toContain('--threshold')
+    })
+
+    it('context help shows token budget option', () => {
+      const output = run('context --help')
+      expect(output).toContain('--tokens')
+      expect(output).toContain('--brief')
+      expect(output).toContain('--full')
+    })
+
+    it('shows notes section when relevant', () => {
+      const indexHelp = run('index --help')
+      expect(indexHelp).toContain('NOTES')
+      expect(indexHelp).toContain('.md-tldr')
+
+      const searchHelp = run('search --help')
+      expect(searchHelp).toContain('NOTES')
+      expect(searchHelp).toContain('semantic')
+    })
+  })
+
   describe('tree command', () => {
     it('lists markdown files in directory', () => {
       const output = run('tree docs/')

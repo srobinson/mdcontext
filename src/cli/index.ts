@@ -43,6 +43,11 @@ import {
   formatSummary,
   summarizeFile,
 } from '../summarize/summarizer.js'
+import {
+  checkSubcommandHelp,
+  shouldShowMainHelp,
+  showMainHelp,
+} from './help.js'
 
 // ============================================================================
 // Helper Functions
@@ -687,64 +692,16 @@ const isValidationError = (error: unknown): boolean => {
   return false
 }
 
-// Custom help output - beautiful and useful
-const showCustomHelp = (): void => {
-  const help = `
-\x1b[1mmdtldr\x1b[0m - Token-efficient markdown analysis for LLMs
+// ============================================================================
+// Custom Help Handling
+// ============================================================================
 
-\x1b[33mCOMMANDS\x1b[0m
-  index [path]              Index markdown files (default: .)
-  search <query> [path]     Search by meaning or structure
-  context <files>...        Get LLM-ready summary
-  tree [path]               Show files or document outline
-  links <file>              Show outgoing links
-  backlinks <file>          Show incoming links
-  stats [path]              Index statistics
+// Check for subcommand help before anything else
+checkSubcommandHelp()
 
-\x1b[33mEXAMPLES\x1b[0m
-  mdtldr tree                         # List all markdown files
-  mdtldr tree README.md               # Show document outline
-  mdtldr index                        # Index current directory
-  mdtldr index --embed                # Index with semantic embeddings
-  mdtldr search "auth"                # Search headings for "auth"
-  mdtldr search --semantic "how to"   # Semantic search (needs --embed)
-  mdtldr context README.md            # Summarize a file
-  mdtldr context *.md -t 2000         # Multi-file with token budget
-
-\x1b[33mWORKFLOWS\x1b[0m
-  \x1b[2m# Quick context for LLM\x1b[0m
-  mdtldr context README.md docs/*.md | pbcopy
-
-  \x1b[2m# Find relevant documentation\x1b[0m
-  mdtldr search "error handling"
-
-  \x1b[2m# Explore a new codebase\x1b[0m
-  mdtldr tree && mdtldr stats
-
-  \x1b[2m# Build semantic search\x1b[0m
-  mdtldr index --embed && mdtldr search --semantic "authentication flow"
-
-\x1b[33mGLOBAL OPTIONS\x1b[0m
-  --json          Output as JSON
-  --pretty        Pretty-print JSON
-  --help, -h      Show help
-  --version, -v   Show version
-
-Run \x1b[36mmdtldr <command> --help\x1b[0m for command-specific options.
-`
-  console.log(help)
-}
-
-// Check if we should show custom help
-const args = process.argv.slice(2)
-const showHelp =
-  args.length === 0 ||
-  args.includes('--help') ||
-  args.includes('-h') ||
-  (args.length === 1 && args[0] === 'help')
-
-if (showHelp && !args.some((a) => !a.startsWith('-') && a !== 'help')) {
-  showCustomHelp()
+// Check if we should show main help
+if (shouldShowMainHelp()) {
+  showMainHelp()
   process.exit(0)
 }
 
