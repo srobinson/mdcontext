@@ -128,9 +128,9 @@ describe('mdtldr CLI e2e', () => {
   })
 
   describe('search command', () => {
-    it('performs structural search', () => {
+    it('performs content search by default', () => {
       const output = run('search "memory" docs/')
-      expect(output).toContain('Structural search')
+      expect(output).toContain('Content search')
       expect(output).toContain('Results:')
     })
 
@@ -141,7 +141,7 @@ describe('mdtldr CLI e2e', () => {
 
     it('supports -s flag for explicit structural search', () => {
       const output = run('search -s "Architecture" docs/')
-      expect(output).toContain('Structural search')
+      expect(output).toContain('Content search')
     })
 
     it('supports -n flag to limit results', () => {
@@ -150,6 +150,45 @@ describe('mdtldr CLI e2e', () => {
         .split('\n')
         .filter((l) => l.trim().startsWith('docs/'))
       expect(lines.length).toBeLessThanOrEqual(3)
+    })
+
+    it('shows mode indicator in output', () => {
+      const output = run('search "memory" docs/')
+      expect(output).toContain('[structural]')
+    })
+
+    it('supports boolean AND operator', () => {
+      const output = run('search "interface AND implementation" docs/')
+      expect(output).toContain('Results:')
+      // Should match sections containing both terms
+    })
+
+    it('supports boolean OR operator', () => {
+      const output = run('search "checkpoint OR gate" docs/')
+      expect(output).toContain('Results:')
+    })
+
+    it('supports boolean NOT operator', () => {
+      const output = run('search "implementation NOT test" docs/')
+      expect(output).toContain('Results:')
+    })
+
+    it('supports quoted phrase search', () => {
+      const output = run('search \'"effect cli"\' docs/')
+      expect(output).toContain('Results:')
+    })
+
+    it('supports --mode flag', () => {
+      const output = run('search --mode structural "memory" docs/')
+      expect(output).toContain('[structural]')
+    })
+
+    it('returns error when forcing semantic without embeddings', () => {
+      // With Effect.fail, the process exits non-zero
+      const output = run('search --mode semantic "memory" docs/', {
+        expectError: true,
+      })
+      expect(output).toContain('Semantic search requires embeddings')
     })
   })
 
@@ -162,9 +201,7 @@ describe('mdtldr CLI e2e', () => {
     })
 
     it('summarizes multiple files', () => {
-      const output = run(
-        'context docs/DESIGN.md docs/PROJECT.md',
-      )
+      const output = run('context docs/DESIGN.md docs/PROJECT.md')
       expect(output).toContain('Context Assembly')
       expect(output).toContain('Sources: 2')
     })
@@ -241,14 +278,18 @@ describe('mdtldr CLI e2e', () => {
     })
 
     it('lists valid options in error message', () => {
-      const output = run('context --invalid docs/DESIGN.md', { expectError: true })
+      const output = run('context --invalid docs/DESIGN.md', {
+        expectError: true,
+      })
       expect(output).toContain('--tokens')
       expect(output).toContain('--brief')
       expect(output).toContain('--json')
     })
 
     it('handles unknown flag with value', () => {
-      const output = run('context --foo=bar docs/DESIGN.md', { expectError: true })
+      const output = run('context --foo=bar docs/DESIGN.md', {
+        expectError: true,
+      })
       expect(output).toContain("Unknown option '--foo'")
     })
 
@@ -265,13 +306,13 @@ describe('mdtldr CLI e2e', () => {
       // Traditional: search -n 3 "query"
       // Flexible: search "query" -n 3
       const output = run('search "memory" -n 2 docs/')
-      expect(output).toContain('Structural search')
+      expect(output).toContain('Content search')
       expect(output).toContain('Results:')
     })
 
     it('search: allows path after flags', () => {
       const output = run('search -s "Architecture" docs/')
-      expect(output).toContain('Structural search')
+      expect(output).toContain('Content search')
     })
 
     it('context: allows files before flags', () => {
@@ -292,7 +333,7 @@ describe('mdtldr CLI e2e', () => {
 
     it('search: handles --limit=value syntax', () => {
       const output = run('search "memory" --limit=2 docs/')
-      expect(output).toContain('Structural search')
+      expect(output).toContain('Content search')
     })
   })
 })

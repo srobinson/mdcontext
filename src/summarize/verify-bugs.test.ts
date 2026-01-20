@@ -6,10 +6,10 @@
  * Bug 3: Formatting overhead under-estimated - 50 token reserve insufficient
  */
 
-import { describe, expect, it } from 'vitest'
 import { Effect } from 'effect'
+import { describe, expect, it } from 'vitest'
+import { countTokens, countTokensApprox } from '../utils/tokens.js'
 import { formatSummary } from './formatters.js'
-import { countTokensApprox, countTokens } from '../utils/tokens.js'
 import type { DocumentSummary } from './summarizer.js'
 
 describe('verify token budget bugs', () => {
@@ -105,7 +105,8 @@ describe('verify token budget bugs', () => {
     it('output should stay within budget even with long paths', () => {
       const mockSummary: DocumentSummary = {
         path: '/very/long/path/to/some/deeply/nested/directory/structure/with/many/segments/file.md',
-        title: 'A Document With A Very Long Title That Takes Up Many Tokens In The Output',
+        title:
+          'A Document With A Very Long Title That Takes Up Many Tokens In The Output',
         originalTokens: 2000,
         summaryTokens: 100,
         compressionRatio: 0.95,

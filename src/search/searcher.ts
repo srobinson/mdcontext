@@ -12,6 +12,13 @@ import {
   loadSectionIndex,
 } from '../index/storage.js'
 import type { DocumentEntry, SectionEntry } from '../index/types.js'
+import {
+  buildHighlightPattern,
+  evaluateQuery,
+  isAdvancedQuery,
+  type ParsedQuery,
+  parseQuery,
+} from './query-parser.js'
 
 // ============================================================================
 // Search Options
@@ -159,8 +166,9 @@ export const search = (
 // ============================================================================
 
 /**
- * Search within section content using regex.
- * This loads file content and searches within each section.
+ * Search within section content.
+ * Supports boolean operators (AND, OR, NOT) and quoted phrases.
+ * Falls back to regex for simple patterns.
  */
 export const searchContent = (
   rootPath: string,
@@ -176,9 +184,24 @@ export const searchContent = (
       return []
     }
 
-    const contentRegex = options.content
-      ? new RegExp(options.content, 'gi')
-      : null
+    // Parse content query - use boolean parser if advanced, else regex
+    let parsedQuery: ParsedQuery | null = null
+    let contentRegex: RegExp | null = null
+    let highlightRegex: RegExp | null = null
+
+    if (options.content) {
+      if (isAdvancedQuery(options.content)) {
+        parsedQuery = parseQuery(options.content)
+        if (parsedQuery) {
+          highlightRegex = buildHighlightPattern(parsedQuery)
+        }
+      } else {
+        // Simple search - use as regex
+        contentRegex = new RegExp(options.content, 'gi')
+        highlightRegex = contentRegex
+      }
+    }
+
     const headingRegex = options.heading
       ? new RegExp(options.heading, 'i')
       : null
@@ -210,7 +233,7 @@ export const searchContent = (
       let fileContent: string | null = null
       let fileLines: string[] = []
 
-      if (contentRegex) {
+      if (parsedQuery || contentRegex) {
         const filePath = path.join(storage.rootPath, docPath)
         try {
           fileContent = yield* Effect.promise(() =>
@@ -261,44 +284,64 @@ export const searchContent = (
         }
 
         // Content search
-        if (contentRegex && fileContent) {
+        if ((parsedQuery || contentRegex) && fileContent) {
           const sectionLines = fileLines.slice(
             section.startLine - 1,
             section.endLine,
           )
           const sectionContent = sectionLines.join('\n')
 
-          // Find all matches in this section
-          const matches: ContentMatch[] = []
-          for (let i = 0; i < sectionLines.length; i++) {
-            const line = sectionLines[i]
-            if (line && contentRegex.test(line)) {
-              // Reset regex lastIndex for next test
-              contentRegex.lastIndex = 0
-
-              const absoluteLineNum = section.startLine + i
-
-              // Create snippet with context (1 line before/after)
-              const snippetStart = Math.max(0, i - 1)
-              const snippetEnd = Math.min(sectionLines.length, i + 2)
-              const snippetLines = sectionLines.slice(snippetStart, snippetEnd)
-              const snippet = snippetLines.join('\n')
-
-              matches.push({
-                lineNumber: absoluteLineNum,
-                line: line,
-                snippet,
-              })
+          // For boolean queries, evaluate against entire section content
+          if (parsedQuery) {
+            if (!evaluateQuery(parsedQuery.ast, sectionContent)) {
+              continue // Section doesn't match query
             }
           }
 
-          if (matches.length > 0) {
-            results.push({
+          // Find individual line matches for highlighting
+          const matches: ContentMatch[] = []
+          const searchRegex = contentRegex || highlightRegex
+
+          if (searchRegex) {
+            for (let i = 0; i < sectionLines.length; i++) {
+              const line = sectionLines[i]
+              if (line && searchRegex.test(line)) {
+                // Reset regex lastIndex for next test
+                searchRegex.lastIndex = 0
+
+                const absoluteLineNum = section.startLine + i
+
+                // Create snippet with context (1 line before/after)
+                const snippetStart = Math.max(0, i - 1)
+                const snippetEnd = Math.min(sectionLines.length, i + 2)
+                const snippetLines = sectionLines.slice(
+                  snippetStart,
+                  snippetEnd,
+                )
+                const snippet = snippetLines.join('\n')
+
+                matches.push({
+                  lineNumber: absoluteLineNum,
+                  line: line,
+                  snippet,
+                })
+              }
+            }
+          }
+
+          // For boolean queries, include section even without line-level matches
+          // (the section matched as a whole)
+          if (parsedQuery || matches.length > 0) {
+            const result: SearchResult = {
               section,
               document,
               sectionContent,
-              matches,
-            })
+            }
+            if (matches.length > 0) {
+              results.push({ ...result, matches })
+            } else {
+              results.push(result)
+            }
 
             if (
               options.limit !== undefined &&
@@ -307,7 +350,7 @@ export const searchContent = (
               return results
             }
           }
-        } else if (!contentRegex) {
+        } else if (!parsedQuery && !contentRegex) {
           // No content search, heading-only search
           results.push({ section, document })
 

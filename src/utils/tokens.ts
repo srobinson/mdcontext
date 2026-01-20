@@ -88,7 +88,10 @@ export const countTokensApprox = (text: string): number => {
     // Code content at ~2.5 chars/token (code has many symbols that become separate tokens)
     const contentTokens = content.length > 0 ? content.length / 2.5 : 0
     // Minimum 6 tokens for any code block (overhead alone)
-    codeBlockTokens += Math.max(overhead, overhead + contentNewlines + contentTokens)
+    codeBlockTokens += Math.max(
+      overhead,
+      overhead + contentNewlines + contentTokens,
+    )
     workingText = workingText.replace(block, '')
   }
 

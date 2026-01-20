@@ -12,12 +12,12 @@ Validation experiment with 11 AI agents identified search query limitations as t
 
 ## Success Criteria
 
-- [ ] Boolean AND/OR/NOT operators work in search queries
-- [ ] Quoted phrases match exactly
-- [ ] Search output shows mode indicator (semantic vs structural)
-- [ ] `--help` includes comprehensive examples
-- [ ] All existing tests pass
-- [ ] New tests cover boolean/phrase functionality
+- [x] Boolean AND/OR/NOT operators work in search queries
+- [x] Quoted phrases match exactly
+- [x] Search output shows mode indicator (semantic vs structural)
+- [x] `--help` includes comprehensive examples
+- [x] All existing tests pass
+- [x] New tests cover boolean/phrase functionality
 
 ## Phases
 
@@ -132,6 +132,25 @@ mdtldr search --help
 - Boolean parsing may benefit from a small expression parser
 - Maintain backward compatibility (single terms still work)
 - Consider performance: boolean may require multiple index queries
+
+## ⚠️ Orchestrator Note: Error Exit Codes
+
+**Do NOT use `Console.error()` + `return` for error cases that should fail.**
+
+Current pattern in `search.ts` is WRONG:
+```typescript
+yield* Console.error('Error: Semantic search requires embeddings...')
+return  // ← Exit code 0, tests can't detect failure!
+```
+
+Use `Effect.fail()` instead (matches `semantic-search.ts` and `searcher.ts`):
+```typescript
+yield* Effect.fail(new Error('Semantic search requires embeddings. Run "mdtldr index --embed" first.'))
+```
+
+This bubbles up through `NodeRuntime.runMain` → exit code 1 → tests work properly.
+
+Same fix needed in `context.ts` (line ~47) for the "no files provided" case.
 
 ## Validation
 

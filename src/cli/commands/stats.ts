@@ -105,11 +105,15 @@ export const statsCommand = Command.make(
         yield* Console.log(`    Avg/doc:     ${indexStats.avgTokensPerDoc}`)
         yield* Console.log('')
         yield* Console.log('  Token distribution')
-        yield* Console.log(`    Min:         ${indexStats.tokenDistribution.min}`)
+        yield* Console.log(
+          `    Min:         ${indexStats.tokenDistribution.min}`,
+        )
         yield* Console.log(
           `    Median:      ${indexStats.tokenDistribution.median}`,
         )
-        yield* Console.log(`    Max:         ${indexStats.tokenDistribution.max}`)
+        yield* Console.log(
+          `    Max:         ${indexStats.tokenDistribution.max}`,
+        )
         yield* Console.log('')
         yield* Console.log('  Sections')
         yield* Console.log(`    Total:       ${indexStats.totalSections}`)
@@ -128,7 +132,9 @@ export const statsCommand = Command.make(
           yield* Console.log(`    Vectors:     ${embeddingStats.count}`)
           yield* Console.log(`    Provider:    ${embeddingStats.provider}`)
           yield* Console.log(`    Dimensions:  ${embeddingStats.dimensions}`)
-          yield* Console.log(`    Cost:        $${embeddingStats.totalCost.toFixed(6)}`)
+          yield* Console.log(
+            `    Cost:        $${embeddingStats.totalCost.toFixed(6)}`,
+          )
         } else {
           yield* Console.log('    Not enabled')
           yield* Console.log(

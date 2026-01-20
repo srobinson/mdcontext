@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
 import { Effect } from 'effect'
-import { countTokensApprox, countTokens, countWords } from './tokens.js'
+import { describe, expect, it } from 'vitest'
+import { countTokens, countTokensApprox, countWords } from './tokens.js'
 
 describe('token utilities', () => {
   describe('countWords', () => {
@@ -82,7 +82,8 @@ describe('token utilities', () => {
     // Being over is safe (wastes some budget), under is dangerous (budget violations)
 
     it('is conservative (never under-estimates) for prose', async () => {
-      const text = 'This is a simple sentence with some common words that form a typical paragraph.'
+      const text =
+        'This is a simple sentence with some common words that form a typical paragraph.'
       const approx = countTokensApprox(text)
       const actual = await Effect.runPromise(countTokens(text))
       // Approximation should be >= actual (conservative) - this is the critical requirement
@@ -92,7 +93,8 @@ describe('token utilities', () => {
     })
 
     it('is conservative for code blocks', async () => {
-      const code = '```typescript\nfunction parseDocument(input: string): AST {\n  const tokens = tokenize(input);\n  return buildTree(tokens);\n}\n```'
+      const code =
+        '```typescript\nfunction parseDocument(input: string): AST {\n  const tokens = tokenize(input);\n  return buildTree(tokens);\n}\n```'
       const approx = countTokensApprox(code)
       const actual = await Effect.runPromise(countTokens(code))
       // Approximation should be >= actual (conservative)
@@ -102,7 +104,8 @@ describe('token utilities', () => {
     })
 
     it('is conservative for inline code', async () => {
-      const text = 'Use the `countTokens` function to count tokens in a `string`.'
+      const text =
+        'Use the `countTokens` function to count tokens in a `string`.'
       const approx = countTokensApprox(text)
       const actual = await Effect.runPromise(countTokens(text))
       expect(approx).toBeGreaterThanOrEqual(actual)
@@ -110,7 +113,8 @@ describe('token utilities', () => {
     })
 
     it('is conservative for file paths', async () => {
-      const path = '/very/long/path/to/deeply/nested/directory/structure/that/keeps/going/file.md'
+      const path =
+        '/very/long/path/to/deeply/nested/directory/structure/that/keeps/going/file.md'
       const approx = countTokensApprox(path)
       const actual = await Effect.runPromise(countTokens(path))
       expect(approx).toBeGreaterThanOrEqual(actual)
@@ -118,7 +122,8 @@ describe('token utilities', () => {
     })
 
     it('is conservative for mixed content', async () => {
-      const text = '# Title\n\nSome prose with `code` and a path `/src/utils.ts`.\n\n```js\nconst x = 1;\n```'
+      const text =
+        '# Title\n\nSome prose with `code` and a path `/src/utils.ts`.\n\n```js\nconst x = 1;\n```'
       const approx = countTokensApprox(text)
       const actual = await Effect.runPromise(countTokens(text))
       expect(approx).toBeGreaterThanOrEqual(actual)
@@ -126,7 +131,8 @@ describe('token utilities', () => {
     })
 
     it('is conservative for punctuation-heavy text', async () => {
-      const text = "Hello, world! How are you? Fine, thanks... Well: good! (Yes, really.)"
+      const text =
+        'Hello, world! How are you? Fine, thanks... Well: good! (Yes, really.)'
       const approx = countTokensApprox(text)
       const actual = await Effect.runPromise(countTokens(text))
       expect(approx).toBeGreaterThanOrEqual(actual)

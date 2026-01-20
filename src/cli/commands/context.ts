@@ -45,9 +45,11 @@ export const contextCommand = Command.make(
       const fileList: string[] = Array.isArray(files) ? files : []
 
       if (fileList.length === 0) {
-        yield* Console.log('Error: At least one file is required')
-        yield* Console.log('Usage: mdtldr context <file> [files...]')
-        return
+        yield* Effect.fail(
+          new Error(
+            'At least one file is required. Usage: mdtldr context <file> [files...]',
+          ),
+        )
       }
 
       // Determine level

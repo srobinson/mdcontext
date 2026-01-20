@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { formatSummary } from './formatters.js'
 import { countTokensApprox } from '../utils/tokens.js'
+import { formatSummary } from './formatters.js'
 import type { DocumentSummary } from './summarizer.js'
 
 describe('token budget enforcement', () => {
@@ -178,7 +178,8 @@ describe('token budget enforcement', () => {
   it('stays within budget for long paths and titles', () => {
     const mockSummary = {
       path: '/very/long/path/to/deeply/nested/directory/structure/that/keeps/going/file.md',
-      title: 'A Very Long Document Title That Uses Significantly More Tokens Than Expected',
+      title:
+        'A Very Long Document Title That Uses Significantly More Tokens Than Expected',
       originalTokens: 1000,
       summaryTokens: 100,
       compressionRatio: 0.9,
@@ -195,7 +196,14 @@ describe('token budget enforcement', () => {
           hasTable: false,
         },
       ],
-      keyTopics: ['topic1', 'topic2', 'topic3', 'topic4', 'topic5', 'long-topic-name'],
+      keyTopics: [
+        'topic1',
+        'topic2',
+        'topic3',
+        'topic4',
+        'topic5',
+        'long-topic-name',
+      ],
     }
 
     const output = formatSummary(mockSummary, { maxTokens: 100 })
@@ -244,14 +252,16 @@ describe('token budget enforcement', () => {
               level: 2,
               originalTokens: 200,
               summaryTokens: 80,
-              summary: 'This component handles user authentication and session management with proper error handling.',
+              summary:
+                'This component handles user authentication and session management with proper error handling.',
               children: [
                 {
                   heading: 'Props',
                   level: 3,
                   originalTokens: 100,
                   summaryTokens: 40,
-                  summary: 'Accepts user object, onLogin callback, and configuration options.',
+                  summary:
+                    'Accepts user object, onLogin callback, and configuration options.',
                   children: [],
                   hasCode: true,
                   hasList: false,
@@ -267,7 +277,8 @@ describe('token budget enforcement', () => {
               level: 2,
               originalTokens: 300,
               summaryTokens: 120,
-              summary: 'Uses React hooks for state management. Implements OAuth2 flow with PKCE.',
+              summary:
+                'Uses React hooks for state management. Implements OAuth2 flow with PKCE.',
               children: [],
               hasCode: true,
               hasList: true,
@@ -330,7 +341,8 @@ describe('token budget enforcement', () => {
             level: 2,
             originalTokens: 500,
             summaryTokens: 200,
-            summary: '```typescript\nfunction parse(input: string): AST {\n  const tokens = tokenize(input);\n  return buildTree(tokens);\n}\n```',
+            summary:
+              '```typescript\nfunction parse(input: string): AST {\n  const tokens = tokenize(input);\n  return buildTree(tokens);\n}\n```',
             children: [],
             hasCode: true,
             hasList: false,

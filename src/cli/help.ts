@@ -55,16 +55,31 @@ export const helpContent: Record<string, CommandHelp> = {
     description: 'Search markdown content by meaning or heading pattern',
     usage: 'mdtldr search [options] <query> [path]',
     examples: [
-      'mdtldr search "auth"            # Search headings (auto-detects mode)',
-      'mdtldr search "how to deploy"   # Semantic search (if embeddings exist)',
-      'mdtldr search -s "API.*"        # Force structural/regex search',
-      'mdtldr search -n 5 "setup"      # Limit to 5 results',
-      'mdtldr search "config" docs/    # Search in specific directory',
+      'mdtldr search "auth"                    # Simple term search',
+      'mdtldr search "auth AND deploy"         # Both terms required',
+      'mdtldr search "error OR bug"            # Either term matches',
+      'mdtldr search "impl NOT test"           # Exclude "test"',
+      'mdtldr search "auth AND (error OR bug)" # Grouped expressions',
+      'mdtldr search \'"exact phrase"\'          # Exact phrase match',
+      'mdtldr search \'"context resumption" AND drift\'  # Phrase + boolean',
+      'mdtldr search -H "API.*"                # Regex on headings only',
+      'mdtldr search --mode structural "auth"  # Force structural mode',
+      'mdtldr search --mode semantic "auth"    # Force semantic mode',
+      'mdtldr search -n 5 "setup"              # Limit to 5 results',
+      'mdtldr search "config" docs/            # Search in specific directory',
     ],
     options: [
       {
         name: '-s, --structural',
-        description: 'Force structural search (heading regex match)',
+        description: 'Force structural search (content text match)',
+      },
+      {
+        name: '-H, --heading-only',
+        description: 'Search headings only (not content)',
+      },
+      {
+        name: '-m, --mode <mode>',
+        description: 'Force search mode: semantic or structural',
       },
       {
         name: '-n, --limit <n>',
@@ -80,6 +95,8 @@ export const helpContent: Record<string, CommandHelp> = {
     ],
     notes: [
       'Auto-detects mode: semantic if embeddings exist, structural otherwise.',
+      'Boolean operators: AND, OR, NOT (case-insensitive).',
+      'Quoted phrases match exactly: "context resumption".',
       'Regex patterns (e.g., "API.*") always use structural search.',
       'Run "mdtldr index --embed" first for semantic search.',
     ],
@@ -254,7 +271,10 @@ export const showMainHelp = (): void => {
   mdtldr tree README.md               # Show document outline
   mdtldr index                        # Index current directory
   mdtldr index --embed                # Index with semantic embeddings
-  mdtldr search "auth"                # Structural search (matches headings)
+  mdtldr search "auth"                # Simple term search
+  mdtldr search "auth AND deploy"     # Boolean AND (both required)
+  mdtldr search "error OR bug"        # Boolean OR (either matches)
+  mdtldr search '"exact phrase"'      # Quoted phrase (exact match)
   mdtldr search "how to deploy"       # Semantic search (if embeddings exist)
   mdtldr context README.md            # Summarize a file
   mdtldr context *.md -t 2000         # Multi-file with token budget
@@ -265,6 +285,9 @@ export const showMainHelp = (): void => {
 
   \x1b[2m# Find relevant documentation\x1b[0m
   mdtldr search "error handling"
+
+  \x1b[2m# Complex queries with boolean operators\x1b[0m
+  mdtldr search "auth AND (error OR exception) NOT test"
 
   \x1b[2m# Explore a new codebase\x1b[0m
   mdtldr tree && mdtldr stats

@@ -391,7 +391,7 @@ export const summarizeFile = (
 // Format Summary for Output (re-exported from formatters.ts)
 // ============================================================================
 
-export { formatSummary, type FormatSummaryOptions } from './formatters.js'
+export { type FormatSummaryOptions, formatSummary } from './formatters.js'
 
 // ============================================================================
 // Multi-Document Context Assembly

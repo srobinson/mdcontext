@@ -72,8 +72,18 @@ const rootFlag: FlagSpec = {
 export const indexSchema: CommandSchema = {
   name: 'index',
   flags: [
-    { name: 'embed', type: 'boolean', alias: 'e', description: 'Build semantic embeddings' },
-    { name: 'watch', type: 'boolean', alias: 'w', description: 'Watch for changes' },
+    {
+      name: 'embed',
+      type: 'boolean',
+      alias: 'e',
+      description: 'Build semantic embeddings',
+    },
+    {
+      name: 'watch',
+      type: 'boolean',
+      alias: 'w',
+      description: 'Watch for changes',
+    },
     forceFlag,
     jsonFlag,
     prettyFlag,
@@ -83,9 +93,30 @@ export const indexSchema: CommandSchema = {
 export const searchSchema: CommandSchema = {
   name: 'search',
   flags: [
-    { name: 'structural', type: 'boolean', alias: 's', description: 'Force structural search' },
-    { name: 'heading-only', type: 'boolean', alias: 'H', description: 'Search headings only' },
-    { name: 'limit', type: 'string', alias: 'n', description: 'Maximum results' },
+    {
+      name: 'structural',
+      type: 'boolean',
+      alias: 's',
+      description: 'Force structural search',
+    },
+    {
+      name: 'heading-only',
+      type: 'boolean',
+      alias: 'H',
+      description: 'Search headings only',
+    },
+    {
+      name: 'mode',
+      type: 'string',
+      alias: 'm',
+      description: 'Force search mode (semantic or structural)',
+    },
+    {
+      name: 'limit',
+      type: 'string',
+      alias: 'n',
+      description: 'Maximum results',
+    },
     { name: 'threshold', type: 'string', description: 'Similarity threshold' },
     jsonFlag,
     prettyFlag,
@@ -143,7 +174,9 @@ export const commandSchemas: Record<string, CommandSchema> = {
 /**
  * Get schema for a command
  */
-export const getCommandSchema = (commandName: string): CommandSchema | undefined => {
+export const getCommandSchema = (
+  commandName: string,
+): CommandSchema | undefined => {
   return commandSchemas[commandName]
 }
 
@@ -164,14 +197,20 @@ export const getValidFlags = (schema: CommandSchema): Set<string> => {
 /**
  * Check if a flag takes a value for a given command
  */
-export const flagTakesValue = (schema: CommandSchema, flag: string): boolean => {
+export const flagTakesValue = (
+  schema: CommandSchema,
+  flag: string,
+): boolean => {
   // Handle --flag=value syntax
   if (flag.includes('=')) {
     return false // Value is already embedded
   }
 
   for (const spec of schema.flags) {
-    if (flag === `--${spec.name}` || (spec.alias && flag === `-${spec.alias}`)) {
+    if (
+      flag === `--${spec.name}` ||
+      (spec.alias && flag === `-${spec.alias}`)
+    ) {
       return spec.type === 'string'
     }
   }
@@ -181,9 +220,15 @@ export const flagTakesValue = (schema: CommandSchema, flag: string): boolean => 
 /**
  * Find the canonical name for a flag (for suggestions)
  */
-export const getCanonicalFlagName = (schema: CommandSchema, flag: string): string | undefined => {
+export const getCanonicalFlagName = (
+  schema: CommandSchema,
+  flag: string,
+): string | undefined => {
   for (const spec of schema.flags) {
-    if (flag === `--${spec.name}` || (spec.alias && flag === `-${spec.alias}`)) {
+    if (
+      flag === `--${spec.name}` ||
+      (spec.alias && flag === `-${spec.alias}`)
+    ) {
       return `--${spec.name}`
     }
   }

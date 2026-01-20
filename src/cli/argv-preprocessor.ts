@@ -15,9 +15,9 @@
 
 import {
   type CommandSchema,
-  flagTakesValue as schemaFlagTakesValue,
   getCommandSchema,
   getValidFlags,
+  flagTakesValue as schemaFlagTakesValue,
 } from './flag-schemas.js'
 import { formatValidFlags, suggestFlag } from './typo-suggester.js'
 
@@ -99,7 +99,9 @@ export const preprocessArgv = (argv: string[]): string[] => {
 /**
  * Preprocess argv with validation (for testing)
  */
-export const preprocessArgvWithValidation = (argv: string[]): PreprocessResult => {
+export const preprocessArgvWithValidation = (
+  argv: string[],
+): PreprocessResult => {
   // argv[0] = node, argv[1] = script, rest = user args
   const nodeAndScript = argv.slice(0, 2)
   const userArgs = argv.slice(2)
