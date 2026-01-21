@@ -25,38 +25,38 @@ Replace hardcoded `flagsWithValues` set with a schema-based approach:
 
 ```typescript
 interface FlagSpec {
-  type: "boolean" | "string"
+  type: "boolean" | "string";
 }
 
 const schema: Record<string, FlagSpec> = {
   "--json": { type: "boolean" },
   "--output": { type: "string" },
-}
+};
 
 function parse(argv: string[], schema: Record<string, FlagSpec>) {
-  const options: Record<string, any> = {}
-  const positionals: string[] = []
+  const options: Record<string, any> = {};
+  const positionals: string[] = [];
 
   for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i]
+    const arg = argv[i];
     if (arg.startsWith("-")) {
-      const spec = schema[arg]
-      if (!spec) throw new Error(`Unknown option: ${arg}`)
+      const spec = schema[arg];
+      if (!spec) throw new Error(`Unknown option: ${arg}`);
       if (spec.type === "boolean") {
-        options[arg] = true
+        options[arg] = true;
       } else {
-        const value = argv[i + 1]
+        const value = argv[i + 1];
         if (!value || value.startsWith("-")) {
-          throw new Error(`Missing value for option: ${arg}`)
+          throw new Error(`Missing value for option: ${arg}`);
         }
-        options[arg] = value
-        i++
+        options[arg] = value;
+        i++;
       }
     } else {
-      positionals.push(arg)
+      positionals.push(arg);
     }
   }
-  return { options, positionals }
+  return { options, positionals };
 }
 ```
 

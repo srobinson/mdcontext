@@ -23,12 +23,14 @@ A comprehensive research document covering developer experience, automated chang
 As of July 2025, [npm trusted publishing with OIDC](https://github.blog/changelog/2025-07-31-npm-trusted-publishing-with-oidc-is-generally-available/) is generally available. This is a game-changer for security and developer experience:
 
 **Key Benefits:**
+
 - **No more token management**: Eliminates storing, rotating, or accidentally exposing npm tokens
 - **Short-lived credentials**: Each publish uses workflow-specific credentials that cannot be exfiltrated
 - **Automatic provenance**: Provenance attestations are published by default (no `--provenance` flag needed)
 - **Industry standard**: Implements OpenSSF trusted publishers specification (joining PyPI, RubyGems)
 
 **Requirements:**
+
 - npm CLI version 11.5.1 or later
 - GitHub Actions with `id-token: write` permission
 
@@ -43,7 +45,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write  # Required for OIDC trusted publishing
+  id-token: write # Required for OIDC trusted publishing
 
 jobs:
   publish:
@@ -58,9 +60,9 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'pnpm'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "22"
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org"
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
@@ -71,6 +73,7 @@ jobs:
 ```
 
 **Critical Notes:**
+
 - The `--no-git-checks` flag bypasses pnpm's detached HEAD check in GitHub Actions
 - pnpm setup must come BEFORE setup-node to enable `cache: 'pnpm'`
 - Use `NODE_AUTH_TOKEN` (not `NPM_TOKEN`) if still using token-based auth
@@ -90,21 +93,23 @@ Based on [Zach Leatherman's security recommendations](https://www.zachleat.com/w
 
 ### Tool Comparison
 
-| Tool | Philosophy | Best For | Weekly Downloads |
-|------|------------|----------|------------------|
-| [semantic-release](https://github.com/semantic-release/release-notes-generator) | Fully automated | Single packages, full automation | ~2M |
-| [Changesets](https://github.com/changesets/changesets) | Human control | Monorepos, collaborative teams | ~800K |
-| [release-it](https://github.com/release-it/release-it) | Flexible middle-ground | Customizable workflows | ~670K |
-| [np](https://github.com/sindresorhus/np) | Interactive local | Single packages, manual control | ~400K |
+| Tool                                                                            | Philosophy             | Best For                         | Weekly Downloads |
+| ------------------------------------------------------------------------------- | ---------------------- | -------------------------------- | ---------------- |
+| [semantic-release](https://github.com/semantic-release/release-notes-generator) | Fully automated        | Single packages, full automation | ~2M              |
+| [Changesets](https://github.com/changesets/changesets)                          | Human control          | Monorepos, collaborative teams   | ~800K            |
+| [release-it](https://github.com/release-it/release-it)                          | Flexible middle-ground | Customizable workflows           | ~670K            |
+| [np](https://github.com/sindresorhus/np)                                        | Interactive local      | Single packages, manual control  | ~400K            |
 
 ### Semantic-Release
 
 **Pros:**
+
 - Zero human intervention once configured
 - Strong Conventional Commits integration
 - Extensive plugin ecosystem
 
 **Cons:**
+
 - Not built for monorepos (community plugins are outdated)
 - Version coupling with deploys causes cleanup issues on failure
 - Package.json version stays at `0.0.0` until build
@@ -112,6 +117,7 @@ Based on [Zach Leatherman's security recommendations](https://www.zachleat.com/w
 ### Changesets (Recommended for Most Projects)
 
 **Workflow:**
+
 ```bash
 # Developer creates changeset describing their change
 pnpm changeset
@@ -123,12 +129,14 @@ pnpm changeset publish
 ```
 
 **Pros:**
+
 - Built for monorepos first
 - Human-reviewable changelog entries
 - Decouples versioning from deployment
 - [pnpm integration](https://pnpm.io/next/using-changesets) is excellent
 
 **Cons:**
+
 - Requires package.json for version tracking (odd for non-JS packages)
 - More manual than semantic-release
 
@@ -158,9 +166,9 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'pnpm'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "22"
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org"
 
       - run: pnpm install --frozen-lockfile
 
@@ -188,6 +196,7 @@ npx np --preview
 ```
 
 **Safety checks np performs:**
+
 - Publishing from correct branch
 - Clean working directory
 - No unpulled remote changes
@@ -209,7 +218,7 @@ on: [push, pull_request]
 jobs:
   test:
     strategy:
-      fail-fast: false  # Continue other tests if one fails
+      fail-fast: false # Continue other tests if one fails
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         node: [18, 20, 22]
@@ -230,7 +239,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - run: pnpm install --frozen-lockfile
 
@@ -291,6 +300,7 @@ npx publint
 ```
 
 **What it checks:**
+
 - `main`, `module`, `exports` field correctness
 - ESM/CJS interpretation issues
 - Missing entrypoints
@@ -311,6 +321,7 @@ npx attw --pack .
 ```
 
 **Issues detected:**
+
 - Resolution failures
 - Missing types
 - CJS/ESM masquerading
@@ -343,8 +354,8 @@ quality:
 
     - uses: actions/setup-node@v4
       with:
-        node-version: '22'
-        cache: 'pnpm'
+        node-version: "22"
+        cache: "pnpm"
 
     - run: pnpm install --frozen-lockfile
     - run: pnpm build
@@ -376,12 +387,12 @@ quality:
 module.exports = {
   files: [
     {
-      path: './dist/*.js',
-      maxSize: '50kb',
+      path: "./dist/*.js",
+      maxSize: "50kb",
     },
   ],
   ci: {
-    trackBranches: ['main'],
+    trackBranches: ["main"],
   },
 };
 ```
@@ -438,6 +449,7 @@ publish:
 ```
 
 **Key insight**: npm publishes are generally **not** safely auto-reversible. Instead:
+
 - Use `--dry-run` first
 - Keep pre-publish checks comprehensive
 - Document manual recovery steps
@@ -452,16 +464,19 @@ publish:
 Based on extensive research from multiple sources:
 
 **Adoption:**
+
 - 7+ million monthly downloads
 - Used by Midjourney, Anthropic (for Claude Code CLI)
 - [Anthropic acquired Bun in November 2025](https://dev.to/rayenmabrouk/why-we-ditched-node-for-bun-in-2026-and-why-you-should-too-48kg)
 
 **Compatibility:**
+
 - 95%+ Node.js API compatibility
 - Native TypeScript execution (no transpilation step)
 - [Full workspace support](https://bun.com/docs/pm/workspaces) with glob patterns
 
 **Performance:**
+
 - 3-4x faster execution than Node.js in many scenarios
 - HTTP: ~52,000 req/s vs Node's ~13,000 req/s
 - 30-50% infrastructure cost reductions reported
@@ -485,25 +500,27 @@ According to [2026 production assessments](https://dev.to/last9/is-bun-productio
 
 ### Bun vs Node.js for CLI Tools
 
-| Aspect | Bun | Node.js |
-|--------|-----|---------|
-| Startup time | ~25ms | ~100-150ms |
-| TypeScript execution | Native | Requires transpilation |
-| Single-file executables | Yes (`bun build --compile`) | Needs pkg/nexe |
-| npm compatibility | 95%+ | 100% |
-| Native addons | Some issues | Full support |
-| Ecosystem maturity | Growing | Mature |
+| Aspect                  | Bun                         | Node.js                |
+| ----------------------- | --------------------------- | ---------------------- |
+| Startup time            | ~25ms                       | ~100-150ms             |
+| TypeScript execution    | Native                      | Requires transpilation |
+| Single-file executables | Yes (`bun build --compile`) | Needs pkg/nexe         |
+| npm compatibility       | 95%+                        | 100%                   |
+| Native addons           | Some issues                 | Full support           |
+| Ecosystem maturity      | Growing                     | Mature                 |
 
 ### md-tldr Specific Analysis
 
 Looking at the md-tldr `package.json`:
 
 **Dependencies that may have Bun issues:**
+
 - `hnswlib-node` - Native addon, potential compatibility issues
 - `tiktoken` - Native addon for tokenization
 - `@effect/*` - Modern ESM, should work fine
 
 **Low-risk dependencies:**
+
 - `openai`, `remark-*`, `unified` - Pure JS, should work
 - `gray-matter`, `chokidar` - Widely used, likely compatible
 
@@ -560,7 +577,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-          cache: 'pnpm'
+          cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
       - run: pnpm build
@@ -576,8 +593,8 @@ jobs:
           version: 10
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'pnpm'
+          node-version: "22"
+          cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm typecheck
@@ -594,9 +611,9 @@ jobs:
           version: 10
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'pnpm'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "22"
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org"
       - run: pnpm install --frozen-lockfile
       - name: Create Release PR or Publish
         uses: changesets/action@v1
@@ -624,18 +641,21 @@ Add to `package.json`:
 **Recommendation: Wait, but prepare**
 
 **Reasons to wait:**
+
 1. `hnswlib-node` and `tiktoken` are native addons - potential compatibility issues
 2. md-tldr is a CLI tool users install globally - Node.js compatibility is safer
 3. pnpm + tsup workflow is working well
 4. 34% compatibility challenge rate is still significant
 
 **Reasons to consider later:**
+
 1. CLI tools benefit most from Bun's fast startup
 2. Anthropic backing means long-term support
 3. Direct TypeScript execution simplifies development
 4. Could offer Bun-compiled binary as alternative distribution
 
 **Recommended approach:**
+
 1. Keep Node.js as primary target for npm package
 2. Test with Bun locally for development speed
 3. Consider offering a Bun-compiled binary in the future
@@ -656,12 +676,14 @@ Add to `package.json`:
 ## Sources
 
 ### npm Publishing and OIDC
+
 - [npm Trusted Publishing with OIDC (GitHub Blog)](https://github.blog/changelog/2025-07-31-npm-trusted-publishing-with-oidc-is-generally-available/)
 - [npm Trusted Publishers Documentation](https://docs.npmjs.com/trusted-publishers/)
 - [Zach Leatherman: npm Security Best Practices](https://www.zachleat.com/web/npm-security)
 - [Auto publish with pnpm and GitHub Actions (DEV.to)](https://dev.to/receter/automatically-publish-your-node-package-to-npm-with-pnpm-and-github-actions-22eg)
 
 ### Changelog and Versioning
+
 - [Using Changesets with pnpm](https://pnpm.io/next/using-changesets)
 - [conventional-changelog (GitHub)](https://github.com/conventional-changelog/conventional-changelog)
 - [git-cliff](https://git-cliff.org/)
@@ -669,16 +691,19 @@ Add to `package.json`:
 - [np - A Better npm publish](https://github.com/sindresorhus/np)
 
 ### Quality Tools
+
 - [publint](https://publint.dev/)
 - [Are The Types Wrong?](https://arethetypeswrong.github.io/)
 - [Bundlephobia](https://bundlephobia.com/)
 - [@arethetypeswrong/cli (npm)](https://www.npmjs.com/package/@arethetypeswrong/cli)
 
 ### Testing
+
 - [GitHub Actions Matrix Strategy Guide](https://codefresh.io/learn/github-actions/github-actions-matrix/)
 - [TypeScript Test Matrix (TypeScript.tv)](https://typescript.tv/best-practices/create-a-typescript-test-matrix-using-github-actions/)
 
 ### Bun
+
 - [Bun Official Site](https://bun.com)
 - [Bun Workspaces Documentation](https://bun.com/docs/pm/workspaces)
 - [Bun vs Node.js 2025 (Strapi)](https://strapi.io/blog/bun-vs-nodejs-performance-comparison-guide)
@@ -687,10 +712,11 @@ Add to `package.json`:
 - [Bun Package Manager Reality Check 2026](https://vocal.media/01/bun-package-manager-reality-check-2026)
 
 ### Error Handling
+
 - [Emergency Rollback Workflows (Latenode Community)](https://community.latenode.com/t/emergency-rollback-workflows-after-failed-npm-updates/40265)
 - [semantic-release npm publish recovery](https://github.com/semantic-release/npm/issues/54)
 
 ---
 
-*Last updated: January 2026*
-*Research conducted for md-tldr CLI tool publishing workflow optimization*
+_Last updated: January 2026_
+_Research conducted for md-tldr CLI tool publishing workflow optimization_

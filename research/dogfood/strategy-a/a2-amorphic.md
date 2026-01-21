@@ -1,9 +1,11 @@
 # Report: A2 - Amorphic Feedback Analyst
 
 ## Mission
+
 Extract feedback, criticism, suggestions, and concerns from docs.amorphic/
 
 ## Command Log
+
 | # | Command | Purpose | Result | Useful? |
 |---|---------|---------|--------|---------|
 | 1 | mdtldr --help | Learn tool capabilities | Showed commands: index, search, context, tree, links, backlinks, stats | Yes |
@@ -109,6 +111,7 @@ Extract feedback, criticism, suggestions, and concerns from docs.amorphic/
 ## Tool Evaluation
 
 ### What Worked Well
+
 - `mdtldr context` command is excellent - 44-61% token reduction while preserving key content
 - `mdtldr tree` for document outlines is helpful for understanding structure
 - `mdtldr search` works well for keyword-based exploration
@@ -117,6 +120,7 @@ Extract feedback, criticism, suggestions, and concerns from docs.amorphic/
 - Multiple output formats supported (normal, JSON, pretty JSON)
 
 ### What Was Frustrating
+
 - Search doesn't work with path argument like `mdtldr search "term" docs.amorphic/` - always says "No index found" even though index exists
 - The `_0.BLURB.md` context returned essentially nothing (100% reduction to 57 tokens from 2449) - unclear why
 - No way to filter search results to specific directories/paths after indexing
@@ -125,6 +129,7 @@ Extract feedback, criticism, suggestions, and concerns from docs.amorphic/
 - Cannot search for multiple terms without boolean operators (AND/OR)
 
 ### What Was Missing
+
 - **Directory-scoped search**: Critical for multi-folder repos. Having to search the whole index then mentally filter is inefficient
 - **Semantic search without embeddings**: The tool prompts for OpenAI API but doesn't make it easy to do without
 - **Context for multiple files at once**: Would love `mdtldr context docs.amorphic/*.md -t 10000`
@@ -134,14 +139,17 @@ Extract feedback, criticism, suggestions, and concerns from docs.amorphic/
 - **Section-level context extraction**: Can get file context but not section-specific context easily
 
 ### Confidence Level
+
 [X] Medium
 
 The tool helped me find key themes and quotes faster than reading all ~62K tokens of docs.amorphic/ content. However, I'm uncertain whether the keyword search missed important feedback that used different terminology. The inability to scope searches to the target directory was a significant limitation. The context summaries were very useful but varied in quality (the blurb file got reduced to nothing).
 
 ### Would Use Again? (1-5)
+
 [4] - Good for quick exploration and context extraction. The `context` command alone is valuable. Search limitations are frustrating but workable with creative query strategies. Would be a 5 with directory-scoped search.
 
 ## Time & Efficiency
+
 - Commands run: 38 (including retries and experiments)
 - Productive commands: ~25
 - Compared to reading all files: **Much less time** - docs.amorphic/ is ~62K tokens; I got useful summaries from ~8K tokens of context output plus search results

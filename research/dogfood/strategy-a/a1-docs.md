@@ -1,55 +1,58 @@
 # Report: A1 - Spec Analyst
 
 ## Mission
+
 Extract the current spec's structure, key claims, and design decisions from docs/
 
 ## Command Log
-| # | Command | Purpose | Result | Useful? |
-|---|---------|---------|--------|---------|
-| 1 | `mdtldr --help` | Learn tool | Full command list with examples | Yes |
-| 2 | `mdtldr index --help` | Learn index options | Options for --embed, --watch, --force | Yes |
-| 3 | `mdtldr search --help` | Learn search options | Boolean ops, context lines, modes | Yes |
-| 4 | `mdtldr context --help` | Learn context options | Token budgets, section filtering | Yes |
-| 5 | `mdtldr index --force --no-embed` | Index workspace | 23 docs, 922 sections, 535ms | Yes |
-| 6 | `mdtldr tree` | List all markdown files | 23 files including 10 in docs/ | Yes |
-| 7 | `mdtldr tree docs/00-README.md` | Show doc outline | 9 sections, 1637 tokens | Yes |
-| 8 | `mdtldr tree docs/01-ARCHITECTURE.md` | Architecture outline | 49 sections, 5037 tokens | Yes |
-| 9 | `mdtldr tree docs/02-PRIMITIVES.md` | Primitives outline | 67 sections, 6803 tokens | Yes |
-| 10 | `mdtldr tree docs/03-ORG_WORKSPACE_MODEL.md` | Org/Workspace outline | 52 sections, 5360 tokens | Yes |
-| 11 | `mdtldr tree docs/04-EXECUTION_MODEL.md` | Execution outline | 63 sections, 7418 tokens | Yes |
-| 12 | `mdtldr tree docs/05-MEMORY_MODEL.md` | Memory outline | 56 sections, 6848 tokens | Yes |
-| 13 | `mdtldr tree docs/06-WORKFLOWS.md` | Workflows outline | 65 sections, 8541 tokens | Yes |
-| 14 | `mdtldr tree docs/07-EXAMPLE_WORKFLOWS.md` | Examples outline | 55 sections, 14423 tokens | Yes |
-| 15 | `mdtldr context docs/00-README.md -t 3000` | Get README summary | Full content with 50% reduction | Yes |
-| 16 | `mdtldr context docs/01-ARCHITECTURE.md --section "Architectural Overview"` | Get overview | Core separation of concerns | Yes |
-| 17 | `mdtldr context docs/01-ARCHITECTURE.md --section "Why This Architecture Works"` | Get justification | 6 key reasons | Yes |
-| 18 | `mdtldr search "human control"` | Find human control theme | 10 results across docs | Yes |
-| 19 | `mdtldr search "immutable"` | Find immutability theme | 10 results | Yes |
-| 20 | `mdtldr search "workspace"` | Find workspace concept | 5 results | Yes |
-| 21 | `mdtldr search "checkpoint"` | Find checkpoint references | 8 results | Yes |
-| 22 | `mdtldr search "safety"` | Find safety theme | 5 results | Yes |
-| 23 | `mdtldr context docs/01-ARCHITECTURE.md --section "Architectural Invariants"` | Get invariants | 8 system invariants | Yes |
-| 24 | `mdtldr context docs/02-PRIMITIVES.md --section "Summary"` | Get primitives summary | Minimal primitive philosophy | Yes |
-| 25 | `mdtldr context docs/05-MEMORY_MODEL.md --section "Memory Philosophy"` | Get memory philosophy | Memory defined as derived understanding | Yes |
-| 26 | `mdtldr context docs/05-MEMORY_MODEL.md --section "Why This Model Works"` | Get memory justification | Enables/Prevents/Supports/Scales | Yes |
-| 27 | `mdtldr context docs/06-WORKFLOWS.md --section "Workflow Philosophy"` | Get workflow philosophy | Guidance, not law | Yes |
-| 28 | `mdtldr search "three-layer"` | Find memory layers | 5 results | Yes |
-| 29 | `mdtldr context docs/05-MEMORY_MODEL.md --section "The Three-Layer Architecture"` | Get layer details | Event/Status/Semantic layers | Yes |
-| 30 | `mdtldr search '"execution context"'` | Find execution contexts | 5 results (exact phrase) | Yes |
-| 31 | `mdtldr search "parallel exploration"` | Find parallel work | 5 results | Yes |
-| 32 | `mdtldr search "cost"` | Find cost model | 5 results | Yes |
-| 33 | `mdtldr search "Control Plane"` | Find control plane | 5 results | Yes |
-| 34 | `mdtldr context docs/02-PRIMITIVES.md --section "Control Plane"` | Get control plane details | Full primitive definition | Yes |
-| 35 | `mdtldr search "time travel"` | Find time travel | 5 results | Yes |
-| 36 | `mdtldr search "branching"` | Find branching | 5 results | Yes |
-| 37 | `mdtldr context docs/05-MEMORY_MODEL.md --section "Time Travel"` | Get time travel details | Query-based, not feature | Yes |
-| 38 | `mdtldr search "guarantee"` | Find guarantees | 8 results | Yes |
-| 39 | `mdtldr context docs/04-EXECUTION_MODEL.md --section "Guarantees"` | Get execution guarantees | 7 explicit guarantees | Yes |
-| 40 | `mdtldr stats` | Get index statistics | 23 docs, 178K tokens, 922 sections | Yes |
+
+| #   | Command                                                                           | Purpose                    | Result                                  | Useful? |
+| --- | --------------------------------------------------------------------------------- | -------------------------- | --------------------------------------- | ------- |
+| 1   | `mdtldr --help`                                                                   | Learn tool                 | Full command list with examples         | Yes     |
+| 2   | `mdtldr index --help`                                                             | Learn index options        | Options for --embed, --watch, --force   | Yes     |
+| 3   | `mdtldr search --help`                                                            | Learn search options       | Boolean ops, context lines, modes       | Yes     |
+| 4   | `mdtldr context --help`                                                           | Learn context options      | Token budgets, section filtering        | Yes     |
+| 5   | `mdtldr index --force --no-embed`                                                 | Index workspace            | 23 docs, 922 sections, 535ms            | Yes     |
+| 6   | `mdtldr tree`                                                                     | List all markdown files    | 23 files including 10 in docs/          | Yes     |
+| 7   | `mdtldr tree docs/00-README.md`                                                   | Show doc outline           | 9 sections, 1637 tokens                 | Yes     |
+| 8   | `mdtldr tree docs/01-ARCHITECTURE.md`                                             | Architecture outline       | 49 sections, 5037 tokens                | Yes     |
+| 9   | `mdtldr tree docs/02-PRIMITIVES.md`                                               | Primitives outline         | 67 sections, 6803 tokens                | Yes     |
+| 10  | `mdtldr tree docs/03-ORG_WORKSPACE_MODEL.md`                                      | Org/Workspace outline      | 52 sections, 5360 tokens                | Yes     |
+| 11  | `mdtldr tree docs/04-EXECUTION_MODEL.md`                                          | Execution outline          | 63 sections, 7418 tokens                | Yes     |
+| 12  | `mdtldr tree docs/05-MEMORY_MODEL.md`                                             | Memory outline             | 56 sections, 6848 tokens                | Yes     |
+| 13  | `mdtldr tree docs/06-WORKFLOWS.md`                                                | Workflows outline          | 65 sections, 8541 tokens                | Yes     |
+| 14  | `mdtldr tree docs/07-EXAMPLE_WORKFLOWS.md`                                        | Examples outline           | 55 sections, 14423 tokens               | Yes     |
+| 15  | `mdtldr context docs/00-README.md -t 3000`                                        | Get README summary         | Full content with 50% reduction         | Yes     |
+| 16  | `mdtldr context docs/01-ARCHITECTURE.md --section "Architectural Overview"`       | Get overview               | Core separation of concerns             | Yes     |
+| 17  | `mdtldr context docs/01-ARCHITECTURE.md --section "Why This Architecture Works"`  | Get justification          | 6 key reasons                           | Yes     |
+| 18  | `mdtldr search "human control"`                                                   | Find human control theme   | 10 results across docs                  | Yes     |
+| 19  | `mdtldr search "immutable"`                                                       | Find immutability theme    | 10 results                              | Yes     |
+| 20  | `mdtldr search "workspace"`                                                       | Find workspace concept     | 5 results                               | Yes     |
+| 21  | `mdtldr search "checkpoint"`                                                      | Find checkpoint references | 8 results                               | Yes     |
+| 22  | `mdtldr search "safety"`                                                          | Find safety theme          | 5 results                               | Yes     |
+| 23  | `mdtldr context docs/01-ARCHITECTURE.md --section "Architectural Invariants"`     | Get invariants             | 8 system invariants                     | Yes     |
+| 24  | `mdtldr context docs/02-PRIMITIVES.md --section "Summary"`                        | Get primitives summary     | Minimal primitive philosophy            | Yes     |
+| 25  | `mdtldr context docs/05-MEMORY_MODEL.md --section "Memory Philosophy"`            | Get memory philosophy      | Memory defined as derived understanding | Yes     |
+| 26  | `mdtldr context docs/05-MEMORY_MODEL.md --section "Why This Model Works"`         | Get memory justification   | Enables/Prevents/Supports/Scales        | Yes     |
+| 27  | `mdtldr context docs/06-WORKFLOWS.md --section "Workflow Philosophy"`             | Get workflow philosophy    | Guidance, not law                       | Yes     |
+| 28  | `mdtldr search "three-layer"`                                                     | Find memory layers         | 5 results                               | Yes     |
+| 29  | `mdtldr context docs/05-MEMORY_MODEL.md --section "The Three-Layer Architecture"` | Get layer details          | Event/Status/Semantic layers            | Yes     |
+| 30  | `mdtldr search '"execution context"'`                                             | Find execution contexts    | 5 results (exact phrase)                | Yes     |
+| 31  | `mdtldr search "parallel exploration"`                                            | Find parallel work         | 5 results                               | Yes     |
+| 32  | `mdtldr search "cost"`                                                            | Find cost model            | 5 results                               | Yes     |
+| 33  | `mdtldr search "Control Plane"`                                                   | Find control plane         | 5 results                               | Yes     |
+| 34  | `mdtldr context docs/02-PRIMITIVES.md --section "Control Plane"`                  | Get control plane details  | Full primitive definition               | Yes     |
+| 35  | `mdtldr search "time travel"`                                                     | Find time travel           | 5 results                               | Yes     |
+| 36  | `mdtldr search "branching"`                                                       | Find branching             | 5 results                               | Yes     |
+| 37  | `mdtldr context docs/05-MEMORY_MODEL.md --section "Time Travel"`                  | Get time travel details    | Query-based, not feature                | Yes     |
+| 38  | `mdtldr search "guarantee"`                                                       | Find guarantees            | 8 results                               | Yes     |
+| 39  | `mdtldr context docs/04-EXECUTION_MODEL.md --section "Guarantees"`                | Get execution guarantees   | 7 explicit guarantees                   | Yes     |
+| 40  | `mdtldr stats`                                                                    | Get index statistics       | 23 docs, 178K tokens, 922 sections      | Yes     |
 
 ## Findings
 
 ### Document Structure (docs/ folder)
+
 The docs/ folder contains 10 markdown files forming a comprehensive specification:
 
 1. **00-README.md** (1,637 tokens) - Overview, principles, differentiators
@@ -68,45 +71,54 @@ Total: ~56,000 tokens of spec content in docs/
 ### Key Discoveries
 
 #### Core Philosophy
+
 The system is named **HumanWork** and is explicitly designed as a "human work operating system, not an agent orchestrator."
 
 > "The system helps humans think better - it never decides for them."
 > Source: docs/00-README.md, Philosophy section
 
 #### Design Decision: Separation of Concerns
+
 > "HumanWork separates concerns explicitly:
+>
 > - **Execution**: agents performing steps within bounded contexts
 > - **Authority**: humans controlling execution via a preemptive control plane
 > - **History**: immutable records of what occurred
 > - **Understanding**: derived state and semantic views"
-> Source: docs/01-ARCHITECTURE.md, Section 1
+>   Source: docs/01-ARCHITECTURE.md, Section 1
 
 #### Design Decision: Preemptive Control Plane
+
 > "The Control Plane has **preemptive authority** over all execution. No agent, workflow, or job may refuse a control plane directive."
 > Source: docs/01-ARCHITECTURE.md, Section 3
 
 Control actions: pause, resume, cancel, reassign, modify_metadata, inject_step, fork, terminate
 
 #### Design Decision: Three-Layer Memory
+
 > "Workspace Memory consists of three orthogonal, composable layers:
+>
 > - Event / Fact Memory (Ground Truth)
 > - Status Memory (Operational Truth)
 > - Semantic Memory (Understanding)"
-> Source: docs/05-MEMORY_MODEL.md, Section 2
+>   Source: docs/05-MEMORY_MODEL.md, Section 2
 
 > "Memory is **not**: Chat logs, Raw execution logs, Agent recall, Hidden embeddings"
 > Source: docs/05-MEMORY_MODEL.md, Section 1
 
 #### Design Decision: Immutability as Foundation
+
 > "All meaningful system activity is recorded as immutable facts. Execution advances by appending new records rather than mutating existing state. Time travel and branching are natural consequences of the data model."
 > Source: docs/00-README.md, Core Principles
 
 #### Design Decision: Workflows as Guidance
+
 > "In HumanWork, workflows are: **Reusable coordination patterns that shape how work unfolds, without prescribing execution logic.**
 > Workflows are **guidance**, not law."
 > Source: docs/06-WORKFLOWS.md, Section 1
 
 #### Architectural Invariants (8 Hard Rules)
+
 > - No hidden mutable state
 > - No irreversible execution (recordable and replayable)
 > - No unobservable progress
@@ -115,9 +127,10 @@ Control actions: pause, resume, cancel, reassign, modify_metadata, inject_step, 
 > - No concurrent mutation of the same scope
 > - No execution without a Workspace
 > - No automatic flow from Org to Workspace
-> Source: docs/01-ARCHITECTURE.md, Section 14
+>   Source: docs/01-ARCHITECTURE.md, Section 14
 
 #### Execution Guarantees
+
 > - **Single-scope coherence**: no concurrent mutation of the same scope
 > - **Human control**: execution always interruptible
 > - **Deterministic replay**: all execution is reproducible from records
@@ -125,7 +138,7 @@ Control actions: pause, resume, cancel, reassign, modify_metadata, inject_step, 
 > - **No hidden state**: all context is external and inspectable
 > - **Agent replaceability**: work continues regardless of agent instance
 > - **Workflow interoperability**: external systems integrate cleanly
-> Source: docs/04-EXECUTION_MODEL.md, Section 16
+>   Source: docs/04-EXECUTION_MODEL.md, Section 16
 
 ### Relevant Quotes/Sections Found
 
@@ -160,6 +173,7 @@ Control actions: pause, resume, cancel, reassign, modify_metadata, inject_step, 
 ## Tool Evaluation
 
 ### What Worked Well
+
 - **tree command**: Excellent for understanding document structure; token counts per section very helpful
 - **context --section**: Precise extraction of specific sections; very efficient
 - **search with boolean/phrase**: Quoted phrases and AND/OR worked well
@@ -168,26 +182,31 @@ Control actions: pause, resume, cancel, reassign, modify_metadata, inject_step, 
 - **index speed**: 535ms for 23 docs is fast
 
 ### What Was Frustrating
+
 - **search from subdirectory failed**: `mdtldr search "..." docs/` returned "No index found" even though index existed - had to search from root
 - **No semantic search by default**: Required --embed flag and OPENAI_API_KEY; keyword search adequate but limited
 - **Context duplication**: `--section "Time Travel"` returned the same section twice (once as parent, once as subsection match)
 - **No way to search AND get context**: Search shows snippets but can't easily expand; had to follow up with context command
 
 ### What Was Missing
+
 - **Cross-reference navigation**: No easy way to "find all sections that reference this concept"
 - **Diff between documents**: Can't compare two docs or see overlap
 - **Export/summarize all**: No "summarize everything in docs/" command
 - **Section numbering inconsistency**: tree shows "## 1. Section" but context uses "1.1" notation
 
 ### Confidence Level
+
 [X] High
 
 I found all major structural elements, design decisions, and key claims. The tool provided efficient access to content without reading 56K tokens of raw markdown.
 
 ### Would Use Again? (1-5)
+
 **4** - Very useful for exploration and targeted extraction. The tree+context+search workflow is effective. Lost a point for the subdirectory search bug and lack of semantic search out-of-box.
 
 ## Time & Efficiency
+
 - Commands run: **40**
 - Tokens read via mdtldr: ~15,000 (estimated from context outputs)
 - Total docs tokens: 56,000+ in docs/ alone
@@ -196,6 +215,7 @@ I found all major structural elements, design decisions, and key claims. The too
 ## Summary
 
 The HumanWork spec defines a comprehensive multi-agent orchestration system with:
+
 - **20 formal primitives** with explicit guarantees
 - **Three-layer memory model** (Event/Status/Semantic)
 - **Preemptive human control** via always-on Control Plane

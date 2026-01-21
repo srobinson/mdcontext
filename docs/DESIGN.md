@@ -252,8 +252,8 @@ Level 3: Collection summary (key documents, themes)
 
 #### Performance Metrics
 
-| Metric                           | Type      | Labels  | Description               |
-| -------------------------------- | --------- | ------- | ------------------------- |
+| Metric                              | Type      | Labels  | Description               |
+| ----------------------------------- | --------- | ------- | ------------------------- |
 | `mdcontext_parse_duration_ms`       | Histogram | -       | Time to parse a document  |
 | `mdcontext_index_build_duration_ms` | Histogram | `type`  | Time to build index       |
 | `mdcontext_query_duration_ms`       | Histogram | `type`  | Query execution time      |
@@ -263,8 +263,8 @@ Level 3: Collection summary (key documents, themes)
 
 #### Usage Metrics
 
-| Metric                       | Type    | Labels | Description              |
-| ---------------------------- | ------- | ------ | ------------------------ |
+| Metric                          | Type    | Labels | Description              |
+| ------------------------------- | ------- | ------ | ------------------------ |
 | `mdcontext_queries_total`       | Counter | `type` | Total queries            |
 | `mdcontext_tokens_input_total`  | Counter | -      | Tokens sent to embedding |
 | `mdcontext_tokens_output_total` | Counter | -      | Tokens in responses      |
@@ -273,8 +273,8 @@ Level 3: Collection summary (key documents, themes)
 
 #### Quality Metrics
 
-| Metric                           | Type      | Labels  | Description              |
-| -------------------------------- | --------- | ------- | ------------------------ |
+| Metric                              | Type      | Labels  | Description              |
+| ----------------------------------- | --------- | ------- | ------------------------ |
 | `mdcontext_search_results_returned` | Histogram | -       | Results per query        |
 | `mdcontext_compression_ratio`       | Histogram | `level` | Token reduction achieved |
 

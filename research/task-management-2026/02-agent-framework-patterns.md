@@ -15,11 +15,13 @@ The AI agent landscape has matured significantly, with 86% of copilot spending (
 **Architecture**: Graph-based workflow orchestration with checkpointing
 
 **Task Persistence**:
+
 - **Short-term memory**: Managed via checkpointers that save state at every "superstep"
 - **Long-term memory**: Integration with vector stores (Pinecone, Weaviate, Chroma) and databases (MongoDB, PostgreSQL)
 - **Thread-based isolation**: Each conversation/task gets a unique `thread_id` for multi-tenant scenarios
 
 **Key Features**:
+
 - `InMemorySaver` for experimentation
 - `SqliteSaver` for local workflows
 - `PostgresSaver` for production (used in LangSmith)
@@ -37,18 +39,21 @@ Sources: [LangChain Docs](https://docs.langchain.com/oss/python/langchain/short-
 **Architecture**: Role-based multi-agent coordination inspired by human organizational structures
 
 **Task Persistence**:
+
 - **Short-term memory**: ChromaDB vector store
 - **Task results**: SQLite for recent task outcomes
 - **Long-term memory**: Separate SQLite table indexed by task description
 - **Entity memory**: Vector embeddings for recognizing entities across sessions
 
 **Coordination Model**:
+
 - Sequential, parallel, and conditional task execution
 - Hierarchical coordination with manager agents
 - Senior agents can override juniors and redistribute resources
 - Automatic planning flag generates step-by-step workflows before execution
 
 **Observability**:
+
 - Crew Control Plane for real-time tracing
 - Metrics, logs, and traces unified in dashboard
 - Project Manager Agent pattern for dependency resolution and milestone tracking
@@ -62,16 +67,19 @@ Sources: [CrewAI](https://www.crewai.com/), [CrewAI Docs](https://docs.crewai.co
 **Architecture**: Autonomous goal decomposition with subtask management
 
 **Task Queue Management**:
+
 - Redis-based task queues for concurrent request handling
 - Custom dashboards for monitoring success rates and execution times
 - Automatic breakdown of high-level goals into subtasks
 
 **Memory**:
+
 - Short-term: In-session context
 - Long-term: Persistent storage for critical data
 - Task decomposition as core differentiator
 
 **Production Infrastructure** (2026):
+
 - Secure vault systems for 15+ API keys
 - Execution sandboxing with isolated environments
 - Comprehensive audit logging
@@ -86,11 +94,13 @@ Sources: [AutoGPT Setup Guide](https://educatecomputer.com/how-to-setup-autogpt-
 **Architecture**: Lightweight, Python-first orchestration with handoffs
 
 **Key Concepts**:
+
 - **Routines**: Sets of instructions agents follow for specific actions
 - **Handoffs**: Seamless transitions between specialized agents
 - **Agent loop**: Built-in tool invocation cycle until task completion
 
 **Task Management Features**:
+
 - Function tools with automatic schema generation
 - Pydantic-powered validation
 - Sessions: Persistent memory layer within agent loops
@@ -98,6 +108,7 @@ Sources: [AutoGPT Setup Guide](https://educatecomputer.com/how-to-setup-autogpt-
 - Horizontal and vertical multi-agent workflow support
 
 **State Management** (2025 updates):
+
 - Conversation state API for durable threads
 - Connectors and MCP servers for external context
 - Replayable state for debugging
@@ -113,6 +124,7 @@ Sources: [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/), [O
 **Evolution**: AutoGen merged with Semantic Kernel into unified Microsoft Agent Framework
 
 **Orchestration Patterns**:
+
 - Sequential (GraphFlow for DAG-based execution)
 - Concurrent (parallel agent work)
 - GroupChat (conversational coordination)
@@ -120,6 +132,7 @@ Sources: [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/), [O
 - Magentic (manager agent with dynamic task ledger)
 
 **Memory Management**:
+
 - Multiple backends: in-memory, Redis, mem0
 - Chat history buffers
 - Summarization memory
@@ -127,6 +140,7 @@ Sources: [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/), [O
 - Sliding window memory options
 
 **Enterprise Features** (2025-2026):
+
 - Persistent state with error recovery
 - Context sharing across agents
 - Role-based access and auditability
@@ -142,12 +156,14 @@ Sources: [Microsoft Agent Framework](https://learn.microsoft.com/en-us/agent-fra
 **Architecture**: File-system and shell-based persistence with subagent delegation
 
 **Task Persistence Mechanisms**:
+
 - **CLAUDE.md**: Persistent memory file for project context, preferences, and ongoing tasks
 - **Todo lists**: Markdown files preserved during context compaction
 - **Plans**: Markdown-based execution plans that persist across sessions
 - **Subagents**: Specialized instances with their own system prompts and conversation history
 
 **Key Patterns**:
+
 - Session-based organization grouping related tasks
 - Resource isolation preventing task interference
 - Circuit breaker patterns with exponential backoff
@@ -165,16 +181,17 @@ Sources: [Claude Code Docs](https://code.claude.com/docs/en/sub-agents), [Apidog
 
 All major frameworks implement layered memory:
 
-| Layer | Purpose | Typical Implementation |
-|-------|---------|----------------------|
-| Working Memory | Current task state | In-memory buffers |
-| Episodic Memory | Past interactions | SQLite, conversation logs |
-| Semantic Memory | Learned knowledge | Vector databases |
+| Layer             | Purpose              | Typical Implementation           |
+| ----------------- | -------------------- | -------------------------------- |
+| Working Memory    | Current task state   | In-memory buffers                |
+| Episodic Memory   | Past interactions    | SQLite, conversation logs        |
+| Semantic Memory   | Learned knowledge    | Vector databases                 |
 | Procedural Memory | How to perform tasks | Embeddings, fine-tuned behaviors |
 
 ### 2. Checkpointing for Fault Tolerance
 
 Every production framework now implements:
+
 - State snapshots at execution boundaries
 - Rollback capability for failed steps
 - Resume without re-running successful work
@@ -183,6 +200,7 @@ Every production framework now implements:
 ### 3. Thread-Based Isolation
 
 Multi-tenant scenarios handled via:
+
 - Unique thread IDs per conversation/task
 - Separate checkpoint streams
 - Context isolation between users/sessions
@@ -190,6 +208,7 @@ Multi-tenant scenarios handled via:
 ### 4. Intent Routing Pattern
 
 From Google's multi-agent design patterns:
+
 - Central dispatcher agent analyzes user intent
 - Routes to specialist agents (Billing, Tech Support, etc.)
 - Coordinator maintains context and synthesizes results
@@ -197,6 +216,7 @@ From Google's multi-agent design patterns:
 ### 5. Plan-and-Execute Architecture
 
 Cost optimization pattern gaining adoption:
+
 - Expensive model (GPT-4, Claude) creates strategy
 - Cheaper models (GPT-3.5, smaller LLMs) execute
 - Reported 90% cost reduction in some deployments
@@ -208,12 +228,14 @@ Cost optimization pattern gaining adoption:
 ### File-Based (Claude Code, some local agents)
 
 **Pros**:
+
 - Simple, human-readable
 - Version control friendly
 - No infrastructure dependencies
 - Easy debugging and manual intervention
 
 **Cons**:
+
 - Limited querying capability
 - No concurrent access handling
 - Doesn't scale for enterprise
@@ -223,17 +245,20 @@ Cost optimization pattern gaining adoption:
 ### Database-Backed (LangGraph, CrewAI, AutoGen)
 
 **Pros**:
+
 - ACID compliance
 - Concurrent access
 - Rich querying
 - Production-ready scaling
 
 **Cons**:
+
 - Infrastructure complexity
 - Requires ops expertise
 - Migration management
 
 **Common Choices**:
+
 - SQLite: Local/experimental
 - PostgreSQL: Production workloads
 - ChromaDB/Pinecone: Vector memory
@@ -244,11 +269,13 @@ Cost optimization pattern gaining adoption:
 ### API-Based (Cloud services, managed platforms)
 
 **Pros**:
+
 - No infrastructure management
 - Built-in scaling
 - Cross-platform persistence
 
 **Cons**:
+
 - Vendor lock-in
 - Latency concerns
 - Cost at scale
@@ -262,22 +289,26 @@ Cost optimization pattern gaining adoption:
 ### Jira Integration Patterns
 
 **Native (Atlassian Rovo)**:
+
 - AI workflows embedded in Jira
 - Custom workflow creation via natural language
 - Out-of-the-box Rovo Agents for task management
 
 **Third-Party Integrations**:
+
 - **Claude AI + Jira**: MCP-based connection for workflow automation
 - **Beam AI**: AI agents perform issue creation, status updates, data extraction
 - **CrewAI + Jira**: Automated project management via Gemini integration
 
 **Capabilities**:
+
 - Automated task assignment based on availability/expertise
 - Enhanced search across tickets and documentation
 - Automated responses to common queries
 - Data analysis for timeline and resource insights
 
 **Challenges**:
+
 - OAuth 2.0 setup complexity
 - Rate limits during high-traffic periods
 - Not plug-and-play; requires careful planning
@@ -300,6 +331,7 @@ Sources: [Atlassian Rovo](https://www.atlassian.com/software/jira/ai), [Claude-J
 ### Production Metrics That Matter
 
 Organizations tracking three key metrics report 30% cost reductions and 35% productivity gains:
+
 - Time saved on manual tasks
 - Error reduction vs previous processes
 - Throughput increase in completed workflows
@@ -381,56 +413,64 @@ The Model Context Protocol (MCP), IBM's Agent Communication Protocol (ACP), and 
 
 ## Framework Selection Guide
 
-| Use Case | Recommended Framework |
-|----------|----------------------|
-| Rapid prototyping | OpenAI Agents SDK |
-| Enterprise multi-agent | Microsoft Agent Framework |
-| Graph-based workflows | LangGraph |
-| Role-based team simulation | CrewAI |
-| Developer tooling | Claude Code patterns |
-| Autonomous goal pursuit | AutoGPT |
-| Custom at scale | Build your own (85% of production) |
+| Use Case                   | Recommended Framework              |
+| -------------------------- | ---------------------------------- |
+| Rapid prototyping          | OpenAI Agents SDK                  |
+| Enterprise multi-agent     | Microsoft Agent Framework          |
+| Graph-based workflows      | LangGraph                          |
+| Role-based team simulation | CrewAI                             |
+| Developer tooling          | Claude Code patterns               |
+| Autonomous goal pursuit    | AutoGPT                            |
+| Custom at scale            | Build your own (85% of production) |
 
 ---
 
 ## References
 
 ### LangChain/LangGraph
+
 - [Short-term Memory Docs](https://docs.langchain.com/oss/python/langchain/short-term-memory)
 - [MongoDB Long-Term Memory](https://www.mongodb.com/company/blog/product-release-announcements/powering-long-term-memory-for-agents-langgraph)
 - [LangGraph Persistence](https://docs.langchain.com/oss/python/langgraph/persistence)
 - [LangMem SDK Launch](https://www.blog.langchain.com/langmem-sdk-launch/)
 
 ### CrewAI
+
 - [CrewAI Platform](https://www.crewai.com/)
 - [CrewAI GitHub](https://github.com/crewAIInc/crewAI)
 - [CrewAI Planning Guide](https://www.analyticsvidhya.com/blog/2025/12/crewai-planning/)
 
 ### OpenAI
+
 - [Agents SDK](https://openai.github.io/openai-agents-python/)
 - [Swarm Framework](https://github.com/openai/swarm)
 - [Developer Updates 2025](https://developers.openai.com/blog/openai-for-developers-2025/)
 
 ### Microsoft
+
 - [Agent Framework Overview](https://learn.microsoft.com/en-us/agent-framework/overview/agent-framework-overview)
 - [AutoGen Research](https://www.microsoft.com/en-us/research/project/autogen/)
 - [Foundry Updates](https://devblogs.microsoft.com/foundry/whats-new-in-microsoft-foundry-oct-nov-2025/)
 
 ### Claude/Anthropic
+
 - [Claude Code Subagents](https://code.claude.com/docs/en/sub-agents)
 - [Agent Design Patterns](https://rlancemartin.github.io/2026/01/09/agent_design/)
 
 ### Multi-Agent Patterns
+
 - [Google's Eight Patterns](https://www.infoq.com/news/2026/01/multi-agent-design-patterns/)
 - [Multi-Agent Systems 2026 Guide](https://dev.to/eira-wexford/how-to-build-multi-agent-systems-complete-2026-guide-1io6)
 - [Agent Orchestration 2026](https://iterathon.tech/blog/ai-agent-orchestration-frameworks-2026)
 
 ### Best Practices & Trends
+
 - [Enterprise Implementation Guide](https://onereach.ai/blog/best-practices-for-ai-agent-implementations/)
 - [AI Agent Monitoring](https://uptimerobot.com/knowledge-hub/monitoring/ai-agent-monitoring-best-practices-tools-and-metrics/)
 - [Agentic AI Trends 2026](https://machinelearningmastery.com/7-agentic-ai-trends-to-watch-in-2026/)
 - [Production Agents Study](https://medium.com/generative-ai-revolution-ai-native-transformation/the-first-production-ai-agents-study-reveals-why-agentic-engineering-becomes-mandatory-in-2026-ec5e00514e5e)
 
 ### Jira Integration
+
 - [Atlassian Rovo](https://www.atlassian.com/software/jira/ai)
 - [Claude-Jira Integration](https://www.eesel.ai/blog/claude-ai-jira-integration)

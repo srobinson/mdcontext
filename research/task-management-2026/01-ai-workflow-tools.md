@@ -20,12 +20,14 @@ The key shift: we've moved from tools that help humans track tasks to platforms 
 **Description:** A fast, minimal, and opinionated project management tool built for software teams. Linear for Agents allows teams to delegate work to AI agents for code generation and technical tasks.
 
 **AI Features:**
+
 - Semantic search with AI-powered context understanding
 - Connects to Cursor, Claude, ChatGPT, and other AI tools
 - AI-assisted issue triaging, duplicate detection, and completion time prediction
 - API designed for LLM integration to generate backlogs
 
 **Pros:**
+
 - Keyboard-first design perfect for developers
 - Blazingly fast performance
 - Excellent GitHub integration (PRs auto-update issue status)
@@ -33,11 +35,13 @@ The key shift: we've moved from tools that help humans track tasks to platforms 
 - Clean, modern interface
 
 **Cons:**
+
 - Opinionated workflows may not fit all teams
 - Paid plans required for larger teams
 - "Increasing pressure to upgrade to enterprise, new features locked behind expensive plan"
 
 **Pricing:**
+
 - Free: Core features for small teams
 - Standard: $8/user/month
 - Plus: Custom pricing
@@ -54,23 +58,27 @@ The key shift: we've moved from tools that help humans track tasks to platforms 
 **Description:** An AI-driven workspace that has evolved beyond task management into an "Agent Sandbox" where teams can build custom AI agents within project folders.
 
 **AI Features:**
+
 - Autonomous AI agents that handle tasks and research
 - Custom agent creation (e.g., "Marketing Agent" that monitors tasks and generates content)
 - Agents learn and adapt to evolving tasks
 - AI-powered workflow automation across tools
 
 **Pros:**
+
 - Build custom AI agents within your workspace
 - Real-time collaboration with chat and video conferencing
 - Strong balance of capability and simplicity
 - Affordable pricing with generous free tier
 
 **Cons:**
+
 - Limited reporting capabilities
 - Weak permissions control
 - Less deep project customization than competitors
 
 **Pricing:**
+
 - Free: $0/month - unlimited tasks, 250 AI generations/month
 - Starter: $8/month - 1,000 AI generations, multiple workspaces
 - Pro: $19/month - advanced features
@@ -87,18 +95,21 @@ The key shift: we've moved from tools that help humans track tasks to platforms 
 **Description:** A purpose-built tool for managing project collaboration between humans and AI agents in a git ecosystem. Uses "Spec-Driven AI Development" methodology.
 
 **AI Features:**
+
 - Task tracking across branches
 - Status change callbacks for AI agents
 - Integration with AI coding assistants
 - Git-native workflow for AI-generated tasks
 
 **Pros:**
+
 - Designed specifically for AI-human collaboration
 - Lives in your git repository (no external tool needed)
 - Open source and transparent
 - Perfect for AI coding assistant workflows
 
 **Cons:**
+
 - New tool (less mature ecosystem)
 - Requires git-centric workflow
 - Less visual/UI compared to traditional tools
@@ -118,12 +129,14 @@ The key shift: we've moved from tools that help humans track tasks to platforms 
 **Description:** The #1 project management software on GitHub. Positions itself as an open-source Jira/Linear alternative with AI-native capabilities.
 
 **AI Features:**
+
 - AI-powered Pages for idea capture and note transformation
 - Official MCP Server for AI assistant integration
 - Enables AI to create, assign, and update tasks directly
 - Use cases: AI Scrum Master, Automated Bug Triage, PRD to Project Plan
 
 **Pros:**
+
 - Self-hostable with 100% feature parity
 - MCP integration for any AI client (not locked to one vendor)
 - Generous free tier
@@ -131,11 +144,13 @@ The key shift: we've moved from tools that help humans track tasks to platforms 
 - Great for compliance-focused industries
 
 **Cons:**
+
 - Less mature than commercial alternatives
 - Community support vs. enterprise support
 - AI features still evolving
 
 **Pricing:**
+
 - Community: Free (self-hosted)
 - Free Cloud: Core features forever free
 - Pro: Paid tier for advanced features
@@ -152,18 +167,21 @@ The key shift: we've moved from tools that help humans track tasks to platforms 
 **Description:** Open-source all-in-one replacement for Linear, Jira, Slack, and Notion. Known for remote collaboration features.
 
 **AI Features:**
+
 - Hulia AI assistant for automatic meeting transcription
 - Upcoming MetaBrain: AI-generated meeting summaries, action item extraction
 - CollectiveCortex: "Living memory" graph treating all content as retrievable context
 - Lightweight autonomous AI coding agent (terminal-based, Rust)
 
 **Pros:**
+
 - Entirely self-hostable with zero license fees
 - Virtual office spaces with audio/video conferencing
 - Linear-inspired interface quality
 - Ambitious AI roadmap
 
 **Cons:**
+
 - AI features still in development
 - Smaller community than Plane
 - Less established enterprise support
@@ -183,6 +201,7 @@ The key shift: we've moved from tools that help humans track tasks to platforms 
 **Description:** The popular workspace tool has evolved with AI Agents (launched September 2025) that provide autonomous data analysis and automated task management.
 
 **AI Features:**
+
 - Notion Agent: Takes on entire projects, breaks into tasks, assigns, drafts docs
 - Can update/create hundreds of pages at once
 - Converts notes to actionable to-do lists automatically
@@ -190,17 +209,20 @@ The key shift: we've moved from tools that help humans track tasks to platforms 
 - Model selection (multiple AI providers)
 
 **Pros:**
+
 - Deeply integrated into existing Notion workflows
 - Agent works in background while you continue other work
 - Strong mobile experience
 - Large ecosystem and community
 
 **Cons:**
+
 - Can become overwhelming for simple use cases
 - AI add-on pricing on top of base subscription
 - Performance can lag with large workspaces
 
 **Pricing:**
+
 - Free: Basic features
 - Plus: $8/user/month
 - Business: $15/user/month
@@ -218,23 +240,27 @@ The key shift: we've moved from tools that help humans track tasks to platforms 
 **Description:** All-in-one workspace with ClickUp Brain AI that connects tasks, docs, people, and integrates with external AI tools.
 
 **AI Features:**
+
 - Brain Max: Integrates other apps (Dropbox, SharePoint) for cross-stack responses
 - Autopilot Agents: Generate daily/weekly reports, auto-generate task properties
 - Custom agent creation with configurable behavior and actions
 - MCP server connection for ChatGPT, Claude, Gemini
 
 **Pros:**
+
 - Comprehensive all-in-one platform
 - Real-time dashboards pulling from tasks, docs, and chat
 - Highly customizable workflows
 - Strong external AI tool integration
 
 **Cons:**
+
 - Can be overwhelming (feature bloat)
 - Steeper learning curve
 - More expensive for full AI features
 
 **Pricing:**
+
 - Free: Limited features
 - Unlimited: $7/user/month
 - Business: $12/user/month
@@ -252,17 +278,20 @@ The key shift: we've moved from tools that help humans track tasks to platforms 
 **Description:** Enterprise project management with embedded AI chatbot and MCP server integration.
 
 **AI Features:**
+
 - Wrike Copilot: Full workspace access, risk analysis, detailed project explanations
 - AI agents automate tasks based on prompts, triggers, and actions
 - MCP server for ChatGPT, Claude, Gemini integration
 - Project management data accessible from external AI apps
 
 **Pros:**
+
 - Enterprise-grade with AI integration
 - Strong risk analysis capabilities
 - Flexible AI tool connections
 
 **Cons:**
+
 - More complex/enterprise-focused
 - Higher price point
 - Overkill for small teams
@@ -277,12 +306,12 @@ The key shift: we've moved from tools that help humans track tasks to platforms 
 
 If existing tools don't meet your needs, these frameworks enable building custom AI task management:
 
-| Framework | Best For | Key Feature |
-|-----------|----------|-------------|
-| **LangGraph** | Complex workflows | Graph-based, stateful orchestration |
-| **CrewAI** | Collaborative agents | Role-playing agents, 32k+ GitHub stars |
-| **AutoGen** | Microsoft ecosystem | Multi-agent conversation framework |
-| **Microsoft Semantic Kernel** | Enterprise integration | Memory and goal planning |
+| Framework                     | Best For               | Key Feature                            |
+| ----------------------------- | ---------------------- | -------------------------------------- |
+| **LangGraph**                 | Complex workflows      | Graph-based, stateful orchestration    |
+| **CrewAI**                    | Collaborative agents   | Role-playing agents, 32k+ GitHub stars |
+| **AutoGen**                   | Microsoft ecosystem    | Multi-agent conversation framework     |
+| **Microsoft Semantic Kernel** | Enterprise integration | Memory and goal planning               |
 
 **Sources:** [AI Multiple - Agentic Orchestration](https://research.aimultiple.com/agentic-orchestration/), [Shakudo - AI Agent Frameworks](https://www.shakudo.io/blog/top-9-ai-agent-frameworks)
 
@@ -290,16 +319,16 @@ If existing tools don't meet your needs, these frameworks enable building custom
 
 ## Comparison Matrix
 
-| Tool | AI Agents | Self-Host | Open Source | Price/User | Best For |
-|------|-----------|-----------|-------------|------------|----------|
-| Linear | Yes | No | No | $8/mo | Dev teams |
-| Taskade | Yes | No | No | $8/mo | Remote teams |
-| Backlog.md | Yes | Yes | Yes | Free | Git workflows |
-| Plane.so | Yes | Yes | Yes | Free | Compliance needs |
-| Huly | Developing | Yes | Yes | Free | Remote collab |
-| Notion | Yes | No | No | $8+/mo | Knowledge work |
-| ClickUp | Yes | No | No | $7+/mo | All-in-one |
-| Wrike | Yes | No | No | Enterprise | Large orgs |
+| Tool       | AI Agents  | Self-Host | Open Source | Price/User | Best For         |
+| ---------- | ---------- | --------- | ----------- | ---------- | ---------------- |
+| Linear     | Yes        | No        | No          | $8/mo      | Dev teams        |
+| Taskade    | Yes        | No        | No          | $8/mo      | Remote teams     |
+| Backlog.md | Yes        | Yes       | Yes         | Free       | Git workflows    |
+| Plane.so   | Yes        | Yes       | Yes         | Free       | Compliance needs |
+| Huly       | Developing | Yes       | Yes         | Free       | Remote collab    |
+| Notion     | Yes        | No        | No          | $8+/mo     | Knowledge work   |
+| ClickUp    | Yes        | No        | No          | $7+/mo     | All-in-one       |
+| Wrike      | Yes        | No        | No          | Enterprise | Large orgs       |
 
 ---
 
@@ -319,27 +348,34 @@ If existing tools don't meet your needs, these frameworks enable building custom
 
 ## Recommendations
 
-### For AI Coding Workflows (My Top Pick):
+### For AI Coding Workflows (My Top Pick)
+
 **Linear + Backlog.md combo**
+
 - Use Linear for team-visible planning and roadmaps
 - Use Backlog.md for git-native AI agent task handoffs
 - Both integrate well with Claude, Cursor, and other AI coding tools
 
-### For Maximum Flexibility (Open Source):
+### For Maximum Flexibility (Open Source)
+
 **Plane.so**
+
 - Full MCP server support means any AI can integrate
 - Self-hostable for compliance requirements
 - Active development and strong community
 
-### For Existing Tool Ecosystems:
+### For Existing Tool Ecosystems
+
 - **Notion users:** Notion Agent is surprisingly capable
 - **Microsoft shops:** Microsoft Copilot + Claude integration
 - **All-in-one needs:** ClickUp with Brain Max
 
-### For Remote/Distributed Teams:
+### For Remote/Distributed Teams
+
 **Huly** - Virtual office + project management + developing AI features
 
-### For Custom Agent Workflows:
+### For Custom Agent Workflows
+
 Build on **LangGraph** or **CrewAI** with Linear/Plane as the task layer
 
 ---
@@ -355,6 +391,7 @@ For teams heavily using AI coding assistants like Claude Code, the git-native ap
 ## Sources
 
 ### Primary Tool References
+
 - [Linear Official](https://linear.app)
 - [Plane.so](https://plane.so)
 - [Huly](https://huly.io)
@@ -364,6 +401,7 @@ For teams heavily using AI coding assistants like Claude Code, the git-native ap
 - [Backlog.md](https://github.com/MrLesk/Backlog.md)
 
 ### Research & Comparisons
+
 - [Top 10+ Agentic Orchestration Frameworks 2026](https://research.aimultiple.com/agentic-orchestration/)
 - [n8n AI Workflow Automation Tools 2026](https://blog.n8n.io/best-ai-workflow-automation-tools/)
 - [Zapier Best AI Project Management Tools 2026](https://zapier.com/blog/best-ai-project-management-tools/)
@@ -373,5 +411,6 @@ For teams heavily using AI coding assistants like Claude Code, the git-native ap
 - [AI in Backlog Management Guide](https://thedigitalprojectmanager.com/productivity/ai-in-backlog-management/)
 
 ### AI Agent Market Data
+
 - [Google Cloud AI Agent Trends 2026](https://cloud.google.com/resources/content/ai-agent-trends-2026)
 - [Analytics Vidhya AI Agents Trends 2026](https://www.analyticsvidhya.com/blog/2026/01/ai-agents-trends/)

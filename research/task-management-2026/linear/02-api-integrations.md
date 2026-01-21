@@ -13,6 +13,7 @@ Linear provides a comprehensive GraphQL API that powers both their internal appl
 ### Authentication Methods
 
 **1. Personal API Keys**
+
 - Create at `https://linear.app/settings/api`
 - Best for personal scripts and local development
 
@@ -26,6 +27,7 @@ curl \
 ```
 
 **2. OAuth 2.0**
+
 - Recommended for applications used by others
 - Supports dynamic client registration for MCP servers
 
@@ -41,6 +43,7 @@ curl \
 ### Query Operations (Read)
 
 **Get Current User**
+
 ```graphql
 query Me {
   viewer {
@@ -52,6 +55,7 @@ query Me {
 ```
 
 **Fetch All Teams**
+
 ```graphql
 query Teams {
   teams {
@@ -64,6 +68,7 @@ query Teams {
 ```
 
 **Get Team Issues**
+
 ```graphql
 query Team {
   team(id: "9cfb482a-81e3-4154-b5b9-2c805e70a02d") {
@@ -87,6 +92,7 @@ query Team {
 ```
 
 **Get Single Issue by Identifier**
+
 ```graphql
 query Issue {
   issue(id: "BLA-123") {
@@ -98,6 +104,7 @@ query Issue {
 ```
 
 **Issues Assigned to User**
+
 ```graphql
 query {
   user(id: "USERID") {
@@ -114,6 +121,7 @@ query {
 ```
 
 **Workflow States**
+
 ```graphql
 query {
   workflowStates {
@@ -128,6 +136,7 @@ query {
 ### Mutation Operations (Create/Update)
 
 **Create Issue**
+
 ```graphql
 mutation IssueCreate {
   issueCreate(
@@ -147,6 +156,7 @@ mutation IssueCreate {
 ```
 
 **Create Issue with All Common Fields**
+
 ```graphql
 mutation IssueCreate {
   issueCreate(
@@ -175,6 +185,7 @@ mutation IssueCreate {
 ```
 
 **Priority Values**:
+
 - 0: No priority
 - 1: Urgent
 - 2: High
@@ -182,6 +193,7 @@ mutation IssueCreate {
 - 4: Low
 
 **Estimate Values** (T-shirt sizes):
+
 - 1: XS
 - 2: S
 - 3: M
@@ -191,14 +203,12 @@ mutation IssueCreate {
 - 21: XXXL
 
 **Update Issue**
+
 ```graphql
 mutation IssueUpdate {
   issueUpdate(
-    id: "BLA-123",
-    input: {
-      title: "New Issue Title"
-      stateId: "NEW-STATE-ID"
-    }
+    id: "BLA-123"
+    input: { title: "New Issue Title", stateId: "NEW-STATE-ID" }
   ) {
     success
     issue {
@@ -218,6 +228,7 @@ mutation IssueUpdate {
 Linear uses Relay-style cursor-based pagination with `first`/`after` and `last`/`before` arguments.
 
 **Basic Pagination**
+
 ```graphql
 query Issues {
   issues(first: 10) {
@@ -237,6 +248,7 @@ query Issues {
 ```
 
 **Subsequent Page Request**
+
 ```graphql
 query Issues {
   issues(first: 10, after: "CURSOR_FROM_PREVIOUS_RESPONSE") {
@@ -256,6 +268,7 @@ query Issues {
 ```
 
 **Simplified Node Syntax** (without edges)
+
 ```graphql
 query Teams {
   teams {
@@ -268,6 +281,7 @@ query Teams {
 ```
 
 **Ordering Results**
+
 ```graphql
 query Issues {
   issues(orderBy: updatedAt) {
@@ -283,6 +297,7 @@ query Issues {
 ```
 
 **Default Behavior**:
+
 - 50 results returned by default
 - Results ordered by `createdAt`
 - Archived resources hidden by default (use `includeArchived: true` to include)
@@ -292,12 +307,13 @@ query Issues {
 Linear uses complexity-based rate limiting with a leaky bucket algorithm.
 
 | Authentication Type | Requests/Hour | Complexity Points/Hour |
-|---------------------|---------------|------------------------|
+| ------------------- | ------------- | ---------------------- |
 | API Key             | 1,500         | 250,000                |
 | OAuth App           | 500           | 200,000                |
 | Unauthenticated     | 60            | 10,000                 |
 
 **Best Practices**:
+
 - Use webhooks instead of polling
 - Specify explicit `first`/`last` limits to reduce complexity
 - Filter in GraphQL queries, not in code
@@ -310,31 +326,38 @@ Linear uses complexity-based rate limiting with a leaky bucket algorithm.
 Linear does not have a dedicated bulk mutation endpoint. Use GraphQL aliases to batch multiple mutations in a single request.
 
 **Batch Create Issues**
+
 ```graphql
 mutation BulkCreate {
-  issue1: issueCreate(input: {
-    title: "Issue 1"
-    teamId: "TEAM_ID"
-    priority: 2
-  }) {
+  issue1: issueCreate(
+    input: { title: "Issue 1", teamId: "TEAM_ID", priority: 2 }
+  ) {
     success
-    issue { id identifier title }
+    issue {
+      id
+      identifier
+      title
+    }
   }
-  issue2: issueCreate(input: {
-    title: "Issue 2"
-    teamId: "TEAM_ID"
-    priority: 3
-  }) {
+  issue2: issueCreate(
+    input: { title: "Issue 2", teamId: "TEAM_ID", priority: 3 }
+  ) {
     success
-    issue { id identifier title }
+    issue {
+      id
+      identifier
+      title
+    }
   }
-  issue3: issueCreate(input: {
-    title: "Issue 3"
-    teamId: "TEAM_ID"
-    priority: 3
-  }) {
+  issue3: issueCreate(
+    input: { title: "Issue 3", teamId: "TEAM_ID", priority: 3 }
+  ) {
     success
-    issue { id identifier title }
+    issue {
+      id
+      identifier
+      title
+    }
   }
 }
 ```
@@ -342,11 +365,14 @@ mutation BulkCreate {
 **Important**: GraphQL mutations execute in series (not parallel), so large batches may hit timeouts or rate limits. Recommended approach for high-volume operations:
 
 ```typescript
-import { LinearClient } from '@linear/sdk';
+import { LinearClient } from "@linear/sdk";
 
 const client = new LinearClient({ apiKey: process.env.LINEAR_API_KEY });
 
-async function bulkCreateIssues(issues: Array<{title: string, description?: string}>, teamId: string) {
+async function bulkCreateIssues(
+  issues: Array<{ title: string; description?: string }>,
+  teamId: string,
+) {
   const results = [];
 
   for (const issue of issues) {
@@ -358,7 +384,7 @@ async function bulkCreateIssues(issues: Array<{title: string, description?: stri
     results.push(result);
 
     // Add delay to respect rate limits
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
   return results;
@@ -378,16 +404,16 @@ npm install @linear/sdk
 ### Authentication
 
 ```typescript
-import { LinearClient } from '@linear/sdk';
+import { LinearClient } from "@linear/sdk";
 
 // API Key authentication
 const client = new LinearClient({
-  apiKey: process.env.LINEAR_API_KEY
+  apiKey: process.env.LINEAR_API_KEY,
 });
 
 // OAuth authentication
 const oauthClient = new LinearClient({
-  accessToken: process.env.LINEAR_OAUTH_TOKEN
+  accessToken: process.env.LINEAR_OAUTH_TOKEN,
 });
 ```
 
@@ -411,8 +437,8 @@ async function getMyIssues() {
   const myIssues = await me.assignedIssues();
 
   if (myIssues.nodes.length) {
-    myIssues.nodes.map(issue =>
-      console.log(`${me.displayName} has issue: ${issue.title}`)
+    myIssues.nodes.map((issue) =>
+      console.log(`${me.displayName} has issue: ${issue.title}`),
     );
   } else {
     console.log(`${me.displayName} has no issues`);
@@ -425,11 +451,11 @@ getMyIssues();
 ### Promise-Based Alternative
 
 ```typescript
-linearClient.viewer.then(me => {
-  return me.assignedIssues().then(myIssues => {
+linearClient.viewer.then((me) => {
+  return me.assignedIssues().then((myIssues) => {
     if (myIssues.nodes.length) {
-      myIssues.nodes.map(issue =>
-        console.log(`${me.displayName} has issue: ${issue.title}`)
+      myIssues.nodes.map((issue) =>
+        console.log(`${me.displayName} has issue: ${issue.title}`),
       );
     } else {
       console.log(`${me.displayName} has no issues`);
@@ -441,7 +467,7 @@ linearClient.viewer.then(me => {
 ### Raw GraphQL Access
 
 ```typescript
-import { LinearGraphQLClient } from '@linear/sdk';
+import { LinearGraphQLClient } from "@linear/sdk";
 
 const graphQLClient = new LinearGraphQLClient(apiKey);
 
@@ -462,7 +488,7 @@ const response = await graphQLClient.rawRequest(`
 ```typescript
 const client = new LinearClient({
   apiKey,
-  headers: { "my-header": "value" }
+  headers: { "my-header": "value" },
 });
 ```
 
@@ -475,10 +501,12 @@ const client = new LinearClient({
 Linear provides an officially supported MCP server for AI integration.
 
 **Transport Options**:
+
 - HTTP (Streamable): `https://mcp.linear.app/mcp` (recommended)
 - SSE: `https://mcp.linear.app/sse`
 
 **Claude Code Setup**:
+
 ```bash
 claude mcp add --transport http linear-server https://mcp.linear.app/mcp
 ```
@@ -486,6 +514,7 @@ claude mcp add --transport http linear-server https://mcp.linear.app/mcp
 Then run `/mcp` in Claude Code to authenticate.
 
 **Available Tools**:
+
 - Search and find issues, projects, and comments
 - Create new issues
 - Update existing issues
@@ -493,10 +522,12 @@ Then run `/mcp` in Claude Code to authenticate.
 - More functionality planned
 
 **Authentication**:
+
 - OAuth 2.1 with dynamic client registration (interactive flow)
 - Direct API key/OAuth token via `Authorization: Bearer <token>` header
 
 **Claude Desktop Configuration** (`claude_desktop_config.json`):
+
 ```json
 {
   "mcpServers": {
@@ -509,6 +540,7 @@ Then run `/mcp` in Claude Code to authenticate.
 ```
 
 **Troubleshooting**:
+
 - Clear cached auth: `rm -rf ~/.mcp-auth`
 - WSL users: Use `--transport sse-only` flag
 
@@ -517,24 +549,27 @@ Then run `/mcp` in Claude Code to authenticate.
 **Note**: Deprecated in favor of official Linear MCP server.
 
 **Installation**:
+
 ```bash
 npx @smithery/cli install linear-mcp-server --client claude
 ```
 
 **Manual Configuration**:
+
 ```json
 {
   "mcpServers": {
     "linear": {
       "command": "npx",
       "args": ["-y", "linear-mcp-server"],
-      "env": {"LINEAR_API_KEY": "your_key_here"}
+      "env": { "LINEAR_API_KEY": "your_key_here" }
     }
   }
 }
 ```
 
 **Available Tools**:
+
 1. **Issue Creation** - Create issues with title, team ID, description, priority (0-4), status
 2. **Issue Updates** - Modify issues via ID (title, description, priority, status)
 3. **Issue Searching** - Filter by query, team, status, assignee, labels, priority
@@ -548,6 +583,7 @@ npx @smithery/cli install linear-mcp-server --client claude
 ### Supported Events
 
 **Data Change Webhooks**:
+
 - Issues, Issue attachments, Issue comments, Issue labels
 - Comment reactions
 - Projects, Project updates
@@ -562,17 +598,21 @@ npx @smithery/cli install linear-mcp-server --client claude
 ### Configuration
 
 Webhooks require admin permissions. Configure via:
+
 - Linear Settings: `https://linear.app/settings/api`
 - GraphQL API mutations
 
 **Create Webhook via GraphQL**:
+
 ```graphql
 mutation {
-  webhookCreate(input: {
-    url: "https://your-server.com/webhook"
-    teamId: "team-id"
-    resourceTypes: ["Issue", "Comment"]
-  }) {
+  webhookCreate(
+    input: {
+      url: "https://your-server.com/webhook"
+      teamId: "team-id"
+      resourceTypes: ["Issue", "Comment"]
+    }
+  ) {
     success
     webhook {
       id
@@ -585,21 +625,27 @@ mutation {
 ### Payload Structure
 
 **HTTP Headers**:
+
 - `Linear-Delivery`: UUID identifying the payload
 - `Linear-Event`: Entity type (Issue, Comment, etc.)
 - `Linear-Signature`: HMAC-SHA256 signature
 - `User-Agent`: `Linear-Webhook`
 
 **Body Fields**:
+
 ```json
 {
   "action": "create | update | remove",
   "type": "Issue",
   "actor": { "id": "user-id", "name": "User Name" },
   "createdAt": "2026-01-21T10:00:00.000Z",
-  "data": { /* serialized entity */ },
+  "data": {
+    /* serialized entity */
+  },
   "url": "https://linear.app/team/issue/BLA-123",
-  "updatedFrom": { /* previous values for updates */ },
+  "updatedFrom": {
+    /* previous values for updates */
+  },
   "webhookTimestamp": 1705831200000,
   "webhookId": "webhook-id"
 }
@@ -609,14 +655,14 @@ mutation {
 
 ```typescript
 const crypto = require("node:crypto");
-const { createHmac } = require('node:crypto');
+const { createHmac } = require("node:crypto");
 
 // Verify signature
 const signature = createHmac("sha256", WEBHOOK_SECRET)
   .update(rawBody)
   .digest("hex");
 
-if (signature !== request.headers.get('linear-signature')) {
+if (signature !== request.headers.get("linear-signature")) {
   return new Response(null, { status: 400 });
 }
 
@@ -629,6 +675,7 @@ return new Response(null, { status: 200 });
 ```
 
 **IP Allowlist** (for firewall rules):
+
 - 35.231.147.226
 - 35.243.134.228
 - (and 4 additional IPs - check Linear docs for current list)
@@ -648,6 +695,7 @@ return new Response(null, { status: 200 });
 Interactive CLI for managing Linear issues from the terminal.
 
 **Installation**:
+
 ```bash
 # Homebrew
 brew install schpet/tap/linear
@@ -657,12 +705,14 @@ deno install -A --reload -f -g -n linear jsr:@schpet/linear-cli
 ```
 
 **Setup**:
+
 ```bash
 export LINEAR_API_KEY="your-api-key"
 linear config  # Creates .linear.toml in repo
 ```
 
 **Key Commands**:
+
 ```bash
 # View issue details
 linear issue view BLA-123
@@ -682,6 +732,7 @@ linear comment add BLA-123 "Your comment here"
 ```
 
 **Features**:
+
 - Works with Git and Jujutsu (jj) VCS
 - Includes Claude Code skill for AI assistance
 - Auto-detects current issue from branch name
@@ -691,6 +742,7 @@ linear comment add BLA-123 "Your comment here"
 CLI optimized for LLM agents with JSON output.
 
 **Key Features**:
+
 - JSON output for structured data
 - Smart ID resolution
 - Optimized GraphQL queries
@@ -701,6 +753,7 @@ CLI optimized for LLM agents with JSON output.
 Fast CLI built with Rust (released January 2026).
 
 **Features**:
+
 - Full API coverage (projects, issues, labels, teams, users, cycles, comments, documents)
 - Git integration for branch checkout and PR linking
 - Jujutsu (jj) first-class support
@@ -715,17 +768,20 @@ Fast CLI built with Rust (released January 2026).
 Open-source workflow automation with deep Linear integration.
 
 **Linear Triggers**:
+
 - Issue Created/Updated/Deleted
 - Comment Added
 - Project Updated
 
 **Linear Actions**:
+
 - Create/Update/Delete Issues
 - Add Comments
 - Update Issue Status
 - Assign Issues
 
 **Example n8n Workflow** (webhook to Linear):
+
 ```json
 {
   "nodes": [
@@ -756,11 +812,13 @@ Open-source workflow automation with deep Linear integration.
 8,000+ app integrations with simple trigger-action model.
 
 **Linear Triggers**:
+
 - New Issue
 - Issue Updated
 - New Comment
 
 **Linear Actions**:
+
 - Create Issue
 - Update Issue
 - Create Comment
@@ -770,6 +828,7 @@ Open-source workflow automation with deep Linear integration.
 Visual workflow builder with branching logic.
 
 **Linear Module**:
+
 - ~2,400 integrations
 - Deeper actions per integration than Zapier
 - Cost-effective for high-volume workflows
@@ -779,6 +838,7 @@ Visual workflow builder with branching logic.
 ## Best Practices for AI/Automation Workflows
 
 ### 1. Use Webhooks, Not Polling
+
 ```typescript
 // DO NOT do this
 setInterval(async () => {
@@ -787,7 +847,7 @@ setInterval(async () => {
 }, 60000);
 
 // DO use webhooks
-app.post('/linear-webhook', (req, res) => {
+app.post("/linear-webhook", (req, res) => {
   const { action, data } = req.body;
   // React to changes in real-time
   res.status(200).send();
@@ -795,14 +855,15 @@ app.post('/linear-webhook', (req, res) => {
 ```
 
 ### 2. Implement Proper Error Handling
+
 ```typescript
-import { parseLinearError } from '@linear/sdk';
+import { parseLinearError } from "@linear/sdk";
 
 try {
   const issue = await client.createIssue({ title, teamId });
 } catch (error) {
   const linearError = parseLinearError(error);
-  if (linearError?.type === 'RATELIMITED') {
+  if (linearError?.type === "RATELIMITED") {
     // Back off and retry
     await sleep(60000);
   }
@@ -810,26 +871,30 @@ try {
 ```
 
 ### 3. Cache Team and State IDs
+
 ```typescript
 // Fetch once at startup
 const teams = await client.teams();
-const teamMap = new Map(teams.nodes.map(t => [t.name, t.id]));
+const teamMap = new Map(teams.nodes.map((t) => [t.name, t.id]));
 
 const states = await client.workflowStates();
-const stateMap = new Map(states.nodes.map(s => [s.name, s.id]));
+const stateMap = new Map(states.nodes.map((s) => [s.name, s.id]));
 
 // Use cached IDs
-const todoStateId = stateMap.get('Todo');
+const todoStateId = stateMap.get("Todo");
 ```
 
 ### 4. Use Filtering in Queries
+
 ```graphql
 # Instead of fetching all issues and filtering
 query {
-  issues(filter: {
-    state: { name: { eq: "In Progress" } }
-    assignee: { id: { eq: "user-id" } }
-  }) {
+  issues(
+    filter: {
+      state: { name: { eq: "In Progress" } }
+      assignee: { id: { eq: "user-id" } }
+    }
+  ) {
     nodes {
       id
       title
@@ -843,6 +908,7 @@ query {
 ## API Explorer
 
 Explore the Linear GraphQL API interactively:
+
 - **Apollo Studio**: [https://studio.apollographql.com/public/Linear-API](https://studio.apollographql.com/public/Linear-API)
 - **Linear Developers**: [https://linear.app/developers](https://linear.app/developers)
 

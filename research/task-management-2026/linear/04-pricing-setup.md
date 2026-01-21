@@ -8,12 +8,12 @@ Linear uses a per-user pricing model with a generous free tier that works well f
 
 ### Plan Comparison
 
-| Plan | Price | Key Features |
-|------|-------|--------------|
-| **Free** | $0 | Unlimited members, up to 250 active issues, 2 teams, all integrations, API access |
-| **Basic** | $8/user/month ($6.40 annual) | Unlimited issues, 5 teams, admin roles, unlimited file uploads |
-| **Business** | $12/user/month ($9.60 annual) | Private teams, guest accounts, Linear Insights analytics, Zendesk/Intercom integrations |
-| **Enterprise** | Custom | SAML/SCIM, granular security controls, workspace owner role, custom SLAs |
+| Plan           | Price                         | Key Features                                                                            |
+| -------------- | ----------------------------- | --------------------------------------------------------------------------------------- |
+| **Free**       | $0                            | Unlimited members, up to 250 active issues, 2 teams, all integrations, API access       |
+| **Basic**      | $8/user/month ($6.40 annual)  | Unlimited issues, 5 teams, admin roles, unlimited file uploads                          |
+| **Business**   | $12/user/month ($9.60 annual) | Private teams, guest accounts, Linear Insights analytics, Zendesk/Intercom integrations |
+| **Enterprise** | Custom                        | SAML/SCIM, granular security controls, workspace owner role, custom SLAs                |
 
 Annual billing provides a 20% discount.
 
@@ -74,20 +74,24 @@ If you maintain a clean backlog (archive completed/stale issues), you can likely
 ## Discount Programs
 
 ### Nonprofits
+
 - **75% off** Basic and Business plans
-- Contact support@linear.app with proof of nonprofit status
+- Contact <support@linear.app> with proof of nonprofit status
 
 ### Education
+
 - Discounted rates for accredited institutions
-- Contact support@linear.app from .edu email with proof of status
+- Contact <support@linear.app> from .edu email with proof of status
 
 ### Startups
+
 - **Up to 6 months free** through Linear for Startups program
 - Requires affiliation with a partner program
 
 ### Open Source Projects
+
 - **No dedicated OSS program** publicly advertised
-- Contact support@linear.app to inquire - they may offer something case-by-case
+- Contact <support@linear.app> to inquire - they may offer something case-by-case
 - The Free tier is often sufficient for OSS project management
 
 ## Solo Developer / Small Team Setup
@@ -129,6 +133,7 @@ The GitHub integration is fully available on the Free plan and is highly valuabl
 - **Two-way comment sync** - Comments sync between platforms
 
 Setup:
+
 1. Settings > Integrations > GitHub
 2. Authenticate and select repositories
 3. Enable PR linking and commit linking per team
@@ -168,12 +173,14 @@ Setup:
 ### Recommendation
 
 Linear's Free plan is well-suited for small open source projects that:
+
 - Have a manageable backlog (under 250 active issues with good archiving habits)
 - Don't need private security issue tracking
 - Want tight GitHub integration
 - Value a modern, fast interface
 
 For an OSS project, you likely don't need paid features unless:
+
 - Your active issue count consistently exceeds 250
 - You need private teams for security vulnerability tracking
 - You want to add external guest collaborators
@@ -181,6 +188,7 @@ For an OSS project, you likely don't need paid features unless:
 ### Cost Comparison
 
 For a solo developer or 3-person team on annual billing:
+
 - **Free**: $0/month - likely sufficient
 - **Basic**: $6.40-$19.20/month (1-3 users) - if you exceed 250 issues
 - **Business**: $9.60-$28.80/month (1-3 users) - if you need private teams

@@ -31,6 +31,7 @@ npx mdcontext --help
 ```
 
 **Requirements:**
+
 - Node.js 18+
 - OpenAI API key (for semantic search only)
 
@@ -68,20 +69,23 @@ mdcontext index [path] [options]
 ```
 
 **Arguments:**
-| Argument | Description |
-|----------|-------------|
-| `path` | Directory to index (default: current directory) |
+
+| Argument | Description                                     |
+| -------- | ----------------------------------------------- |
+| `path`   | Directory to index (default: current directory) |
 
 **Options:**
-| Option | Description |
-|--------|-------------|
-| `-e, --embed` | Also build semantic embeddings |
-| `-w, --watch` | Watch for file changes |
-| `--force` | Force full rebuild (ignore cache) |
-| `--json` | Output as JSON |
-| `--pretty` | Pretty-print JSON |
+
+| Option        | Description                       |
+| ------------- | --------------------------------- |
+| `-e, --embed` | Also build semantic embeddings    |
+| `-w, --watch` | Watch for file changes            |
+| `--force`     | Force full rebuild (ignore cache) |
+| `--json`      | Output as JSON                    |
+| `--pretty`    | Pretty-print JSON                 |
 
 **Examples:**
+
 ```bash
 # Index current directory
 mdcontext index
@@ -112,25 +116,29 @@ mdcontext search [options] <query> [path]
 ```
 
 **Arguments:**
-| Argument | Description |
-|----------|-------------|
-| `query` | Search query (natural language or regex pattern) |
-| `path` | Directory to search in (default: current directory) |
+
+| Argument | Description                                         |
+| -------- | --------------------------------------------------- |
+| `query`  | Search query (natural language or regex pattern)    |
+| `path`   | Directory to search in (default: current directory) |
 
 **Options:**
-| Option | Description |
-|--------|-------------|
-| `-k, --keyword` | Force keyword search (exact text match) |
-| `-n, --limit` | Maximum results (default: 10) |
-| `--threshold` | Similarity threshold for semantic search (0-1) |
-| `--json` | Output as JSON |
-| `--pretty` | Pretty-print JSON |
+
+| Option          | Description                                    |
+| --------------- | ---------------------------------------------- |
+| `-k, --keyword` | Force keyword search (exact text match)        |
+| `-n, --limit`   | Maximum results (default: 10)                  |
+| `--threshold`   | Similarity threshold for semantic search (0-1) |
+| `--json`        | Output as JSON                                 |
+| `--pretty`      | Pretty-print JSON                              |
 
 **Auto-detection:**
+
 - If embeddings exist AND query looks like natural language: semantic search
 - If query has regex characters OR `-k` flag: keyword search
 
 **Examples:**
+
 ```bash
 # Semantic search (if embeddings exist)
 mdcontext search "how to authenticate"
@@ -159,20 +167,23 @@ mdcontext context [options] <files...>
 ```
 
 **Arguments:**
-| Argument | Description |
-|----------|-------------|
+
+| Argument   | Description                                          |
+| ---------- | ---------------------------------------------------- |
 | `files...` | One or more markdown files (glob patterns supported) |
 
 **Options:**
-| Option | Description |
-|--------|-------------|
-| `-t, --tokens` | Token budget |
-| `--brief` | Minimal output (~100 tokens) |
-| `--full` | Include full content |
-| `--json` | Output as JSON |
-| `--pretty` | Pretty-print JSON |
+
+| Option         | Description                  |
+| -------------- | ---------------------------- |
+| `-t, --tokens` | Token budget                 |
+| `--brief`      | Minimal output (~100 tokens) |
+| `--full`       | Include full content         |
+| `--json`       | Output as JSON               |
+| `--pretty`     | Pretty-print JSON            |
 
 **Examples:**
+
 ```bash
 # Single file
 mdcontext context README.md
@@ -194,6 +205,7 @@ mdcontext context --full README.md
 ```
 
 **Output includes:**
+
 - Document title and path
 - Section summaries (respecting token budget)
 - Token count
@@ -210,21 +222,25 @@ mdcontext tree [path] [options]
 ```
 
 **Arguments:**
-| Argument | Description |
-|----------|-------------|
-| `path` | Directory or file (default: current directory) |
+
+| Argument | Description                                    |
+| -------- | ---------------------------------------------- |
+| `path`   | Directory or file (default: current directory) |
 
 **Options:**
-| Option | Description |
-|--------|-------------|
-| `--json` | Output as JSON |
+
+| Option     | Description       |
+| ---------- | ----------------- |
+| `--json`   | Output as JSON    |
 | `--pretty` | Pretty-print JSON |
 
 **Auto-detection:**
+
 - If path is a directory: shows file list
 - If path is a file: shows document outline (heading hierarchy)
 
 **Examples:**
+
 ```bash
 # File list in current directory
 mdcontext tree
@@ -237,6 +253,7 @@ mdcontext tree README.md
 ```
 
 **Directory output:**
+
 ```
 docs/
 ├── README.md (2,450 tokens)
@@ -248,6 +265,7 @@ docs/
 ```
 
 **File output:**
+
 ```
 # API Reference (450 tokens)
   ## Authentication (120 tokens)
@@ -269,23 +287,27 @@ mdcontext links <file> [options]
 ```
 
 **Arguments:**
-| Argument | Description |
-|----------|-------------|
-| `file` | Markdown file to analyze |
+
+| Argument | Description              |
+| -------- | ------------------------ |
+| `file`   | Markdown file to analyze |
 
 **Options:**
-| Option | Description |
-|--------|-------------|
+
+| Option       | Description                                 |
+| ------------ | ------------------------------------------- |
 | `-r, --root` | Root directory for index (default: current) |
-| `--json` | Output as JSON |
-| `--pretty` | Pretty-print JSON |
+| `--json`     | Output as JSON                              |
+| `--pretty`   | Pretty-print JSON                           |
 
 **Example:**
+
 ```bash
 mdcontext links docs/README.md
 ```
 
 **Output:**
+
 ```
 Internal Links:
   → ./getting-started.md (Getting Started)
@@ -307,23 +329,27 @@ mdcontext backlinks <file> [options]
 ```
 
 **Arguments:**
-| Argument | Description |
-|----------|-------------|
-| `file` | Markdown file to find links to |
+
+| Argument | Description                    |
+| -------- | ------------------------------ |
+| `file`   | Markdown file to find links to |
 
 **Options:**
-| Option | Description |
-|--------|-------------|
+
+| Option       | Description                                 |
+| ------------ | ------------------------------------------- |
 | `-r, --root` | Root directory for index (default: current) |
-| `--json` | Output as JSON |
-| `--pretty` | Pretty-print JSON |
+| `--json`     | Output as JSON                              |
+| `--pretty`   | Pretty-print JSON                           |
 
 **Example:**
+
 ```bash
 mdcontext backlinks docs/api/authentication.md
 ```
 
 **Output:**
+
 ```
 Files linking to docs/api/authentication.md:
   ← docs/README.md (in section "Quick Start")
@@ -341,22 +367,26 @@ mdcontext stats [path] [options]
 ```
 
 **Arguments:**
-| Argument | Description |
-|----------|-------------|
-| `path` | Directory to show stats for (default: current) |
+
+| Argument | Description                                    |
+| -------- | ---------------------------------------------- |
+| `path`   | Directory to show stats for (default: current) |
 
 **Options:**
-| Option | Description |
-|--------|-------------|
-| `--json` | Output as JSON |
+
+| Option     | Description       |
+| ---------- | ----------------- |
+| `--json`   | Output as JSON    |
 | `--pretty` | Pretty-print JSON |
 
 **Example:**
+
 ```bash
 mdcontext stats
 ```
 
 **Output:**
+
 ```
 Index Statistics:
   Documents: 23
@@ -382,11 +412,11 @@ mdcontext-mcp
 
 ### Available Tools
 
-| Tool | Description |
-|------|-------------|
-| `md_search` | Semantic search across indexed documents |
-| `md_context` | Get LLM-ready context for a file |
-| `md_structure` | Get document structure/outline |
+| Tool           | Description                              |
+| -------------- | ---------------------------------------- |
+| `md_search`    | Semantic search across indexed documents |
+| `md_context`   | Get LLM-ready context for a file         |
+| `md_structure` | Get document structure/outline           |
 
 ### Claude Desktop Configuration
 
@@ -514,8 +544,8 @@ By default, indexes are stored in `.mdcontext/` in your project root:
 
 ### Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
+| Variable         | Required            | Description    |
+| ---------------- | ------------------- | -------------- |
 | `OPENAI_API_KEY` | For semantic search | OpenAI API key |
 
 ### Supported File Types

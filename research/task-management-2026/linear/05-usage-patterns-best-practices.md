@@ -32,6 +32,7 @@ Descript's internal guide recommends using [Raycast](https://www.raycast.com/), 
 #### 2. Slack to Linear Automation
 
 Descript built a Zapier automation workflow:
+
 1. New Slack message triggers the automation
 2. ChatGPT summarizes the message into 12 words or less
 3. Creates a Linear issue with the summary as title
@@ -59,6 +60,7 @@ Triage is an optional status category that acts as an **inbox for your team**. I
 ### When Issues Land in Triage
 
 Issues automatically go to Triage when:
+
 - Created through integrations (Slack, Sentry, Zendesk)
 - Created while inside the Triage view
 - Created by workspace members not belonging to your specific team
@@ -81,6 +83,7 @@ Issues automatically go to Triage when:
 ### Triage Intelligence (AI-Powered)
 
 Linear's AI features automate triage assessment:
+
 - Automatically flags duplicate requests
 - Links related issues together
 - Suggests properties like labels and assignees
@@ -96,12 +99,12 @@ Linear's AI features automate triage assessment:
 
 ### Triage vs Backlog: When to Use Each
 
-| Triage | Backlog |
-|--------|---------|
-| Unvetted, needs review | Accepted, ready to be worked |
-| Source may be unclear | Properly scoped and assigned |
-| May be duplicate or invalid | Validated and unique |
-| Requires assessment | Prioritized for future work |
+| Triage                      | Backlog                      |
+| --------------------------- | ---------------------------- |
+| Unvetted, needs review      | Accepted, ready to be worked |
+| Source may be unclear       | Properly scoped and assigned |
+| May be duplicate or invalid | Validated and unique         |
+| Requires assessment         | Prioritized for future work  |
 
 ---
 
@@ -125,16 +128,19 @@ Solo developers benefit from Linear's structure without the overhead of team coo
 From a personal productivity case study:
 
 **Planning Phase (Sprint Grooming)**:
+
 - List all pending tasks
 - Estimate time and priority for each
 - If completion rates hover around 50-70%, reduce workload
 
 **Execution Phase**:
+
 - Plan next day's tasks the night before
 - Review day's completion each morning
 - Update issue statuses daily
 
 **Review Phase**:
+
 - Track completion rates at end of cycle
 - Note emotional state during execution
 - Identify improvements for next sprint
@@ -149,6 +155,7 @@ From a personal productivity case study:
 ### Managing Side Projects with Initiatives
 
 Even solo, use Linear's hierarchy:
+
 - **Initiatives**: Major life/work streams (e.g., "Client Work", "Products", "Learning")
 - **Projects**: Specific deliverables under each initiative
 - **Issues**: Individual tasks
@@ -162,6 +169,7 @@ Even solo, use Linear's hierarchy:
 [Plum's engineering blog](https://build.plumhq.com/how-we-use-linear/) details their three-stage workflow:
 
 #### Plan Stage
+
 - Create quarterly roadmaps aligned with OKRs
 - Projects listed for every key result
 - One week before cycle starts, managers assign estimated projects
@@ -169,18 +177,21 @@ Even solo, use Linear's hierarchy:
 #### Work Stage
 
 **For Managers:**
+
 - Use cycle views during standups (filter by assignee)
 - Log blocking issues in Linear for async notifications
 - Mid-cycle: assess progress using cycle graph
 - Maintain updated project and milestone due dates
 
 **For Contributors:**
+
 - Update issue statuses daily before standups
 - Use GitHub integration for automatic PR status sync
 - Append deliverables (Figma, GitHub PRs) to issues
 - Keep due dates continuously updated
 
 #### Review Stage
+
 - Calculate team velocity from previous 3 cycles
 - Identify missed milestones
 - Evaluate progress toward quarterly objectives
@@ -223,6 +234,7 @@ Configuration tip: Set workflow automations per team in team settings.
 > "Teams try to recreate Jira-level complexity with too many custom statuses, nested labels, or rigid workflows. Before long, people stop following the process altogether."
 
 **What goes wrong:**
+
 - Too many custom states (keep to 5-7 maximum)
 - Excessive automation rules that become hard to maintain
 - Too many teams and projects that fragment work
@@ -235,6 +247,7 @@ Configuration tip: Set workflow automations per team in team settings.
 > "At Linear, they don't write user stories and think they're an anti-pattern in product development."
 
 **What goes wrong:**
+
 - Formulaic "As a user, I want to..." adds overhead without value
 - Focus shifts from clear communication to format compliance
 
@@ -245,11 +258,13 @@ Configuration tip: Set workflow automations per team in team settings.
 > "You don't need to save every feature request or piece of feedback indefinitely. Important ones will resurface, low priority ones will never get fixed."
 
 **What goes wrong:**
+
 - Backlog becomes a graveyard of forgotten ideas
 - Planning sessions become overwhelming
 - Team loses trust in the system
 
 **The fix:**
+
 - Archive issues untouched for 30+ days
 - Schedule regular "Linear gardening" sessions
 - Keep backlog focused on realistic work
@@ -259,6 +274,7 @@ Configuration tip: Set workflow automations per team in team settings.
 > "Teams stop using cycles, letting issues pile up in the backlog or stay perpetually 'In Progress.' Planning becomes reactive. Velocity becomes meaningless."
 
 **What goes wrong:**
+
 - No rhythm or routine to work
 - No way to measure progress
 - Scope creep becomes unmanageable
@@ -268,11 +284,13 @@ Configuration tip: Set workflow automations per team in team settings.
 ### Mistake 5: Misusing Estimates
 
 **What goes wrong:**
+
 - Equating story points with hours (1 SP = 4 hours)
 - Using estimates for delivery date promises
 - Judging performance by points completed
 
 **The fix:**
+
 - Use estimates for relative sizing only
 - Consider issue count instead (with "split until small" rule)
 - Focus estimates on understanding scope, not timelines
@@ -282,6 +300,7 @@ Configuration tip: Set workflow automations per team in team settings.
 > "Linear's concept of 'Project' is actually what you would call a Feature. Teams have tried to use Linear's Projects as features, as traditional Projects and as Epics, and neither way made sense."
 
 **The fix:** Understand Linear's conceptual model:
+
 - **Workspace**: Your company
 - **Team**: A group working together (engineering, design, etc.)
 - **Project**: A time-bound deliverable (like a feature launch)
@@ -297,11 +316,13 @@ Configuration tip: Set workflow automations per team in team settings.
 Access via `G` `S` (Settings) -> Templates, or per-team settings.
 
 **Workspace Templates:**
+
 - Available to all teams
 - Cannot preset team-specific properties
 - Best for cross-team issue types
 
 **Team Templates:**
+
 - Only available within that team
 - Full access to team labels and statuses
 - Best for team-specific workflows (bugs, features, etc.)
@@ -309,11 +330,13 @@ Access via `G` `S` (Settings) -> Templates, or per-team settings.
 ### Form Templates
 
 More structured than standard templates. Useful for:
+
 - Bug reports requiring repro steps and environment details
 - Security incidents capturing severity and timing
 - IT/HR requests for equipment or onboarding
 
 Form template fields can include:
+
 - Text input, dropdowns, checkboxes
 - Issue properties (priority, customer, label groups)
 - Required field markers
@@ -321,43 +344,55 @@ Form template fields can include:
 ### Starter Issue Templates
 
 #### Bug Report Template
+
 ```markdown
 ## Description
+
 [Brief description of the bug]
 
 ## Steps to Reproduce
+
 1.
 2.
 3.
 
 ## Expected Behavior
+
 [What should happen]
 
 ## Actual Behavior
+
 [What actually happens]
 
 ## Environment
+
 - Browser/App version:
 - OS:
 - Device:
 
 ## Screenshots/Videos
+
 [Attach if available]
 ```
 
 #### Feature Request Template
+
 ```markdown
 ## Problem Statement
+
 [What problem does this solve?]
 
 ## Proposed Solution
+
 [Brief description of the feature]
 
 ## Success Criteria
+
 - [ ]
 - [ ]
 
 ## Additional Context
+
 [Any relevant background]
 ```
 
@@ -386,6 +421,7 @@ Area (team-specific):
 ```
 
 **Naming conventions:**
+
 - Singular, not plural ("Bug" not "Bugs")
 - Consistent capitalization ("Frontend" not "front-end")
 - Don't replicate statuses as labels
@@ -393,6 +429,7 @@ Area (team-specific):
 ### Starter Workflow Setup
 
 **Default statuses (recommended to keep):**
+
 1. Triage (optional but recommended)
 2. Backlog
 3. Todo
@@ -402,6 +439,7 @@ Area (team-specific):
 7. Canceled
 
 **Cycle setup:**
+
 - 2-week cycles are most common
 - Set automatic start day (Monday recommended)
 - Enable automatic rollover for incomplete items
@@ -414,36 +452,36 @@ Linear is arguably the most keyboard-optimized project management tool. Masterin
 
 ### Essential Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `?` | Show keyboard shortcuts help |
-| `Cmd/Ctrl + K` | Command palette (context-sensitive) |
-| `C` | Create new issue |
-| `Option/Alt + C` | Create issue from template |
+| Shortcut         | Action                              |
+| ---------------- | ----------------------------------- |
+| `?`              | Show keyboard shortcuts help        |
+| `Cmd/Ctrl + K`   | Command palette (context-sensitive) |
+| `C`              | Create new issue                    |
+| `Option/Alt + C` | Create issue from template          |
 
 ### Navigation
 
-| Shortcut | Action |
-|----------|--------|
-| `G` then `M` | Go to My Issues |
-| `G` then `T` | Go to Triage |
-| `G` then `B` | Go to Backlog |
+| Shortcut     | Action              |
+| ------------ | ------------------- |
+| `G` then `M` | Go to My Issues     |
+| `G` then `T` | Go to Triage        |
+| `G` then `B` | Go to Backlog       |
 | `G` then `A` | Go to Active issues |
-| `O` then `P` | Search projects |
-| `O` then `T` | Switch teams |
+| `O` then `P` | Search projects     |
+| `O` then `T` | Switch teams        |
 
 ### Issue Management
 
-| Shortcut | Action |
-|----------|--------|
-| `A` | Assign to user |
-| `L` | Add label |
-| `P` | Set priority |
-| `S` | Change status |
-| `F` | Add filter |
-| `E` | Archive notification |
-| `Shift + H` | Snooze issue |
-| `J` / `K` | Navigate up/down in list |
+| Shortcut    | Action                   |
+| ----------- | ------------------------ |
+| `A`         | Assign to user           |
+| `L`         | Add label                |
+| `P`         | Set priority             |
+| `S`         | Change status            |
+| `F`         | Add filter               |
+| `E`         | Archive notification     |
+| `Shift + H` | Snooze issue             |
+| `J` / `K`   | Navigate up/down in list |
 
 ### Power User Tips
 
@@ -461,6 +499,7 @@ Linear is arguably the most keyboard-optimized project management tool. Masterin
 Descript (all-in-one video editing platform) has used Linear since December 2020.
 
 **Key practices:**
+
 - Linear as "central work operating system" for EPD and business teams
 - Heavy use of keyboard shortcuts
 - Slack + ChatGPT automation for issue creation
@@ -470,6 +509,7 @@ Descript (all-in-one video editing platform) has used Linear since December 2020
 ### Plum: Structured Three-Stage Workflow
 
 **Their setup:**
+
 - Quarterly roadmaps aligned with OKRs
 - 2-week cycles with bandwidth calculation
 - Projects kept short (no more than 2 cycles)
@@ -478,11 +518,13 @@ Descript (all-in-one video editing platform) has used Linear since December 2020
 - Heavy use of async communication through Linear
 
 **Key insight:**
+
 > "When adequately put to use, the majority of communication will be async, freeing teams from the cycle of indefinitely updating people about the same thing."
 
 ### Creative Agency Use
 
 Small design studios report:
+
 - Linear feels "less bloated" than traditional tools
 - Freelancers can be onboarded quickly
 - Tags separate dev, design, content, and marketing work in one workspace
@@ -490,6 +532,7 @@ Small design studios report:
 ### Non-Traditional Uses
 
 According to Linear staff, people use the tool for:
+
 - TV productions
 - Wedding planning
 - House builds
@@ -519,6 +562,7 @@ This demonstrates the flexibility of the system beyond software development.
 ### When to Scale Complexity
 
 Add structure only when its absence becomes painful:
+
 - Start with defaults
 - Customize only for real pain points
 - Review and simplify every quarter
@@ -529,6 +573,7 @@ Add structure only when its absence becomes painful:
 ## Sources
 
 ### Official Linear Resources
+
 - [Linear Method: Principles & Practices](https://linear.app/method/introduction)
 - [Linear Docs: Triage](https://linear.app/docs/triage)
 - [Linear Docs: Issue Templates](https://linear.app/docs/issue-templates)
@@ -537,6 +582,7 @@ Add structure only when its absence becomes painful:
 - [Linear Docs: Conceptual Model](https://linear.app/docs/conceptual-model)
 
 ### Case Studies and Blog Posts
+
 - [Descript's Internal Guide for Using Linear](https://linear.app/now/descript-internal-guide-for-using-linear)
 - [How Plum Uses Linear](https://build.plumhq.com/how-we-use-linear/)
 - [How to Use Linear: Setup, Best Practices, and Hidden Features Guide (Morgen)](https://www.morgen.so/blog-posts/linear-project-management)
@@ -546,6 +592,7 @@ Add structure only when its absence becomes painful:
 - [Building at the Early Stage (Karri Saarinen)](https://medium.com/linear-app/building-at-the-early-stage-e79e696341db)
 
 ### Guides and Reviews
+
 - [Linear Task Management: Organize, Prioritize, and Deliver (Everhour)](https://everhour.com/blog/linear-task-management/)
 - [Linear App Case Study: How to Build a $400M Issue Tracker (Eleken)](https://www.eleken.co/blog-posts/linear-app-case-study)
 - [Mastering Linear: How to Optimize Your Team's Project Management Experience (OneHorizon)](https://onehorizon.ai/blog/linear-app-review)
@@ -553,5 +600,6 @@ Add structure only when its absence becomes painful:
 - [How Linear Builds Product (Lenny's Newsletter)](https://www.lennysnewsletter.com/p/how-linear-builds-product)
 
 ### Keyboard Shortcuts
+
 - [Linear Keyboard Shortcuts (KeyCombiner)](https://keycombiner.com/collections/linear/)
 - [Linear App Cheat Sheet (ShortcutFoo)](https://www.shortcutfoo.com/app/dojos/linear-app-mac/cheatsheet)

@@ -51,7 +51,7 @@ export class OpenAIProvider implements EmbeddingProvider {
     this.model = options.model ?? 'text-embedding-3-small'
     this.batchSize = options.batchSize ?? 100
     this.name = `openai:${this.model}`
-    this.dimensions = this.model === 'text-embedding-3-large' ? 3072 : 1536
+    this.dimensions = 512
   }
 
   async embed(texts: string[]): Promise<EmbeddingResult> {
@@ -69,6 +69,7 @@ export class OpenAIProvider implements EmbeddingProvider {
       const response = await this.client.embeddings.create({
         model: this.model,
         input: batch,
+        dimensions: 512, // Ensure consistent dimensions
       })
 
       for (const item of response.data) {

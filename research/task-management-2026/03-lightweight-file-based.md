@@ -1,6 +1,6 @@
 # Lightweight File-Based Task Management for AI Workflows
 
-*Research compiled January 2026*
+_Research compiled January 2026_
 
 ## Executive Summary
 
@@ -27,6 +27,7 @@ AI coding agents famously have no memory between sessions. File-based systems le
 > "The problem we all face with coding agents is that they have no memory between sessions -- sessions that only last about ten minutes. It's the movie Memento in real life." -- [Steve Yegge, creator of Beads](https://steve-yegge.medium.com/introducing-beads-a-coding-agent-memory-system-637d7d92514a)
 
 Git-native task management provides:
+
 - **Audit trails** that sync with codebase history
 - **Branching** for parallel task exploration
 - **Collaboration** between humans and multiple agents
@@ -35,6 +36,7 @@ Git-native task management provides:
 ### 1.3 Human-AI Collaboration on Same Artifacts
 
 When tasks live in markdown files within the repo, both humans and AI agents can:
+
 - Read the same task definitions
 - Update progress in the same format
 - Add notes and context that persist
@@ -49,17 +51,20 @@ When tasks live in markdown files within the repo, both humans and AI agents can
 [Todo.txt](http://todotxt.org/) represents the minimalist philosophy: tasks as lines in a plain text file.
 
 **Format:**
+
 ```
 (A) 2026-01-21 Call Mom @phone +Family
 x 2026-01-20 2026-01-15 File taxes @computer +Finance
 ```
 
 **Strengths for AI:**
+
 - Extremely simple for LLMs to parse and generate
 - No dependencies or special tooling required
 - Portable across any system
 
 **Limitations:**
+
 - No support for subtasks or dependencies
 - No due dates (only creation/completion dates)
 - Limited metadata capabilities
@@ -71,6 +76,7 @@ x 2026-01-20 2026-01-15 File taxes @computer +Finance
 [TaskWarrior](https://taskwarrior.org/) offers a richer feature set for command-line task management.
 
 **Key Features:**
+
 - Dependencies between tasks
 - Due dates, start dates, recurrence
 - Projects, tags, and user-defined attributes
@@ -78,6 +84,7 @@ x 2026-01-20 2026-01-15 File taxes @computer +Finance
 - Sync capabilities
 
 **AI Considerations:**
+
 - More complex format for LLMs to work with
 - Rich feature set useful for complex project management
 - JSON export enables structured AI consumption
@@ -88,17 +95,20 @@ x 2026-01-20 2026-01-15 File taxes @computer +Finance
 [Org-mode](https://orgmode.org/org.html) is the most powerful plain-text organizational system, combining task management with notes, documentation, and more.
 
 **LLM Integration Tools:**
+
 - [gptel](https://github.com/karthink/gptel): Simple, extensible LLM client for Emacs
 - [org-ai](https://github.com/rksm/org-ai): Personal AI assistant for Emacs using LLMs
 - [gptel-got](https://codeberg.org/bajsicki/gptel-got): Tooling for LLM interactions with org-mode
 
 **AI-Specific Capabilities:**
+
 - LLMs can generate subtasks from headlines
 - Estimate task durations
 - Review and reorganize task hierarchies
 - All within version-controlled plain text
 
 **Limitations:**
+
 - Requires Emacs ecosystem
 - Learning curve for org-mode syntax
 - Not as universal as markdown
@@ -112,16 +122,19 @@ x 2026-01-20 2026-01-15 File taxes @computer +Finance
 [Backlog.md](https://github.com/MrLesk/Backlog.md) transforms any Git repo into a self-contained project board using markdown files.
 
 **Core Principles:**
+
 1. **Markdown as database**: Each task is a separate `.md` file
 2. **Git-native integration**: Task IDs reference commits and branches
 3. **Terminal-first design**: Full CLI functionality
 
 **AI Integration:**
+
 - Works with Claude Code, Gemini CLI, Codex, and MCP-compatible assistants
 - Structured format for easy AI parsing
 - Web interface and terminal Kanban for visualization
 
 **Example Structure:**
+
 ```
 .backlog/
   tasks/
@@ -135,6 +148,7 @@ x 2026-01-20 2026-01-15 File taxes @computer +Finance
 [Tasks.md](https://github.com/BaldissaraMatheus/Tasks.md) is a self-hosted, markdown-based Kanban board.
 
 **Features:**
+
 - Cards, lanes, and tags in a responsive web interface
 - PWA installation support
 - All data stored in markdown files
@@ -162,20 +176,24 @@ The [TODO.md standard](https://github.com/todo-md/todo-md) defines an interchang
 [Beads](https://github.com/steveyegge/beads), created by Steve Yegge, is a "memory upgrade for coding agents" -- a Git-backed issue tracker designed specifically for AI workflows.
 
 **Architecture:**
+
 - Local SQLite database for speed
 - JSONL files for Git synchronization
 - Automatic sync between DB and files
 
 **Key Differentiators:**
+
 - **DAG + Priority Model**: Dependency-aware task graphs
 - **Agent-Centric Design**: Agents file and manage issues automatically
 - **JSON Interface**: Primary interface designed for programmatic access
 - **Auto-Sync**: Changes flush to JSONL after 5 seconds of inactivity
 
 **Why Not Plain Markdown?**
+
 > "A flat markdown list doesn't explicitly define relationships between tasks. An agent might struggle to understand that Task C depends on completing Task A and Task B first."
 
 **Visualization Tools:**
+
 - Kanban board view
 - Dependency graph visualization
 - Graph metrics and bottleneck analysis via [Beads Viewer](https://github.com/Dicklesworthstone/beads_viewer)
@@ -183,6 +201,7 @@ The [TODO.md standard](https://github.com/todo-md/todo-md) defines an interchang
 ### 4.2 Issues-as-Files Approach
 
 The broader pattern of storing issues as files enables:
+
 - Issues versioned alongside code
 - Offline access and editing
 - Standard text tools for search/manipulation
@@ -197,9 +216,11 @@ The broader pattern of storing issues as files enables:
 [Spec-driven development (SDD)](https://www.thoughtworks.com/en-us/insights/blog/agile-engineering-practices/spec-driven-development-unpacking-2025-new-engineering-practices) has emerged as a key pattern for AI-assisted development in 2025-2026.
 
 **Core Concept:**
+
 > "Spec-driven development means writing a 'spec' before writing code with AI. The spec becomes the source of truth for the human and the AI."
 
 **Typical File Structure:**
+
 ```
 project/
   requirements.md    # What we're building
@@ -211,16 +232,19 @@ project/
 ### 5.2 Tools and Frameworks
 
 **GitHub Spec-Kit:**
+
 - [Open-source toolkit](https://github.com/github/spec-kit/blob/main/spec-driven.md) for spec-driven workflows
 - Structured directories for specs, contracts, data models
 - Works with various AI coding tools
 
 **Amazon Kiro:**
+
 - Predefined SDD workflows
 - Requirements-driven development
 - Integrated task generation from specs
 
 **JetBrains Junie:**
+
 - [Spec-driven approach](https://blog.jetbrains.com/junie/2025/10/how-to-use-a-spec-driven-approach-for-coding-with-ai/) for AI coding
 - Markdown-based requirements
 
@@ -242,22 +266,27 @@ From [Addy Osmani's guide on specs for AI agents](https://addyosmani.com/blog/go
 Claude Code uses markdown files for configuration and task persistence.
 
 **CLAUDE.md Files:**
+
 - [Project-level configuration](https://claude.com/blog/using-claude-md-files) in markdown
 - Persistent instructions across sessions
 - Can reference external files for context
 
 **Task Persistence Challenges:**
+
 - Built-in todo list doesn't persist across sessions
 - Context window resets clear task state
 
 **Workarounds:**
+
 - Create `plan.md` or `todo.md` files manually
 - Use [ralph-wiggum plugin](https://looking4offswitch.github.io/blog/2026/01/04/ralph-wiggum-claude-code/) for autonomous task loops
 - [CCPM](https://github.com/automazeio/ccpm): Project management using GitHub Issues and Git worktrees
 
 **Minimalist Workflow Pattern** (from [Nick Tune](https://medium.com/nick-tune-tech-strategy-blog/minimalist-claude-code-task-management-workflow-7b7bdcbc4cc1)):
+
 ```markdown
 # TODO.md
+
 - [ ] Task 1: Description
 - [x] Task 2: Completed
 - [ ] Task 3: In progress
@@ -268,11 +297,13 @@ Claude Code uses markdown files for configuration and task persistence.
 Modern AI IDEs [handle context differently](https://www.builder.io/blog/windsurf-vs-cursor):
 
 **Cursor:**
+
 - Manual context curation with @ symbols
 - Rules files (`.cursorrules`) for project configuration
 - Developer-driven approach
 
 **Windsurf:**
+
 - Automatic context detection
 - Repository-scale comprehension
 - Multi-file reasoning
@@ -296,11 +327,13 @@ Modern AI IDEs [handle context differently](https://www.builder.io/blog/windsurf
 [YAML has become the de facto standard](https://empathyfirstmedia.com/yaml-files-ai-agents/) for AI agent configuration.
 
 **Advantages:**
+
 - Human-readable hierarchical structure
 - Widely supported parsing libraries
 - Clean separation of concerns
 
 **Use Cases:**
+
 - Agent role definitions
 - Task parameters
 - Workflow configurations
@@ -318,6 +351,7 @@ description: What this skill does
 ```
 
 **Benefits:**
+
 - Portable across agents
 - Metadata for skill discovery
 - Instructions in natural language
@@ -325,6 +359,7 @@ description: What this skill does
 ### 7.3 Conformance Testing
 
 YAML-based conformance suites define expected inputs/outputs for agent behavior:
+
 - Language-independent test definitions
 - Contract-style specifications
 - Verifiable agent behavior
@@ -338,6 +373,7 @@ YAML-based conformance suites define expected inputs/outputs for agent behavior:
 [llm-md](https://llm.md/) is a workflow definition language built on markdown.
 
 **Key Features:**
+
 - Define conversations in `.md` files
 - Context, user input, and responses in one file
 - Version-controllable AI interactions
@@ -346,22 +382,29 @@ YAML-based conformance suites define expected inputs/outputs for agent behavior:
 - Scoped variables (global, session, agent, local)
 
 **Example:**
+
 ```markdown
 # Agent: researcher
+
 You are a research assistant.
 
 ## User
+
 Find information about task management.
 
 ## Assistant
+
 [Response appears here]
 
->>>
+> > >
+
 # Agent: summarizer
+
 Summarize the research above.
 ```
 
 **Philosophy:**
+
 > "AI interactions become plain-text files you can version, share, and trace, complete with context, agent flow, and conversation history."
 
 ### 8.2 llms.txt
@@ -384,16 +427,19 @@ Summarize the research above.
 # Current Sprint
 
 ## In Progress
+
 - [ ] Implement authentication module
   - [x] Set up JWT tokens
   - [ ] Add refresh token logic
 
 ## Pending
+
 - [ ] Write unit tests
 - [ ] Update documentation
 ```
 
 **Why:**
+
 - Zero tooling required
 - Directly readable by any LLM
 - Git-versioned automatically
@@ -421,6 +467,7 @@ project/
 ```
 
 **Why:**
+
 - Specs as source of truth
 - Clear separation of concerns
 - Human review points before implementation
@@ -449,16 +496,16 @@ project/
 
 ## 10. Comparison Matrix
 
-| Approach | Complexity | AI-Friendliness | Dependencies | Version Control | Best For |
-|----------|-----------|-----------------|--------------|-----------------|----------|
-| Todo.txt | Very Low | High | None | Excellent | Simple flat lists |
-| Markdown checklists | Low | Very High | None | Excellent | Most use cases |
-| TaskWarrior | Medium | Medium | CLI tool | Good | Complex personal task mgmt |
-| Org-mode | High | High (with tools) | Emacs | Excellent | Emacs users |
-| Backlog.md | Medium | Very High | CLI tool | Excellent | Team projects |
-| Beads | Medium | Very High | CLI tool | Excellent | Multi-agent coordination |
-| Spec-Kit | Medium | High | None | Excellent | Spec-driven development |
-| llm-md | Medium | Very High | CLI tool | Excellent | LLM workflow definition |
+| Approach            | Complexity | AI-Friendliness   | Dependencies | Version Control | Best For                   |
+| ------------------- | ---------- | ----------------- | ------------ | --------------- | -------------------------- |
+| Todo.txt            | Very Low   | High              | None         | Excellent       | Simple flat lists          |
+| Markdown checklists | Low        | Very High         | None         | Excellent       | Most use cases             |
+| TaskWarrior         | Medium     | Medium            | CLI tool     | Good            | Complex personal task mgmt |
+| Org-mode            | High       | High (with tools) | Emacs        | Excellent       | Emacs users                |
+| Backlog.md          | Medium     | Very High         | CLI tool     | Excellent       | Team projects              |
+| Beads               | Medium     | Very High         | CLI tool     | Excellent       | Multi-agent coordination   |
+| Spec-Kit            | Medium     | High              | None         | Excellent       | Spec-driven development    |
+| llm-md              | Medium     | Very High         | CLI tool     | Excellent       | LLM workflow definition    |
 
 ---
 
@@ -481,6 +528,7 @@ The trend in 2026 is toward treating specifications and task definitions as prim
 ## Sources
 
 ### Task Management Tools
+
 - [Todo.txt](http://todotxt.org/)
 - [TaskWarrior](https://taskwarrior.org/)
 - [Backlog.md](https://github.com/MrLesk/Backlog.md)
@@ -489,26 +537,31 @@ The trend in 2026 is toward treating specifications and task definitions as prim
 - [Beads](https://github.com/steveyegge/beads)
 
 ### AI Coding Tools
+
 - [Claude Code CLAUDE.md](https://claude.com/blog/using-claude-md-files)
 - [AGENTS.md Standard](https://agents.md/)
 - [VS Code Agent Skills](https://code.visualstudio.com/docs/copilot/customization/agent-skills)
 
 ### Spec-Driven Development
+
 - [GitHub Spec-Kit](https://github.com/github/spec-kit/blob/main/spec-driven.md)
 - [Thoughtworks on SDD](https://www.thoughtworks.com/en-us/insights/blog/agile-engineering-practices/spec-driven-development-unpacking-2025-new-engineering-practices)
 - [Addy Osmani on Specs](https://addyosmani.com/blog/good-spec/)
 - [Martin Fowler on SDD Tools](https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html)
 
 ### LLM Workflow Tools
+
 - [llm-md](https://llm.md/)
 - [gptel for Emacs](https://github.com/karthink/gptel)
 
 ### AI Workflow Articles
+
 - [Addy Osmani's LLM Coding Workflow 2026](https://addyosmani.com/blog/ai-coding-workflow/)
 - [Steve Yegge on Beads](https://steve-yegge.medium.com/introducing-beads-a-coding-agent-memory-system-637d7d92514a)
 - [Nick Tune's Minimalist Task Workflow](https://medium.com/nick-tune-tech-strategy-blog/minimalist-claude-code-task-management-workflow-7b7bdcbc4cc1)
 
 ### Comparisons and Reviews
+
 - [Windsurf vs Cursor](https://www.builder.io/blog/windsurf-vs-cursor)
 - [AI Code Editor Comparison 2026](https://research.aimultiple.com/ai-code-editor/)
 - [LLM Context Management Guide](https://eval.16x.engineer/blog/llm-context-management-guide)

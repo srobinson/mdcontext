@@ -22,14 +22,14 @@ This document synthesizes research from three independent agents into actionable
 
 ### All Three Agents Agree On
 
-| Decision | Consensus | Confidence |
-|----------|-----------|------------|
-| **Package Manager** | pnpm (stay) | 100% |
-| **Release Tool** | Changesets | 100% |
-| **Authentication** | OIDC Trusted Publishing | 100% |
-| **Bun Migration Now** | No | 100% |
-| **Provenance** | Enable via `id-token: write` | 100% |
-| **Quality Tools** | publint + attw | 100% |
+| Decision              | Consensus                    | Confidence |
+| --------------------- | ---------------------------- | ---------- |
+| **Package Manager**   | pnpm (stay)                  | 100%       |
+| **Release Tool**      | Changesets                   | 100%       |
+| **Authentication**    | OIDC Trusted Publishing      | 100%       |
+| **Bun Migration Now** | No                           | 100%       |
+| **Provenance**        | Enable via `id-token: write` | 100%       |
+| **Quality Tools**     | publint + attw               | 100%       |
 
 ### Key Insight
 
@@ -44,11 +44,13 @@ All agents independently arrived at the same conclusion: **pnpm + Changesets + O
 #### 1. Package Manager: Stay with pnpm
 
 All agents recommend staying with pnpm:
+
 - **Agent 1**: "Migration effort not justified" for existing pnpm projects
 - **Agent 2**: "pnpm" as primary recommendation, with Bun as speed alternative
 - **Agent 3**: "pnpm + tsup workflow is working well"
 
 **Rationale**:
+
 - Mature ecosystem with excellent CI/CD support
 - Native provenance support (`--provenance` flag)
 - Workspace publishing is stable
@@ -58,14 +60,15 @@ All agents recommend staying with pnpm:
 
 Unanimous recommendation for Changesets over semantic-release:
 
-| Factor | Changesets | semantic-release |
-|--------|------------|------------------|
-| Monorepo Support | Native, first-class | Via outdated plugins |
-| Human Review | PR-based workflow | Fully automated |
-| Control | High (edit after commit) | Low (commit-driven) |
-| pnpm Integration | Official documentation | Community support |
+| Factor           | Changesets               | semantic-release     |
+| ---------------- | ------------------------ | -------------------- |
+| Monorepo Support | Native, first-class      | Via outdated plugins |
+| Human Review     | PR-based workflow        | Fully automated      |
+| Control          | High (edit after commit) | Low (commit-driven)  |
+| pnpm Integration | Official documentation   | Community support    |
 
 **Why not semantic-release?**
+
 - Agent 1: "semantic-release monorepo plugin (multi-release) is not well maintained"
 - Agent 2: "No native monorepo support (requires community plugins)"
 - Agent 3: "Version coupling with deploys causes cleanup issues on failure"
@@ -75,38 +78,41 @@ Unanimous recommendation for Changesets over semantic-release:
 All agents emphasize OIDC as the clear winner:
 
 **Key Benefits**:
+
 - No token management (classic tokens revoked Dec 9, 2025)
 - Short-lived, cryptographically signed credentials
 - Automatic provenance attestations
 - Cannot be exfiltrated or reused
 
 **Critical Configuration**:
+
 ```yaml
 permissions:
   contents: write
-  id-token: write  # Required for OIDC
+  id-token: write # Required for OIDC
 ```
 
 #### 4. Quality Tools
 
 All agents recommend the same pre-publish validation:
 
-| Tool | Purpose |
-|------|---------|
-| **publint** | Package structure validation (exports, main, module) |
-| **attw** | TypeScript types validation |
-| **pnpm typecheck** | Compile-time type checking |
+| Tool               | Purpose                                              |
+| ------------------ | ---------------------------------------------------- |
+| **publint**        | Package structure validation (exports, main, module) |
+| **attw**           | TypeScript types validation                          |
+| **pnpm typecheck** | Compile-time type checking                           |
 
 ### Minor Differences (Non-Conflicting)
 
-| Topic | Agent 1 | Agent 2 | Agent 3 |
-|-------|---------|---------|---------|
-| Build Tool | tsup | **tsdown** (recommends migration) | tsup |
-| Node Versions | 22 | 20, 22, 24 | 18, 20, 22 |
-| OS Matrix | Ubuntu only | Ubuntu, macOS, Windows | Ubuntu, macOS, Windows |
-| setup-node version | v4 | **v6** | v4 |
+| Topic              | Agent 1     | Agent 2                           | Agent 3                |
+| ------------------ | ----------- | --------------------------------- | ---------------------- |
+| Build Tool         | tsup        | **tsdown** (recommends migration) | tsup                   |
+| Node Versions      | 22          | 20, 22, 24                        | 18, 20, 22             |
+| OS Matrix          | Ubuntu only | Ubuntu, macOS, Windows            | Ubuntu, macOS, Windows |
+| setup-node version | v4          | **v6**                            | v4                     |
 
 **Recommendations**:
+
 - Build Tool: Keep tsup for now; tsdown migration is optional
 - Node Versions: Test 20, 22 minimum; 18 for LTS users, 24 for forward compatibility
 - OS Matrix: Add Windows/macOS for CLI tool (path handling differs)
@@ -116,15 +122,15 @@ All agents recommend the same pre-publish validation:
 
 ## Final Recommended Stack
 
-| Component | Choice | Rationale |
-|-----------|--------|-----------|
-| **Package Manager** | pnpm 10 | Mature, stable, excellent CI support |
-| **Release Tool** | Changesets | PR-based review, monorepo-ready, pnpm integration |
-| **Authentication** | OIDC Trusted Publishing | No tokens, automatic provenance, industry standard |
-| **Build Tool** | tsup (current) | Working well, tsdown migration optional |
-| **CI Platform** | GitHub Actions | Native OIDC support, excellent pnpm integration |
-| **Module Format** | ESM-first + CJS fallback | Maximum compatibility |
-| **Quality Gates** | publint + attw + typecheck | Comprehensive pre-publish validation |
+| Component           | Choice                     | Rationale                                          |
+| ------------------- | -------------------------- | -------------------------------------------------- |
+| **Package Manager** | pnpm 10                    | Mature, stable, excellent CI support               |
+| **Release Tool**    | Changesets                 | PR-based review, monorepo-ready, pnpm integration  |
+| **Authentication**  | OIDC Trusted Publishing    | No tokens, automatic provenance, industry standard |
+| **Build Tool**      | tsup (current)             | Working well, tsdown migration optional            |
+| **CI Platform**     | GitHub Actions             | Native OIDC support, excellent pnpm integration    |
+| **Module Format**   | ESM-first + CJS fallback   | Maximum compatibility                              |
+| **Quality Gates**   | publint + attw + typecheck | Comprehensive pre-publish validation               |
 
 ---
 
@@ -136,12 +142,12 @@ All three agents independently reached the same conclusion.
 
 ### Why Not Now
 
-| Issue | Impact | Source |
-|-------|--------|--------|
-| No `--provenance` flag | Cannot generate SLSA attestations | Agent 1 (Issue #15601) |
-| 34% compatibility challenges | Risk for production CLI | Agent 2, Agent 3 |
-| Native addon issues | `hnswlib-node`, `tiktoken` may break | Agent 3 |
-| Workspace publishing bugs | References may not resolve | Agent 1 (Issue #15246) |
+| Issue                        | Impact                               | Source                 |
+| ---------------------------- | ------------------------------------ | ---------------------- |
+| No `--provenance` flag       | Cannot generate SLSA attestations    | Agent 1 (Issue #15601) |
+| 34% compatibility challenges | Risk for production CLI              | Agent 2, Agent 3       |
+| Native addon issues          | `hnswlib-node`, `tiktoken` may break | Agent 3                |
+| Workspace publishing bugs    | References may not resolve           | Agent 1 (Issue #15246) |
 
 ### md-tldr Specific Concerns
 
@@ -158,12 +164,14 @@ Low-risk dependencies:
 ### Future Consideration
 
 **When to reconsider Bun:**
+
 1. `--provenance` flag is implemented (track Issue #15601)
 2. Native addon compatibility reaches 95%+
 3. `hnswlib-node` and `tiktoken` confirmed working
 4. md-tldr usage grows enough to warrant dual distribution
 
 **Potential hybrid approach (future):**
+
 - Keep Node.js as primary npm target
 - Offer Bun-compiled binary as alternative distribution
 - Use Bun for local development speed
@@ -185,7 +193,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  id-token: write  # Required for OIDC trusted publishing
+  id-token: write # Required for OIDC trusted publishing
 
 jobs:
   # ============================================
@@ -202,8 +210,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'pnpm'
+          node-version: "22"
+          cache: "pnpm"
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
@@ -227,7 +235,7 @@ jobs:
   # ============================================
   test:
     strategy:
-      fail-fast: false  # See all failures, not just first
+      fail-fast: false # See all failures, not just first
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         node: [20, 22]
@@ -247,7 +255,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
@@ -268,7 +276,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Required for changesets
+          fetch-depth: 0 # Required for changesets
 
       - uses: pnpm/action-setup@v4
         with:
@@ -276,9 +284,9 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'pnpm'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "22"
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org"
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
@@ -316,8 +324,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'pnpm'
+          node-version: "22"
+          cache: "pnpm"
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
@@ -344,7 +352,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
@@ -359,17 +367,17 @@ jobs:
 
 ### Pre-Publish Checklist (Automated)
 
-| Gate | Tool | Blocks Publish |
-|------|------|----------------|
-| Type Safety | `pnpm typecheck` | Yes |
-| Linting | `pnpm lint` | Yes |
-| Unit Tests | `pnpm test` | Yes |
-| Build | `pnpm build` | Yes |
-| Package Exports | `npx publint` | Yes |
-| TypeScript Types | `npx attw --pack .` | Yes |
-| CLI Works | `node dist/cli/main.js --help` | Yes |
-| Cross-Platform | Matrix (Ubuntu, macOS, Windows) | Yes |
-| Multi-Node | Matrix (Node 20, 22) | Yes |
+| Gate             | Tool                            | Blocks Publish |
+| ---------------- | ------------------------------- | -------------- |
+| Type Safety      | `pnpm typecheck`                | Yes            |
+| Linting          | `pnpm lint`                     | Yes            |
+| Unit Tests       | `pnpm test`                     | Yes            |
+| Build            | `pnpm build`                    | Yes            |
+| Package Exports  | `npx publint`                   | Yes            |
+| TypeScript Types | `npx attw --pack .`             | Yes            |
+| CLI Works        | `node dist/cli/main.js --help`  | Yes            |
+| Cross-Platform   | Matrix (Ubuntu, macOS, Windows) | Yes            |
+| Multi-Node       | Matrix (Node 20, 22)            | Yes            |
 
 ### Package.json Scripts
 
@@ -455,6 +463,7 @@ Update `package.json` with quality scripts.
 ### Phase 5: Test the Workflow (Day 2)
 
 1. **Create a test changeset**:
+
    ```bash
    pnpm changeset
    # Choose patch, describe the change
@@ -487,6 +496,7 @@ pnpm changeset
 \`\`\`
 
 Follow the prompts to:
+
 1. Select the package(s) to bump
 2. Choose the bump type (patch/minor/major)
 3. Write a summary of the change
@@ -496,7 +506,7 @@ Follow the prompts to:
 1. Push your changeset file with your PR
 2. Once merged, a "Version Packages" PR is automatically created
 3. When that PR is merged, packages are automatically published to npm
-\`\`\`
+   \`\`\`
 
 ---
 
@@ -504,22 +514,22 @@ Follow the prompts to:
 
 ### What You're Getting
 
-| Feature | Benefit |
-|---------|---------|
-| **OIDC Authentication** | No token rotation, automatic provenance |
-| **Changesets** | Human-reviewable releases, monorepo-ready |
-| **Quality Gates** | Catch issues before publish |
-| **Matrix Testing** | Confidence across Node versions and OS |
+| Feature                  | Benefit                                     |
+| ------------------------ | ------------------------------------------- |
+| **OIDC Authentication**  | No token rotation, automatic provenance     |
+| **Changesets**           | Human-reviewable releases, monorepo-ready   |
+| **Quality Gates**        | Catch issues before publish                 |
+| **Matrix Testing**       | Confidence across Node versions and OS      |
 | **Automatic Provenance** | SLSA Build Level 2, verifiable supply chain |
 
 ### What You're Avoiding
 
-| Risk | Mitigation |
-|------|------------|
-| Token leaks | OIDC eliminates long-lived tokens |
-| Broken packages | publint + attw catch export issues |
-| Type errors | attw validates TypeScript consumers |
-| Platform bugs | Matrix testing across OS/Node |
+| Risk                | Mitigation                              |
+| ------------------- | --------------------------------------- |
+| Token leaks         | OIDC eliminates long-lived tokens       |
+| Broken packages     | publint + attw catch export issues      |
+| Type errors         | attw validates TypeScript consumers     |
+| Platform bugs       | Matrix testing across OS/Node           |
 | Accidental releases | Changesets requires explicit versioning |
 
 ---
@@ -527,11 +537,13 @@ Follow the prompts to:
 ## References
 
 All research documents:
+
 - `/docs/npm-workflow-research-agent1.md` - Focus: GitHub Actions, OIDC, Bun analysis
 - `/docs/npm-workflow-research-agent2.md` - Focus: Release tools, CI/CD design, ESM/CJS
 - `/docs/npm-workflow-research-agent3.md` - Focus: DX, quality tools, testing strategies
 
 Key external sources:
+
 - [npm Trusted Publishing with OIDC](https://github.blog/changelog/2025-07-31-npm-trusted-publishing-with-oidc-is-generally-available/)
 - [Using Changesets with pnpm](https://pnpm.io/next/using-changesets)
 - [publint](https://publint.dev/)
@@ -539,5 +551,6 @@ Key external sources:
 
 ---
 
-*Synthesis completed January 2026*
-*Ready for implementation*
+_Synthesis completed January 2026_
+_Ready for implementation_
+```

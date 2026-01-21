@@ -42,29 +42,31 @@ mdcontext provides semantic search capabilities that allow users to search markd
 
 **Current Provider**: OpenAI `text-embedding-3-small`
 
-| Property | Value |
-|----------|-------|
-| Model | `text-embedding-3-small` |
-| Dimensions | 1536 |
-| Batch Size | 100 texts per API call |
-| Cost | $0.02 per 1M tokens |
+| Property   | Value                    |
+| ---------- | ------------------------ |
+| Model      | `text-embedding-3-small` |
+| Dimensions | 1536                     |
+| Batch Size | 100 texts per API call   |
+| Cost       | $0.02 per 1M tokens      |
 
 **Interface**:
+
 ```typescript
 interface EmbeddingProvider {
-  readonly name: string           // e.g., "openai:text-embedding-3-small"
-  readonly dimensions: number     // 1536 for small, 3072 for large
-  embed(texts: string[]): Promise<EmbeddingResult>
+  readonly name: string; // e.g., "openai:text-embedding-3-small"
+  readonly dimensions: number; // 1536 for small, 3072 for large
+  embed(texts: string[]): Promise<EmbeddingResult>;
 }
 
 interface EmbeddingResult {
-  readonly embeddings: readonly number[][]
-  readonly tokensUsed: number
-  readonly cost: number
+  readonly embeddings: readonly number[][];
+  readonly tokensUsed: number;
+  readonly cost: number;
 }
 ```
 
 **Supported Models**:
+
 - `text-embedding-3-small` (default): 1536 dimensions, $0.02/1M tokens
 - `text-embedding-3-large`: 3072 dimensions, $0.13/1M tokens
 - `text-embedding-ada-002` (legacy): 1536 dimensions, $0.10/1M tokens
@@ -73,30 +75,33 @@ interface EmbeddingResult {
 
 **Implementation**: HNSW via `hnswlib-node`
 
-| Parameter | Value | Description |
-|-----------|-------|-------------|
-| Space | `cosine` | Cosine similarity distance metric |
-| Initial Capacity | 10,000 | Auto-resizes by 2x when full |
-| M | 16 | Max connections per node (default) |
-| efConstruction | 200 | Construction-time search width |
-| efSearch | 100 | Query-time search width (implicit from init) |
+| Parameter        | Value    | Description                                  |
+| ---------------- | -------- | -------------------------------------------- |
+| Space            | `cosine` | Cosine similarity distance metric            |
+| Initial Capacity | 10,000   | Auto-resizes by 2x when full                 |
+| M                | 16       | Max connections per node (default)           |
+| efConstruction   | 200      | Construction-time search width               |
+| efSearch         | 100      | Query-time search width (implicit from init) |
 
 **Storage Format**:
+
 - `vectors.bin`: Binary HNSW index file
 - `vectors.meta.json`: Metadata including entries, costs, timestamps
 
 **Vector Entry Structure**:
+
 ```typescript
 interface VectorEntry {
-  readonly id: string           // Section ID
-  readonly sectionId: string    // Same as id
-  readonly documentPath: string // Relative path to document
-  readonly heading: string      // Section heading text
-  readonly embedding: readonly number[]  // 1536-dimensional vector
+  readonly id: string; // Section ID
+  readonly sectionId: string; // Same as id
+  readonly documentPath: string; // Relative path to document
+  readonly heading: string; // Section heading text
+  readonly embedding: readonly number[]; // 1536-dimensional vector
 }
 ```
 
 **Similarity Calculation**:
+
 - HNSW stores cosine distance (1 - similarity)
 - Search returns `similarity = 1 - distance`
 - Results filtered by threshold (default: 0.45)
@@ -106,6 +111,7 @@ interface VectorEntry {
 **Text Generation for Embeddings**:
 
 Each section is embedded with contextual metadata:
+
 ```
 # {heading}
 Parent section: {parentHeading}  // if nested
@@ -115,19 +121,22 @@ Document: {documentTitle}
 ```
 
 **Filtering**:
+
 - Sections with < 10 tokens are skipped
 - Exclude patterns can filter by document path
 
 **Search Flow**:
+
 1. Load vector store from disk
 2. Embed query using same provider
-3. kNN search with limit * 2 (over-fetch for filtering)
+3. kNN search with limit \* 2 (over-fetch for filtering)
 4. Apply path pattern filter if specified
 5. Return top `limit` results above threshold
 
 ### 4. CLI Search Command (`src/cli/commands/search.ts`)
 
 **Mode Detection Priority**:
+
 1. `--mode semantic` or `--mode keyword` (explicit)
 2. `--keyword` flag (force keyword)
 3. Boolean/phrase pattern detected (`AND`, `OR`, `NOT`, `"quoted"`)
@@ -136,6 +145,7 @@ Document: {documentTitle}
 6. No embeddings → keyword
 
 **Auto-Index Behavior**:
+
 - If semantic mode requested but no embeddings exist:
   - Estimate time/cost
   - If < 10 seconds: auto-create silently
@@ -230,12 +240,12 @@ Document: {documentTitle}
 
 Located in `.mdcontext/` directory:
 
-| File | Format | Contents |
-|------|--------|----------|
-| `vectors.bin` | Binary | HNSW index (hnswlib native format) |
-| `vectors.meta.json` | JSON | Entry metadata, costs, timestamps |
-| `documents.json` | JSON | Document index (title, path, stats) |
-| `sections.json` | JSON | Section index (headings, line numbers, tokens) |
+| File                | Format | Contents                                       |
+| ------------------- | ------ | ---------------------------------------------- |
+| `vectors.bin`       | Binary | HNSW index (hnswlib native format)             |
+| `vectors.meta.json` | JSON   | Entry metadata, costs, timestamps              |
+| `documents.json`    | JSON   | Document index (title, path, stats)            |
+| `sections.json`     | JSON   | Section index (headings, line numbers, tokens) |
 
 ## Current Limitations and Gaps
 
@@ -303,21 +313,21 @@ Located in `.mdcontext/` directory:
 
 For a typical documentation corpus (~1000 sections, ~500K tokens):
 
-| Operation | Tokens | Cost |
-|-----------|--------|------|
-| Initial embedding | ~500K | ~$0.01 |
-| Per query | ~50-100 | ~$0.000002 |
+| Operation         | Tokens  | Cost       |
+| ----------------- | ------- | ---------- |
+| Initial embedding | ~500K   | ~$0.01     |
+| Per query         | ~50-100 | ~$0.000002 |
 
 The cost is dominated by initial embedding creation. Query costs are negligible.
 
 ## Performance Characteristics
 
-| Metric | Typical Value |
-|--------|---------------|
-| Embedding build | ~1.5s per 100 sections |
-| Query latency | ~200-500ms (API call dominant) |
-| Index load time | ~50-100ms for 1000 vectors |
-| Memory usage | ~10MB per 1000 vectors |
+| Metric          | Typical Value                  |
+| --------------- | ------------------------------ |
+| Embedding build | ~1.5s per 100 sections         |
+| Query latency   | ~200-500ms (API call dominant) |
+| Index load time | ~50-100ms for 1000 vectors     |
+| Memory usage    | ~10MB per 1000 vectors         |
 
 ## Configuration
 

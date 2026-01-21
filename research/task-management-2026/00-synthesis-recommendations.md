@@ -19,17 +19,18 @@ We need a system for capturing task intent before processing through "ralph" (an
 
 ### Requirements
 
-| Requirement | Priority | Notes |
-|-------------|----------|-------|
-| Capture task intent quickly | Critical | Friction kills adoption |
-| LLM-friendly format | Critical | Ralph must parse and understand it |
-| Git-native | High | Version control, audit trail, offline |
-| Low friction for humans | High | Must be faster than "just do it myself" |
-| Scales to many tasks | Medium | Backlog accumulation, parallel work |
+| Requirement                 | Priority | Notes                                   |
+| --------------------------- | -------- | --------------------------------------- |
+| Capture task intent quickly | Critical | Friction kills adoption                 |
+| LLM-friendly format         | Critical | Ralph must parse and understand it      |
+| Git-native                  | High     | Version control, audit trail, offline   |
+| Low friction for humans     | High     | Must be faster than "just do it myself" |
+| Scales to many tasks        | Medium   | Backlog accumulation, parallel work     |
 
 ### Constraint
 
 Ralph operates on files in a repository. Whatever system we choose must either:
+
 1. **Live in the repo** (file-based), or
 2. **Be accessible via MCP/API** (external tool)
 
@@ -39,12 +40,12 @@ Ralph operates on files in a repository. Whatever system we choose must either:
 
 ### Top 4 Approaches Evaluated
 
-| Approach | Quick Capture | LLM-Friendly | Git-Native | Low Friction | Scales | Overall |
-|----------|---------------|--------------|------------|--------------|--------|---------|
-| **SPEC.md Pattern** | A | A | A | A | B | **A** |
-| **Backlog.md** | B | A | A | B | A | **A-** |
-| **Linear** | B | B | C | A | A | **B+** |
-| **GitHub Issues** | C | B | B | B | A | **B** |
+| Approach            | Quick Capture | LLM-Friendly | Git-Native | Low Friction | Scales | Overall |
+| ------------------- | ------------- | ------------ | ---------- | ------------ | ------ | ------- |
+| **SPEC.md Pattern** | A             | A            | A          | A            | B      | **A**   |
+| **Backlog.md**      | B             | A            | A          | B            | A      | **A-**  |
+| **Linear**          | B             | B            | C          | A            | A      | **B+**  |
+| **GitHub Issues**   | C             | B            | B          | B            | A      | **B**   |
 
 ### Detailed Analysis
 
@@ -53,6 +54,7 @@ Ralph operates on files in a repository. Whatever system we choose must either:
 **What it is:** Markdown files in the repo (e.g., `SPEC.md`, `TODO.md`, `PLAN.md`) that define task intent. Already emerging as the industry standard for AI-assisted development in 2026.
 
 **Pros:**
+
 - Zero dependencies - works with any editor, any AI tool
 - Direct context injection into LLM prompts (no API calls)
 - Git versioning provides audit trail and rollback for free
@@ -61,6 +63,7 @@ Ralph operates on files in a repository. Whatever system we choose must either:
 - Already using something similar in the codebase
 
 **Cons:**
+
 - No built-in visualization (Kanban, timelines)
 - Requires discipline to maintain structure
 - Doesn't scale well for team-wide coordination across multiple projects
@@ -72,6 +75,7 @@ Ralph operates on files in a repository. Whatever system we choose must either:
 **What it is:** Purpose-built tool for AI-human collaboration. Each task is a separate `.md` file in a `.backlog/` directory. CLI and web interface available.
 
 **Pros:**
+
 - Designed specifically for AI agent workflows
 - Git-native with task IDs referencing commits/branches
 - Terminal Kanban for visualization
@@ -79,6 +83,7 @@ Ralph operates on files in a repository. Whatever system we choose must either:
 - Open source, no vendor lock-in
 
 **Cons:**
+
 - Adds a tool/CLI dependency
 - Slightly more structure than bare SPEC.md
 - Newer tool with smaller community
@@ -90,12 +95,14 @@ Ralph operates on files in a repository. Whatever system we choose must either:
 **What it is:** The leading AI-native project management tool. Treats AI agents as "full teammates" with native integrations to Cursor, Copilot, and Claude.
 
 **Pros:**
+
 - Best-in-class AI agent integration (agents as assignable teammates)
 - Excellent API and MCP servers
 - Team visibility and coordination features
 - Fast, keyboard-first UI
 
 **Cons:**
+
 - External service (not in repo)
 - Requires MCP/API integration for ralph to access
 - Adds latency to task capture (open tool, create issue)
@@ -109,12 +116,14 @@ Ralph operates on files in a repository. Whatever system we choose must either:
 **What it is:** GitHub's built-in issue tracker, now with Copilot coding agent that can be assigned issues directly.
 
 **Pros:**
+
 - Already using GitHub
 - Copilot can autonomously work on issues
 - No new tool adoption
 - Free
 
 **Cons:**
+
 - Slow to create issues (web UI friction)
 - Not optimized for quick intent capture
 - Less LLM-friendly than markdown files
@@ -164,17 +173,21 @@ Ralph operates on files in a repository. Whatever system we choose must either:
 # [Task Title]
 
 ## Intent
+
 [One paragraph: What do we want to accomplish and why?]
 
 ## Success Criteria
+
 - [ ] Criterion 1
 - [ ] Criterion 2
 - [ ] Criterion 3
 
 ## Context
+
 [Any relevant background, links, constraints]
 
 ## Notes
+
 [Optional: implementation hints, considerations]
 ```
 
@@ -196,7 +209,7 @@ Linear is excellent, but it adds friction to the core workflow:
 3. **Not the source of truth:** The code is in git, the spec should be too
 4. **Overkill for capture:** Linear is optimized for team coordination, not quick intent capture
 
-Linear makes sense for *visibility and coordination*, not for *AI agent input*.
+Linear makes sense for _visibility and coordination_, not for _AI agent input_.
 
 ### Why Not Backlog.md?
 
@@ -255,13 +268,13 @@ ralph process .ralph/active/dark-mode.spec.md
 
 ## Decision Summary
 
-| Decision | Choice | Confidence |
-|----------|--------|------------|
-| Primary task capture | SPEC.md files in `.ralph/` | High |
-| Format | Markdown with structured sections | High |
-| Location | Git repository | High |
-| Team coordination | Linear (optional, secondary) | Medium |
-| External issue tracking | GitHub Issues (for bugs, community) | Medium |
+| Decision                | Choice                              | Confidence |
+| ----------------------- | ----------------------------------- | ---------- |
+| Primary task capture    | SPEC.md files in `.ralph/`          | High       |
+| Format                  | Markdown with structured sections   | High       |
+| Location                | Git repository                      | High       |
+| Team coordination       | Linear (optional, secondary)        | Medium     |
+| External issue tracking | GitHub Issues (for bugs, community) | Medium     |
 
 ---
 
@@ -275,6 +288,7 @@ This synthesis is based on four research documents:
 4. **04-established-tools-ai-features.md** - AI features in GitHub, Linear, Jira, Notion
 
 Key external sources informing this recommendation:
+
 - [GitHub Spec-Kit](https://github.com/github/spec-kit/blob/main/spec-driven.md)
 - [Addy Osmani on specs for AI agents](https://addyosmani.com/blog/good-spec/)
 - [Steve Yegge on coding agent memory](https://steve-yegge.medium.com/introducing-beads-a-coding-agent-memory-system-637d7d92514a)

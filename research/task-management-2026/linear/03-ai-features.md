@@ -15,12 +15,14 @@ Linear has positioned itself as a genuinely **AI-native** task management tool r
 Linear's flagship AI feature uses an **agentic approach** where models actively pull context from workspace data to make intelligent decisions.
 
 **How it works**:
+
 - Analyzes every issue entering triage against existing backlog data
 - Uses GPT-5 and Gemini 2.5 Pro for complex reasoning
 - Learns from how similar work was organized historically
 - Runs in background with no manual trigger required
 
 **Capabilities**:
+
 - **Duplicate detection**: Automatically merges duplicate requests into existing issues
 - **Related issue linking**: Surfaces connections between related work
 - **Property suggestions**: Recommends teams, projects, assignees, and labels
@@ -33,6 +35,7 @@ Linear's flagship AI feature uses an **agentic approach** where models actively 
 ### AI Workflows
 
 Linear's AI assists with routine manual tasks across the product:
+
 - Summarizing issues and projects
 - Drafting updates
 - Organizing work
@@ -60,6 +63,7 @@ Critical distinction in Linear's model:
 > "Agents are not traditional assignees. Assigning an issue to an agent triggers delegation - the agent acts on the issue, but the human teammate remains responsible for its completion."
 
 This **human accountability** model means:
+
 - Humans maintain ownership while agents execute
 - Clear visibility into what agents are doing
 - Agents act on behalf of the responsible human
@@ -76,6 +80,7 @@ The core interaction model centers on **Agent Sessions**:
 - No manual state management required
 
 Agents communicate through **Agent Activities**:
+
 - Thoughts (reasoning)
 - Actions (what they're doing)
 - Clarification prompts
@@ -117,6 +122,7 @@ Linear has deep integration with Cursor, allowing issues to be assigned directly
 ### Automatic Triage Rules
 
 Configure rules to auto-assign issues to Cursor based on:
+
 - Labels
 - Projects
 - T-shirt size (e.g., "small or less")
@@ -127,6 +133,7 @@ Configure rules to auto-assign issues to Cursor based on:
 ### Technical Integration
 
 Linear built an **API specifically for agents**:
+
 - "Agent session" concept provides full context to agents
 - Structured webhooks with issue details, comments, references
 - Bi-directional communication
@@ -187,6 +194,7 @@ Launched December 2025.
 ### Automatic Assignment
 
 Via triage rules:
+
 1. Navigate to Settings > Team > Workflow > Triage
 2. Create rule: Delegate > Codex
 3. New issues matching criteria auto-assigned
@@ -207,12 +215,12 @@ Via triage rules:
 
 Linear's agent ecosystem includes specialized tools:
 
-| Agent | Capabilities |
-|-------|-------------|
-| **Devin** | Scopes issues, drafts PRs, built-in Linear tool |
-| **Sentry** | Root cause analysis with Seer, diagnoses and fixes issues |
-| **ChatPRD** | Writes requirements, manages issues, provides feedback |
-| **Warp** | Investigates bugs, suggests fixes, opens PRs |
+| Agent       | Capabilities                                                       |
+| ----------- | ------------------------------------------------------------------ |
+| **Devin**   | Scopes issues, drafts PRs, built-in Linear tool                    |
+| **Sentry**  | Root cause analysis with Seer, diagnoses and fixes issues          |
+| **ChatPRD** | Writes requirements, manages issues, provides feedback             |
+| **Warp**    | Investigates bugs, suggests fixes, opens PRs                       |
 | **Factory** | Codes, tests, creates pull requests in isolated cloud environments |
 
 ### Sentry Agent Details
@@ -244,6 +252,7 @@ Linear provides a full developer platform for custom agents.
 ### Authentication
 
 Uses OAuth2 with special `actor=app` parameter:
+
 - Creates dedicated user for the agent
 - Token tied to specific scopes and teams
 - Workspace admin controls installation
@@ -257,6 +266,7 @@ Uses OAuth2 with special `actor=app` parameter:
 ### Agent Activity System
 
 Agents emit structured activities to Linear:
+
 - `thought`: Agent's reasoning
 - `action`: Current execution step
 - `prompt`: Clarification needed
@@ -272,9 +282,9 @@ Linear renders appropriate UI automatically based on activity types.
 
 ### Developer Resources
 
-- Documentation: https://linear.app/developers/agents
-- Agent Docs: https://linear.app/docs/agents-in-linear
-- Agents Overview: https://linear.app/agents
+- Documentation: <https://linear.app/developers/agents>
+- Agent Docs: <https://linear.app/docs/agents-in-linear>
+- Agents Overview: <https://linear.app/agents>
 
 ---
 
@@ -292,14 +302,14 @@ Linear renders appropriate UI automatically based on activity types.
 
 ### Comparison with Bolt-On Approaches
 
-| Aspect | AI-Native (Linear) | AI Bolt-On (Typical) |
-|--------|-------------------|---------------------|
-| Agent identity | First-class workspace member | External integration |
-| Authentication | Dedicated OAuth flow | API key or user impersonation |
-| State management | Automatic via sessions | Manual tracking |
-| UI integration | Native rendering | Webhook comments |
-| Pricing | Agents don't count | Often per-seat |
-| Delegation model | Human accountability preserved | Full transfer or nothing |
+| Aspect           | AI-Native (Linear)             | AI Bolt-On (Typical)          |
+| ---------------- | ------------------------------ | ----------------------------- |
+| Agent identity   | First-class workspace member   | External integration          |
+| Authentication   | Dedicated OAuth flow           | API key or user impersonation |
+| State management | Automatic via sessions         | Manual tracking               |
+| UI integration   | Native rendering               | Webhook comments              |
+| Pricing          | Agents don't count             | Often per-seat                |
+| Delegation model | Human accountability preserved | Full transfer or nothing      |
 
 ### Limitations
 
@@ -316,6 +326,7 @@ Linear has signaled continued AI investment:
 > "Linear intends to move in the direction of more automation and decisions based on richer context. Triage Intelligence will improve as it draws on a deeper understanding of your workspace and as they adopt newer models and techniques."
 
 Expected developments:
+
 - More automation options with user control
 - Richer context understanding
 - Adoption of newer models and techniques
