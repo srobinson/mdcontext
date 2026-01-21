@@ -11,7 +11,7 @@ import {
   loadSectionIndex,
 } from '../index/storage.js'
 import type { SectionEntry } from '../index/types.js'
-import { createOpenAIProvider } from './openai-provider.js'
+import { createOpenAIProvider, InvalidApiKeyError } from './openai-provider.js'
 import type {
   EmbeddingProvider,
   SemanticSearchOptions,
@@ -197,8 +197,13 @@ export const buildEmbeddings = (
       )
     }
 
-    // Get or create provider
-    const provider = options.provider ?? createOpenAIProvider()
+    // Get or create provider (wrap in Effect.try to catch MissingApiKeyError)
+    const provider =
+      options.provider ??
+      (yield* Effect.try({
+        try: () => createOpenAIProvider(),
+        catch: (e) => e as Error,
+      }))
     const dimensions = provider.dimensions
 
     // Create vector store
@@ -360,10 +365,13 @@ export const buildEmbeddings = (
     const texts = sectionsToEmbed.map((s) => s.text)
     const result = yield* Effect.tryPromise({
       try: () => provider.embed(texts),
-      catch: (e) =>
-        new Error(
+      catch: (e) => {
+        // Preserve InvalidApiKeyError so handleApiKeyError can catch it
+        if (e instanceof InvalidApiKeyError) return e
+        return new Error(
           `Embedding failed: ${e instanceof Error ? e.message : String(e)}`,
-        ),
+        )
+      },
     })
 
     // Create vector entries
@@ -412,8 +420,11 @@ export const semanticSearch = (
   Effect.gen(function* () {
     const resolvedRoot = path.resolve(rootPath)
 
-    // Get provider for query embedding
-    const provider = createOpenAIProvider()
+    // Get provider for query embedding (wrap in Effect.try to catch MissingApiKeyError)
+    const provider = yield* Effect.try({
+      try: () => createOpenAIProvider(),
+      catch: (e) => e as Error,
+    })
     const dimensions = provider.dimensions
 
     // Load vector store

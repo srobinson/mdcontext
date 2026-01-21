@@ -8,7 +8,7 @@ import * as path from 'node:path'
 import * as readline from 'node:readline'
 import { Args, Command, Options } from '@effect/cli'
 import { Console, Effect, Option } from 'effect'
-import { MissingApiKeyError } from '../../embeddings/openai-provider.js'
+import { handleApiKeyError } from '../../embeddings/openai-provider.js'
 import {
   buildEmbeddings,
   estimateEmbeddingCost,
@@ -299,24 +299,7 @@ export const searchCommand = Command.make(
         const results = yield* semanticSearch(resolvedDir, query, {
           limit,
           threshold,
-        }).pipe(
-          Effect.catchIf(
-            (e): e is MissingApiKeyError => e instanceof MissingApiKeyError,
-            () =>
-              Effect.gen(function* () {
-                yield* Console.error('')
-                yield* Console.error('Error: OPENAI_API_KEY not set')
-                yield* Console.error('')
-                yield* Console.error(
-                  'To use semantic search, set your OpenAI API key:',
-                )
-                yield* Console.error('  export OPENAI_API_KEY=sk-...')
-                yield* Console.error('')
-                yield* Console.error('Or add to .env file in project root.')
-                return yield* Effect.fail(new Error('Missing API key'))
-              }),
-          ),
-        )
+        }).pipe(handleApiKeyError)
 
         if (json) {
           const output = {
@@ -390,25 +373,7 @@ const handleMissingEmbeddings = (
             )
           }
         },
-      }).pipe(
-        Effect.catchIf(
-          (e): e is MissingApiKeyError => e instanceof MissingApiKeyError,
-          () =>
-            Effect.gen(function* () {
-              yield* Console.error('')
-              yield* Console.error('Error: OPENAI_API_KEY not set')
-              yield* Console.error('')
-              yield* Console.error(
-                'To use semantic search, set your OpenAI API key:',
-              )
-              yield* Console.error('  export OPENAI_API_KEY=sk-...')
-              yield* Console.error('')
-              yield* Console.error('Or add to .env file in project root.')
-              return null
-            }),
-        ),
-        Effect.catchAll(() => Effect.succeed(null)),
-      )
+      }).pipe(handleApiKeyError, Effect.catchAll(() => Effect.succeed(null)))
 
       if (!result) {
         return false
@@ -456,25 +421,7 @@ const handleMissingEmbeddings = (
             )
           }
         },
-      }).pipe(
-        Effect.catchIf(
-          (e): e is MissingApiKeyError => e instanceof MissingApiKeyError,
-          () =>
-            Effect.gen(function* () {
-              yield* Console.error('')
-              yield* Console.error('Error: OPENAI_API_KEY not set')
-              yield* Console.error('')
-              yield* Console.error(
-                'To use semantic search, set your OpenAI API key:',
-              )
-              yield* Console.error('  export OPENAI_API_KEY=sk-...')
-              yield* Console.error('')
-              yield* Console.error('Or add to .env file in project root.')
-              return null
-            }),
-        ),
-        Effect.catchAll(() => Effect.succeed(null)),
-      )
+      }).pipe(handleApiKeyError, Effect.catchAll(() => Effect.succeed(null)))
 
       if (!result) {
         return false

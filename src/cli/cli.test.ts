@@ -4,9 +4,10 @@
  * Tests actual CLI execution against dynamically generated test fixtures
  *
  * Test fixture setup:
- * - beforeAll: Builds index (documents, sections, links) - fast, no API key needed
+ * - beforeAll:
+ * - When REBUILD_TEST_INDEX=true: Builds index (documents, sections, links) - fast, no API key needed
  * - When INCLUDE_EMBED_TESTS=true: Also builds embeddings (requires OPENAI_API_KEY)
- * - afterAll: Cleans up .mdcontext directory and frees tiktoken encoder
+ * - afterAll: frees tiktoken encoder
  *
  * Running tests:
  * - `pnpm test` - Runs with keyword search only (no API key needed)
@@ -24,8 +25,8 @@ import { freeEncoder } from '../utils/tokens.js'
 
 const execAsync = promisify(exec)
 
-const INCLUDE_EMBED_TESTS = process.env.INCLUDE_EMBED_TESTS === 'true'
 const REBUILD_TEST_INDEX = process.env.REBUILD_TEST_INDEX === 'true'
+const INCLUDE_EMBED_TESTS = process.env.INCLUDE_EMBED_TESTS === 'true'
 const TEST_FIXTURE_DIR = path.join(process.cwd(), 'tests', 'fixtures', 'cli')
 const CLI = `node ${path.join(process.cwd(), 'dist', 'cli', 'main.js')}`
 
@@ -56,12 +57,14 @@ describe.concurrent('mdcontext CLI e2e', () => {
       console.log('Rebuilding test fixture index and embeddings...')
       // Build the index (fast, no API key needed)
       await Effect.runPromise(buildIndex(TEST_FIXTURE_DIR, { force: true }))
+      console.log('Index rebuilt.')
 
       if (INCLUDE_EMBED_TESTS) {
         console.log('Rebuilding test fixture embeddings...')
         await Effect.runPromise(
           buildEmbeddings(TEST_FIXTURE_DIR, { force: true }),
         )
+        console.log('Embeddings rebuilt.')
       }
     }
   })
@@ -168,8 +171,8 @@ describe.concurrent('mdcontext CLI e2e', () => {
   })
 
   describe('search command', () => {
-    it('performs keyword search by default', async () => {
-      const output = await run('search "getting started"')
+    it('performs keyword search with -k flag', async () => {
+      const output = await run('search -k "getting started"')
       expect(output).toContain('[keyword]')
       expect(output).toContain('Results:')
     })
@@ -193,7 +196,7 @@ describe.concurrent('mdcontext CLI e2e', () => {
     })
 
     it('shows mode indicator in output', async () => {
-      const output = await run('search "getting started"')
+      const output = await run('search -k "getting started"')
       expect(output).toContain('[keyword]')
     })
 
@@ -285,17 +288,17 @@ describe.concurrent('mdcontext CLI e2e', () => {
 
   describe('search command context lines', () => {
     it('supports -C flag for context lines', async () => {
-      const output = await run('search "test" . -C 2')
+      const output = await run('search -k "test" . -C 2')
       expect(output).toContain('[keyword]')
     })
 
     it('supports -B and -A flags for asymmetric context', async () => {
       const output = await run('search "test" . -B 1 -A 3')
-      expect(output).toContain('[keyword]')
+      expect(output).toContain('[semantic]')
     })
 
     it('includes contextLines in JSON output', async () => {
-      const output = await run('search "test" . -C 2 --json -n 1')
+      const output = await run('search -k "test" . -C 2 --json -n 1')
       const parsed = JSON.parse(output)
       expect(parsed.contextBefore).toBe(2)
       expect(parsed.contextAfter).toBe(2)

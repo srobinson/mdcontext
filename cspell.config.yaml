@@ -5,6 +5,7 @@ dictionaries: []
 words:
   - attw
   - backlinks
+  - Hnsw
   - hnswlib
   - mdcontext
   - modelcontextprotocol

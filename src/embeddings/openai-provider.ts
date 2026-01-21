@@ -2,6 +2,7 @@
  * OpenAI embedding provider
  */
 
+import { Console, Effect } from 'effect'
 import OpenAI from 'openai'
 import type { EmbeddingProvider, EmbeddingResult } from './types.js'
 
@@ -17,6 +18,24 @@ const PRICING: Record<string, number> = {
 }
 
 // ============================================================================
+// Error Classes
+// ============================================================================
+
+export class MissingApiKeyError extends Error {
+  constructor() {
+    super('OPENAI_API_KEY not set')
+    this.name = 'MissingApiKeyError'
+  }
+}
+
+export class InvalidApiKeyError extends Error {
+  constructor(message?: string) {
+    super(message ?? 'Invalid OPENAI_API_KEY')
+    this.name = 'InvalidApiKeyError'
+  }
+}
+
+// ============================================================================
 // OpenAI Provider
 // ============================================================================
 
@@ -24,13 +43,6 @@ export interface OpenAIProviderOptions {
   readonly apiKey?: string | undefined
   readonly model?: string | undefined
   readonly batchSize?: number | undefined
-}
-
-export class MissingApiKeyError extends Error {
-  constructor() {
-    super('OPENAI_API_KEY not set')
-    this.name = 'MissingApiKeyError'
-  }
 }
 
 export class OpenAIProvider implements EmbeddingProvider {
@@ -62,21 +74,29 @@ export class OpenAIProvider implements EmbeddingProvider {
     const allEmbeddings: number[][] = []
     let totalTokens = 0
 
-    // Process in batches
-    for (let i = 0; i < texts.length; i += this.batchSize) {
-      const batch = texts.slice(i, i + this.batchSize)
+    try {
+      // Process in batches
+      for (let i = 0; i < texts.length; i += this.batchSize) {
+        const batch = texts.slice(i, i + this.batchSize)
 
-      const response = await this.client.embeddings.create({
-        model: this.model,
-        input: batch,
-        dimensions: 512, // Ensure consistent dimensions
-      })
+        const response = await this.client.embeddings.create({
+          model: this.model,
+          input: batch,
+          dimensions: 512, // Ensure consistent dimensions
+        })
 
-      for (const item of response.data) {
-        allEmbeddings.push(item.embedding)
+        for (const item of response.data) {
+          allEmbeddings.push(item.embedding)
+        }
+
+        totalTokens += response.usage?.total_tokens ?? 0
       }
-
-      totalTokens += response.usage?.total_tokens ?? 0
+    } catch (error) {
+      // Check for authentication errors (401 Unauthorized, invalid API key)
+      if (error instanceof OpenAI.AuthenticationError) {
+        throw new InvalidApiKeyError(error.message)
+      }
+      throw error
     }
 
     // Calculate cost
@@ -98,3 +118,48 @@ export class OpenAIProvider implements EmbeddingProvider {
 export const createOpenAIProvider = (
   options?: OpenAIProviderOptions,
 ): EmbeddingProvider => new OpenAIProvider(options)
+
+// ============================================================================
+// Error Handler Utility
+// ============================================================================
+
+/**
+ * Catches OpenAI API key errors and displays helpful messages.
+ * Use with Effect.pipe after operations that may throw MissingApiKeyError or InvalidApiKeyError.
+ */
+export const handleApiKeyError = <A, E>(
+  effect: Effect.Effect<A, E | MissingApiKeyError | InvalidApiKeyError>,
+): Effect.Effect<A, E | Error> =>
+  effect.pipe(
+    Effect.catchIf(
+      (e): e is MissingApiKeyError => e instanceof MissingApiKeyError,
+      () =>
+        Effect.gen(function* () {
+          yield* Console.error('')
+          yield* Console.error('Error: OPENAI_API_KEY not set')
+          yield* Console.error('')
+          yield* Console.error(
+            'To use semantic search, set your OpenAI API key:',
+          )
+          yield* Console.error('  export OPENAI_API_KEY=sk-...')
+          yield* Console.error('')
+          yield* Console.error('Or add to .env file in project root.')
+          return yield* Effect.fail(new Error('Missing API key'))
+        }),
+    ),
+    Effect.catchIf(
+      (e): e is InvalidApiKeyError => e instanceof InvalidApiKeyError,
+      (e) =>
+        Effect.gen(function* () {
+          yield* Console.error('')
+          yield* Console.error('Error: Invalid OPENAI_API_KEY')
+          yield* Console.error('')
+          yield* Console.error('The provided API key was rejected by OpenAI.')
+          yield* Console.error('Please check your API key is correct:')
+          yield* Console.error('  export OPENAI_API_KEY=sk-...')
+          yield* Console.error('')
+          yield* Console.error(`Details: ${e.message}`)
+          return yield* Effect.fail(new Error('Invalid API key'))
+        }),
+    ),
+  )
