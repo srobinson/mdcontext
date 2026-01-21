@@ -26,6 +26,13 @@ export interface OpenAIProviderOptions {
   readonly batchSize?: number | undefined
 }
 
+export class MissingApiKeyError extends Error {
+  constructor() {
+    super('OPENAI_API_KEY not set')
+    this.name = 'MissingApiKeyError'
+  }
+}
+
 export class OpenAIProvider implements EmbeddingProvider {
   readonly name: string
   readonly dimensions: number
@@ -37,9 +44,7 @@ export class OpenAIProvider implements EmbeddingProvider {
   constructor(options: OpenAIProviderOptions = {}) {
     const apiKey = options.apiKey ?? process.env.OPENAI_API_KEY
     if (!apiKey) {
-      throw new Error(
-        'OpenAI API key required. Set OPENAI_API_KEY env var or pass apiKey option.',
-      )
+      throw new MissingApiKeyError()
     }
 
     this.client = new OpenAI({ apiKey })

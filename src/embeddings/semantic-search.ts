@@ -26,31 +26,145 @@ import { createVectorStore, type HnswVectorStore } from './vector-store.js'
 
 const generateEmbeddingText = (
   section: SectionEntry,
+  content: string,
   documentTitle: string,
   parentHeading?: string | undefined,
 ): string => {
   const parts: string[] = []
 
-  parts.push(section.heading)
-  parts.push('')
-
-  // We don't have the content here, so we'll use heading + context
+  parts.push(`# ${section.heading}`)
   if (parentHeading) {
-    parts.push(`Parent: ${parentHeading}`)
+    parts.push(`Parent section: ${parentHeading}`)
   }
-
   parts.push(`Document: ${documentTitle}`)
+  parts.push('')
+  parts.push(content)
 
   return parts.join('\n')
 }
 
 // ============================================================================
+// Cost Estimation
+// ============================================================================
+
+// Price per 1M tokens for text-embedding-3-small
+const EMBEDDING_PRICE_PER_MILLION = 0.02
+
+export interface DirectoryEstimate {
+  readonly directory: string
+  readonly fileCount: number
+  readonly sectionCount: number
+  readonly estimatedTokens: number
+  readonly estimatedCost: number
+}
+
+export interface EmbeddingEstimate {
+  readonly totalFiles: number
+  readonly totalSections: number
+  readonly totalTokens: number
+  readonly totalCost: number
+  readonly estimatedTimeSeconds: number
+  readonly byDirectory: readonly DirectoryEstimate[]
+}
+
+export const estimateEmbeddingCost = (
+  rootPath: string,
+  options: { excludePatterns?: readonly string[] | undefined } = {},
+): Effect.Effect<EmbeddingEstimate, Error> =>
+  Effect.gen(function* () {
+    const resolvedRoot = path.resolve(rootPath)
+    const storage = createStorage(resolvedRoot)
+
+    const docIndex = yield* loadDocumentIndex(storage)
+    const sectionIndex = yield* loadSectionIndex(storage)
+
+    if (!docIndex || !sectionIndex) {
+      return yield* Effect.fail(
+        new Error("Index not found. Run 'mdtldr index' first."),
+      )
+    }
+
+    // Group by directory
+    const byDir: Map<
+      string,
+      { files: Set<string>; sections: number; tokens: number }
+    > = new Map()
+
+    for (const section of Object.values(sectionIndex.sections)) {
+      // Skip very short sections (< 10 tokens)
+      if (section.tokenCount < 10) continue
+
+      // Check exclude patterns
+      if (options.excludePatterns?.length) {
+        const excluded = options.excludePatterns.some((pattern) => {
+          const regex = new RegExp(
+            '^' + pattern.replace(/\*/g, '.*').replace(/\?/g, '.') + '$',
+          )
+          return regex.test(section.documentPath)
+        })
+        if (excluded) continue
+      }
+
+      const dir = path.dirname(section.documentPath) || '.'
+      if (!byDir.has(dir)) {
+        byDir.set(dir, { files: new Set(), sections: 0, tokens: 0 })
+      }
+      const entry = byDir.get(dir)!
+      entry.files.add(section.documentPath)
+      entry.sections++
+      entry.tokens += section.tokenCount
+    }
+
+    const directoryEstimates: DirectoryEstimate[] = []
+    let totalFiles = 0
+    let totalSections = 0
+    let totalTokens = 0
+
+    for (const [dir, data] of byDir) {
+      directoryEstimates.push({
+        directory: dir,
+        fileCount: data.files.size,
+        sectionCount: data.sections,
+        estimatedTokens: data.tokens,
+        estimatedCost: (data.tokens / 1_000_000) * EMBEDDING_PRICE_PER_MILLION,
+      })
+      totalFiles += data.files.size
+      totalSections += data.sections
+      totalTokens += data.tokens
+    }
+
+    // Sort by directory name
+    directoryEstimates.sort((a, b) => a.directory.localeCompare(b.directory))
+
+    // Estimate time: ~1.5s per 100 sections (API batch processing)
+    const estimatedTimeSeconds = Math.ceil(totalSections / 100) * 1.5
+
+    return {
+      totalFiles,
+      totalSections,
+      totalTokens,
+      totalCost: (totalTokens / 1_000_000) * EMBEDDING_PRICE_PER_MILLION,
+      estimatedTimeSeconds,
+      byDirectory: directoryEstimates,
+    }
+  })
+
+// ============================================================================
 // Build Embeddings
 // ============================================================================
+
+export interface FileProgress {
+  readonly fileIndex: number
+  readonly totalFiles: number
+  readonly filePath: string
+  readonly sectionCount: number
+}
 
 export interface BuildEmbeddingsOptions {
   readonly force?: boolean | undefined
   readonly provider?: EmbeddingProvider | undefined
+  readonly excludePatterns?: readonly string[] | undefined
+  readonly onFileProgress?: ((progress: FileProgress) => void) | undefined
 }
 
 export interface BuildEmbeddingsResult {
@@ -58,6 +172,7 @@ export interface BuildEmbeddingsResult {
   readonly tokensUsed: number
   readonly cost: number
   readonly duration: number
+  readonly filesProcessed: number
 }
 
 export const buildEmbeddings = (
@@ -102,13 +217,28 @@ export const buildEmbeddings = (
             tokensUsed: 0,
             cost: 0,
             duration,
+            filesProcessed: 0,
           }
         }
       }
     }
 
-    // Prepare sections for embedding
-    const sectionsToEmbed: { section: SectionEntry; text: string }[] = []
+    // Helper to check if a path matches exclude patterns
+    const isExcluded = (docPath: string): boolean => {
+      if (!options.excludePatterns?.length) return false
+      return options.excludePatterns.some((pattern) => {
+        const regex = new RegExp(
+          '^' + pattern.replace(/\*/g, '.*').replace(/\?/g, '.') + '$',
+        )
+        return regex.test(docPath)
+      })
+    }
+
+    // Group sections by document for efficient file reading
+    const sectionsByDoc: Map<
+      string,
+      { section: SectionEntry; parentHeading: string | undefined }[]
+    > = new Map()
 
     for (const section of Object.values(sectionIndex.sections)) {
       const document = docIndex.documents[section.documentPath]
@@ -116,6 +246,9 @@ export const buildEmbeddings = (
 
       // Skip very short sections (< 10 tokens)
       if (section.tokenCount < 10) continue
+
+      // Check exclude patterns
+      if (isExcluded(section.documentPath)) continue
 
       // Find parent heading if any
       let parentHeading: string | undefined
@@ -133,8 +266,71 @@ export const buildEmbeddings = (
         }
       }
 
-      const text = generateEmbeddingText(section, document.title, parentHeading)
-      sectionsToEmbed.push({ section, text })
+      const docPath = section.documentPath
+      if (!sectionsByDoc.has(docPath)) {
+        sectionsByDoc.set(docPath, [])
+      }
+      sectionsByDoc.get(docPath)!.push({ section, parentHeading })
+    }
+
+    if (sectionsByDoc.size === 0) {
+      const duration = Date.now() - startTime
+      return {
+        sectionsEmbedded: 0,
+        tokensUsed: 0,
+        cost: 0,
+        duration,
+        filesProcessed: 0,
+      }
+    }
+
+    // Prepare sections for embedding by reading file content
+    const sectionsToEmbed: { section: SectionEntry; text: string }[] = []
+    const docPaths = Array.from(sectionsByDoc.keys())
+    let filesProcessed = 0
+
+    for (let fileIndex = 0; fileIndex < docPaths.length; fileIndex++) {
+      const docPath = docPaths[fileIndex]!
+      const sections = sectionsByDoc.get(docPath)!
+      const document = docIndex.documents[docPath]
+      if (!document) continue
+
+      // Report file progress
+      if (options.onFileProgress) {
+        options.onFileProgress({
+          fileIndex: fileIndex + 1,
+          totalFiles: docPaths.length,
+          filePath: docPath,
+          sectionCount: sections.length,
+        })
+      }
+
+      const filePath = path.join(resolvedRoot, docPath)
+      let fileContent: string
+      try {
+        fileContent = yield* Effect.promise(() => fs.readFile(filePath, 'utf-8'))
+      } catch {
+        // Skip files that can't be read
+        continue
+      }
+
+      filesProcessed++
+      const lines = fileContent.split('\n')
+
+      for (const { section, parentHeading } of sections) {
+        // Extract section content from file
+        const content = lines
+          .slice(section.startLine - 1, section.endLine)
+          .join('\n')
+
+        const text = generateEmbeddingText(
+          section,
+          content,
+          document.title,
+          parentHeading,
+        )
+        sectionsToEmbed.push({ section, text })
+      }
     }
 
     if (sectionsToEmbed.length === 0) {
@@ -144,6 +340,7 @@ export const buildEmbeddings = (
         tokensUsed: 0,
         cost: 0,
         duration,
+        filesProcessed,
       }
     }
 
@@ -187,6 +384,7 @@ export const buildEmbeddings = (
       tokensUsed: result.tokensUsed,
       cost: result.cost,
       duration,
+      filesProcessed,
     }
   })
 

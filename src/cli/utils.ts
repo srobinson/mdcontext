@@ -59,9 +59,9 @@ export const isRegexPattern = (query: string): boolean => {
  * Check if embeddings exist for a directory
  */
 export const hasEmbeddings = async (dir: string): Promise<boolean> => {
-  const embeddingsPath = path.join(dir, '.tldr', 'embeddings.bin')
+  const vectorsPath = path.join(dir, '.md-tldr', 'vectors.bin')
   try {
-    await fsPromises.access(embeddingsPath)
+    await fsPromises.access(vectorsPath)
     return true
   } catch {
     return false

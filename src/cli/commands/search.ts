@@ -4,13 +4,35 @@
  * Search markdown content by meaning or heading pattern.
  */
 
+import * as readline from 'node:readline'
 import * as path from 'node:path'
 import { Args, Command, Options } from '@effect/cli'
 import { Console, Effect, Option } from 'effect'
-import { semanticSearch } from '../../embeddings/semantic-search.js'
+import { MissingApiKeyError } from '../../embeddings/openai-provider.js'
+import {
+  buildEmbeddings,
+  estimateEmbeddingCost,
+  semanticSearch,
+} from '../../embeddings/semantic-search.js'
 import { search, searchContent } from '../../search/searcher.js'
 import { jsonOption, prettyOption } from '../options.js'
 import { formatJson, hasEmbeddings, isRegexPattern } from '../utils.js'
+
+// Auto-index threshold in seconds
+const AUTO_INDEX_THRESHOLD_SECONDS = 10
+
+const promptUser = (message: string): Promise<string> => {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    })
+    rl.question(message, (answer) => {
+      rl.close()
+      resolve(answer.trim().toLowerCase())
+    })
+  })
+}
 
 export const searchCommand = Command.make(
   'search',
@@ -44,7 +66,7 @@ export const searchCommand = Command.make(
     ),
     threshold: Options.float('threshold').pipe(
       Options.withDescription('Similarity threshold for semantic search (0-1)'),
-      Options.withDefault(0.5),
+      Options.withDefault(0.3),
     ),
     context: Options.integer('context').pipe(
       Options.withAlias('C'),
@@ -65,6 +87,12 @@ export const searchCommand = Command.make(
       Options.withDescription('Lines of context after matches (like grep -A)'),
       Options.optional,
     ),
+    autoIndexThreshold: Options.integer('auto-index-threshold').pipe(
+      Options.withDescription(
+        'Auto-create semantic index if estimated time is under this threshold (seconds)',
+      ),
+      Options.withDefault(AUTO_INDEX_THRESHOLD_SECONDS),
+    ),
     json: jsonOption,
     pretty: prettyOption,
   },
@@ -79,6 +107,7 @@ export const searchCommand = Command.make(
     context,
     beforeContext,
     afterContext,
+    autoIndexThreshold,
     json,
     pretty,
   }) =>
@@ -86,9 +115,7 @@ export const searchCommand = Command.make(
       const resolvedDir = path.resolve(dirPath)
 
       // Check for embeddings
-      const embedsExist = yield* Effect.promise(() =>
-        hasEmbeddings(resolvedDir),
-      )
+      let embedsExist = yield* Effect.promise(() => hasEmbeddings(resolvedDir))
 
       // Determine search mode
       // Priority: --mode flag > --structural flag > regex pattern > embeddings availability
@@ -98,12 +125,18 @@ export const searchCommand = Command.make(
       const modeValue = Option.getOrUndefined(mode)
 
       if (modeValue === 'semantic') {
+        // User explicitly requested semantic search
         if (!embedsExist) {
-          yield* Effect.fail(
-            new Error(
-              'Semantic search requires embeddings. Run "mdtldr index --embed" first.',
-            ),
+          // Try to auto-create index
+          embedsExist = yield* handleMissingEmbeddings(
+            resolvedDir,
+            autoIndexThreshold,
+            json,
           )
+          if (!embedsExist) {
+            // User declined or error
+            return
+          }
         }
         useStructural = false
         modeReason = '--mode semantic'
@@ -221,7 +254,24 @@ export const searchCommand = Command.make(
         const results = yield* semanticSearch(resolvedDir, query, {
           limit,
           threshold,
-        })
+        }).pipe(
+          Effect.catchIf(
+            (e): e is MissingApiKeyError => e instanceof MissingApiKeyError,
+            () =>
+              Effect.gen(function* () {
+                yield* Console.error('')
+                yield* Console.error('Error: OPENAI_API_KEY not set')
+                yield* Console.error('')
+                yield* Console.error(
+                  'To use semantic search, set your OpenAI API key:',
+                )
+                yield* Console.error('  export OPENAI_API_KEY=sk-...')
+                yield* Console.error('')
+                yield* Console.error('Or add to .env file in project root.')
+                return yield* Effect.fail(new Error('Missing API key'))
+              }),
+          ),
+        )
 
         if (json) {
           const output = {
@@ -246,3 +296,148 @@ export const searchCommand = Command.make(
       }
     }),
 ).pipe(Command.withDescription('Search by meaning or structure'))
+
+/**
+ * Handle the case when embeddings don't exist.
+ * Returns true if embeddings were created (or already exist), false to fall back to structural search.
+ */
+const handleMissingEmbeddings = (
+  resolvedDir: string,
+  autoIndexThreshold: number,
+  json: boolean,
+): Effect.Effect<boolean, Error> =>
+  Effect.gen(function* () {
+    // Get cost estimate
+    const estimate = yield* estimateEmbeddingCost(resolvedDir).pipe(
+      Effect.catchAll(() => Effect.succeed(null)),
+    )
+
+    if (!estimate) {
+      yield* Console.error('No semantic index found and could not estimate cost.')
+      yield* Console.error('Run "mdtldr index --embed" first.')
+      return false
+    }
+
+    // Check if we should auto-index
+    if (estimate.estimatedTimeSeconds <= autoIndexThreshold) {
+      if (!json) {
+        yield* Console.log(
+          `Creating semantic index (~${estimate.estimatedTimeSeconds}s, ~$${estimate.totalCost.toFixed(4)})...`,
+        )
+      }
+
+      const result = yield* buildEmbeddings(resolvedDir, {
+        force: false,
+        onFileProgress: (progress) => {
+          if (!json) {
+            process.stdout.write(
+              `\r  [${progress.fileIndex}/${progress.totalFiles}] ${progress.filePath}...`,
+            )
+          }
+        },
+      }).pipe(
+        Effect.catchIf(
+          (e): e is MissingApiKeyError => e instanceof MissingApiKeyError,
+          () =>
+            Effect.gen(function* () {
+              yield* Console.error('')
+              yield* Console.error('Error: OPENAI_API_KEY not set')
+              yield* Console.error('')
+              yield* Console.error(
+                'To use semantic search, set your OpenAI API key:',
+              )
+              yield* Console.error('  export OPENAI_API_KEY=sk-...')
+              yield* Console.error('')
+              yield* Console.error('Or add to .env file in project root.')
+              return null
+            }),
+        ),
+        Effect.catchAll(() => Effect.succeed(null)),
+      )
+
+      if (!result) {
+        return false
+      }
+
+      if (!json) {
+        process.stdout.write('\r' + ' '.repeat(80) + '\r')
+        yield* Console.log(
+          `Index created (${result.sectionsEmbedded} sections, $${result.cost.toFixed(6)})`,
+        )
+        yield* Console.log('')
+      }
+
+      return true
+    }
+
+    // Prompt user for larger indexes
+    if (!json) {
+      yield* Console.log('')
+      yield* Console.log('No semantic index found.')
+      yield* Console.log('')
+      yield* Console.log('Options:')
+      yield* Console.log(
+        `  1. Create now (recommended, ~${estimate.estimatedTimeSeconds}s, ~$${estimate.totalCost.toFixed(4)})`,
+      )
+      yield* Console.log('  2. Use keyword search instead')
+      yield* Console.log('')
+    }
+
+    const answer = yield* Effect.promise(() => promptUser('Choice [1]: '))
+    const choice = answer === '' || answer === '1' ? '1' : answer
+
+    if (choice === '1') {
+      if (!json) {
+        yield* Console.log('')
+        yield* Console.log('Building embeddings...')
+      }
+
+      const result = yield* buildEmbeddings(resolvedDir, {
+        force: false,
+        onFileProgress: (progress) => {
+          if (!json) {
+            process.stdout.write(
+              `\r  [${progress.fileIndex}/${progress.totalFiles}] ${progress.filePath}...`,
+            )
+          }
+        },
+      }).pipe(
+        Effect.catchIf(
+          (e): e is MissingApiKeyError => e instanceof MissingApiKeyError,
+          () =>
+            Effect.gen(function* () {
+              yield* Console.error('')
+              yield* Console.error('Error: OPENAI_API_KEY not set')
+              yield* Console.error('')
+              yield* Console.error(
+                'To use semantic search, set your OpenAI API key:',
+              )
+              yield* Console.error('  export OPENAI_API_KEY=sk-...')
+              yield* Console.error('')
+              yield* Console.error('Or add to .env file in project root.')
+              return null
+            }),
+        ),
+        Effect.catchAll(() => Effect.succeed(null)),
+      )
+
+      if (!result) {
+        return false
+      }
+
+      if (!json) {
+        process.stdout.write('\r' + ' '.repeat(80) + '\r')
+        yield* Console.log(
+          `Index created (${result.sectionsEmbedded} sections, $${result.cost.toFixed(6)})`,
+        )
+        yield* Console.log('')
+      }
+
+      return true
+    }
+
+    // User chose keyword search
+    yield* Console.log('')
+    yield* Console.log('Falling back to keyword search.')
+    return false
+  })
