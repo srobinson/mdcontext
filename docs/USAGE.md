@@ -120,7 +120,7 @@ mdtldr search [options] <query> [path]
 **Options:**
 | Option | Description |
 |--------|-------------|
-| `-s, --structural` | Force structural search (heading regex) |
+| `-k, --keyword` | Force keyword search (exact text match) |
 | `-n, --limit` | Maximum results (default: 10) |
 | `--threshold` | Similarity threshold for semantic search (0-1) |
 | `--json` | Output as JSON |
@@ -128,15 +128,15 @@ mdtldr search [options] <query> [path]
 
 **Auto-detection:**
 - If embeddings exist AND query looks like natural language: semantic search
-- If query has regex characters OR `-s` flag: structural search
+- If query has regex characters OR `-k` flag: keyword search
 
 **Examples:**
 ```bash
 # Semantic search (if embeddings exist)
 mdtldr search "how to authenticate"
 
-# Structural search (heading regex)
-mdtldr search -s "Setup|Install"
+# Keyword search (exact text match)
+mdtldr search -k "Setup|Install"
 
 # Limit results
 mdtldr search -n 5 "api"

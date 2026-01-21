@@ -79,6 +79,11 @@ export const indexSchema: CommandSchema = {
       description: 'Build semantic embeddings',
     },
     {
+      name: 'no-embed',
+      type: 'boolean',
+      description: 'Skip semantic search prompt',
+    },
+    {
       name: 'watch',
       type: 'boolean',
       alias: 'w',
@@ -94,10 +99,10 @@ export const searchSchema: CommandSchema = {
   name: 'search',
   flags: [
     {
-      name: 'structural',
+      name: 'keyword',
       type: 'boolean',
-      alias: 's',
-      description: 'Force structural search',
+      alias: 'k',
+      description: 'Force keyword search',
     },
     {
       name: 'heading-only',
@@ -109,7 +114,7 @@ export const searchSchema: CommandSchema = {
       name: 'mode',
       type: 'string',
       alias: 'm',
-      description: 'Force search mode (semantic or structural)',
+      description: 'Force search mode (semantic or keyword)',
     },
     {
       name: 'limit',

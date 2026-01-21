@@ -100,9 +100,9 @@ const tools: Tool[] = [
     },
   },
   {
-    name: 'md_structural_search',
+    name: 'md_keyword_search',
     description:
-      'Search markdown documents by structure (headings, code blocks, lists, tables).',
+      'Search markdown documents by keyword search (headings, code blocks, lists, tables).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -299,7 +299,7 @@ const handleMdStructure = async (
   }
 }
 
-const handleMdStructuralSearch = async (
+const handleMdKeywordSearch = async (
   args: Record<string, unknown>,
   rootPath: string,
 ): Promise<CallToolResult> => {
@@ -437,8 +437,8 @@ const createServer = (rootPath: string) => {
         return handleMdContext(args ?? {}, rootPath)
       case 'md_structure':
         return handleMdStructure(args ?? {}, rootPath)
-      case 'md_structural_search':
-        return handleMdStructuralSearch(args ?? {}, rootPath)
+      case 'md_keyword_search':
+        return handleMdKeywordSearch(args ?? {}, rootPath)
       case 'md_index':
         return handleMdIndex(args ?? {}, rootPath)
       default:

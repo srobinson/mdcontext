@@ -4,6 +4,7 @@
  * Index markdown files for fast searching.
  */
 
+import * as readline from 'node:readline'
 import * as path from 'node:path'
 import { Args, Command, Options } from '@effect/cli'
 import { Console, Effect } from 'effect'
@@ -15,7 +16,20 @@ import {
 import { buildIndex } from '../../index/indexer.js'
 import { watchDirectory } from '../../index/watcher.js'
 import { forceOption, jsonOption, prettyOption } from '../options.js'
-import { formatJson } from '../utils.js'
+import { formatJson, hasEmbeddings } from '../utils.js'
+
+const promptUser = (message: string): Promise<string> => {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    })
+    rl.question(message, (answer) => {
+      rl.close()
+      resolve(answer.trim().toLowerCase())
+    })
+  })
+}
 
 export const indexCommand = Command.make(
   'index',
@@ -27,6 +41,10 @@ export const indexCommand = Command.make(
     embed: Options.boolean('embed').pipe(
       Options.withAlias('e'),
       Options.withDescription('Also build semantic embeddings'),
+      Options.withDefault(false),
+    ),
+    noEmbed: Options.boolean('no-embed').pipe(
+      Options.withDescription('Skip semantic search prompt'),
       Options.withDefault(false),
     ),
     exclude: Options.text('exclude').pipe(
@@ -45,7 +63,7 @@ export const indexCommand = Command.make(
     json: jsonOption,
     pretty: prettyOption,
   },
-  ({ path: dirPath, embed, exclude, watch: watchMode, force, json, pretty }) =>
+  ({ path: dirPath, embed, noEmbed, exclude, watch: watchMode, force, json, pretty }) =>
     Effect.gen(function* () {
       const resolvedDir = path.resolve(dirPath)
 
@@ -110,7 +128,10 @@ export const indexCommand = Command.make(
           }
         }
 
-        // Build embeddings if requested
+        // Check if we should prompt for semantic search
+        const embedsExist = yield* Effect.promise(() => hasEmbeddings(resolvedDir))
+
+        // Build embeddings if requested or after user prompt
         if (embed) {
           yield* Console.log('')
 
@@ -153,7 +174,11 @@ export const indexCommand = Command.make(
             yield* Console.log('')
           }
 
-          yield* Console.log('Building embeddings...')
+          if (!force) {
+            yield* Console.log('Checking embeddings...')
+          } else {
+            yield* Console.log('Rebuilding embeddings (--force specified)...')
+          }
 
           const embedResult = yield* buildEmbeddings(resolvedDir, {
             force,
@@ -188,13 +213,96 @@ export const indexCommand = Command.make(
             // Clear the progress line
             process.stdout.write('\r' + ' '.repeat(80) + '\r')
             yield* Console.log('')
-            yield* Console.log(`Completed in ${(embedResult.duration / 1000).toFixed(1)}s`)
-            yield* Console.log(`  Files: ${embedResult.filesProcessed}`)
-            yield* Console.log(
-              `  Sections: ${embedResult.sectionsEmbedded}`,
-            )
-            yield* Console.log(`  Tokens: ${embedResult.tokensUsed.toLocaleString()}`)
-            yield* Console.log(`  Cost: $${embedResult.cost.toFixed(6)}`)
+
+            if (embedResult.cacheHit) {
+              // Cache hit - embeddings already exist
+              yield* Console.log(`Embeddings already exist (${embedResult.existingVectors} vectors)`)
+              yield* Console.log('  Use --force to rebuild')
+              yield* Console.log('')
+              yield* Console.log(`Skipped embedding generation (saved ~$${(embedResult.estimatedSavings ?? 0).toFixed(4)})`)
+            } else {
+              // New embeddings were created
+              yield* Console.log(`Completed in ${(embedResult.duration / 1000).toFixed(1)}s`)
+              yield* Console.log(`  Files: ${embedResult.filesProcessed}`)
+              yield* Console.log(
+                `  Sections: ${embedResult.sectionsEmbedded}`,
+              )
+              yield* Console.log(`  Tokens: ${embedResult.tokensUsed.toLocaleString()}`)
+              yield* Console.log(`  Cost: $${embedResult.cost.toFixed(6)}`)
+            }
+          }
+        } else if (!noEmbed && !embedsExist && !json) {
+          // Prompt user to enable semantic search
+          yield* Console.log('')
+          yield* Console.log('Enable semantic search? This allows natural language queries like:')
+          yield* Console.log('  "how does authentication work" instead of exact keyword matches')
+          yield* Console.log('')
+
+          // Get cost estimate for the prompt
+          const estimate = yield* estimateEmbeddingCost(resolvedDir).pipe(
+            Effect.catchAll(() => Effect.succeed(null)),
+          )
+
+          if (estimate) {
+            yield* Console.log(`Cost: ~$${estimate.totalCost.toFixed(4)} for this corpus (~${estimate.estimatedTimeSeconds}s)`)
+          }
+          yield* Console.log('Requires: OPENAI_API_KEY environment variable')
+          yield* Console.log('')
+
+          const answer = yield* Effect.promise(() => promptUser('Create semantic index? [y/N]: '))
+
+          if (answer === 'y' || answer === 'yes') {
+            // Check for API key
+            if (!process.env.OPENAI_API_KEY) {
+              yield* Console.log('')
+              yield* Console.log('OPENAI_API_KEY not set.')
+              yield* Console.log('')
+              yield* Console.log('To enable semantic search, set your OpenAI API key:')
+              yield* Console.log('  export OPENAI_API_KEY=sk-...')
+              yield* Console.log('')
+              yield* Console.log('Or add to .env file in project root.')
+            } else {
+              yield* Console.log('')
+              yield* Console.log('Building embeddings...')
+
+              const embedResult = yield* buildEmbeddings(resolvedDir, {
+                force: false,
+                onFileProgress: (progress) => {
+                  process.stdout.write(
+                    `\r  [${progress.fileIndex}/${progress.totalFiles}] ${progress.filePath} (${progress.sectionCount} sections)...`,
+                  )
+                },
+              }).pipe(
+                Effect.catchIf(
+                  (e): e is MissingApiKeyError => e instanceof MissingApiKeyError,
+                  () =>
+                    Effect.gen(function* () {
+                      yield* Console.error('')
+                      yield* Console.error('Error: OPENAI_API_KEY not set')
+                      yield* Console.error('')
+                      yield* Console.error(
+                        'To use semantic search, set your OpenAI API key:',
+                      )
+                      yield* Console.error('  export OPENAI_API_KEY=sk-...')
+                      yield* Console.error('')
+                      yield* Console.error('Or add to .env file in project root.')
+                      return yield* Effect.fail(new Error('Missing API key'))
+                    }),
+                ),
+                Effect.catchAll(() => Effect.succeed(null)),
+              )
+
+              if (embedResult) {
+                // Clear the progress line
+                process.stdout.write('\r' + ' '.repeat(80) + '\r')
+                yield* Console.log('')
+                yield* Console.log(`Completed in ${(embedResult.duration / 1000).toFixed(1)}s`)
+                yield* Console.log(`  Files: ${embedResult.filesProcessed}`)
+                yield* Console.log(`  Sections: ${embedResult.sectionsEmbedded}`)
+                yield* Console.log(`  Tokens: ${embedResult.tokensUsed.toLocaleString()}`)
+                yield* Console.log(`  Cost: $${embedResult.cost.toFixed(6)}`)
+              }
+            }
           }
         }
 

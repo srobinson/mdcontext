@@ -39,6 +39,10 @@ export const helpContent: Record<string, CommandHelp> = {
         description: 'Build semantic embeddings (enables AI-powered search)',
       },
       {
+        name: '--no-embed',
+        description: 'Skip the prompt to enable semantic search',
+      },
+      {
         name: '-w, --watch',
         description: 'Watch for changes and re-index automatically',
       },
@@ -47,7 +51,8 @@ export const helpContent: Record<string, CommandHelp> = {
       { name: '--pretty', description: 'Pretty-print JSON output' },
     ],
     notes: [
-      'First run downloads embedding model (~80MB) if --embed is used.',
+      'After indexing, prompts to enable semantic search (use --no-embed to skip).',
+      'Embedding requires OPENAI_API_KEY environment variable.',
       'Index is stored in .md-tldr/ directory.',
     ],
   },
@@ -63,7 +68,7 @@ export const helpContent: Record<string, CommandHelp> = {
       'mdtldr search \'"exact phrase"\'          # Exact phrase match',
       'mdtldr search \'"context resumption" AND drift\'  # Phrase + boolean',
       'mdtldr search -H "API.*"                # Regex on headings only',
-      'mdtldr search --mode structural "auth"  # Force structural mode',
+      'mdtldr search --mode keyword "auth"     # Force keyword mode',
       'mdtldr search --mode semantic "auth"    # Force semantic mode',
       'mdtldr search -n 5 "setup"              # Limit to 5 results',
       'mdtldr search "config" docs/            # Search in specific directory',
@@ -74,8 +79,8 @@ export const helpContent: Record<string, CommandHelp> = {
     ],
     options: [
       {
-        name: '-s, --structural',
-        description: 'Force structural search (content text match)',
+        name: '-k, --keyword',
+        description: 'Force keyword search (content text match)',
       },
       {
         name: '-H, --heading-only',
@@ -83,7 +88,7 @@ export const helpContent: Record<string, CommandHelp> = {
       },
       {
         name: '-m, --mode <mode>',
-        description: 'Force search mode: semantic or structural',
+        description: 'Force search mode: semantic or keyword',
       },
       {
         name: '-n, --limit <n>',
@@ -110,10 +115,10 @@ export const helpContent: Record<string, CommandHelp> = {
       { name: '--pretty', description: 'Pretty-print JSON output' },
     ],
     notes: [
-      'Auto-detects mode: semantic if embeddings exist, structural otherwise.',
+      'Auto-detects mode: semantic if embeddings exist, keyword otherwise.',
       'Boolean operators: AND, OR, NOT (case-insensitive).',
       'Quoted phrases match exactly: "context resumption".',
-      'Regex patterns (e.g., "API.*") always use structural search.',
+      'Regex patterns (e.g., "API.*") always use keyword search.',
       'Run "mdtldr index --embed" first for semantic search.',
     ],
   },

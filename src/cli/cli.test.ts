@@ -81,9 +81,9 @@ describe('mdtldr CLI e2e', () => {
       expect(output).toContain('--force')
     })
 
-    it('search help shows structural and limit options', () => {
+    it('search help shows keyword and limit options', () => {
       const output = run('search --help')
-      expect(output).toContain('--structural')
+      expect(output).toContain('--keyword')
       expect(output).toContain('--limit')
       expect(output).toContain('--threshold')
     })
@@ -128,9 +128,10 @@ describe('mdtldr CLI e2e', () => {
   })
 
   describe('search command', () => {
-    it('performs content search by default', () => {
+    it('performs search by default', () => {
       const output = run('search "memory" docs/')
-      expect(output).toContain('Content search')
+      // When embeddings exist, uses semantic; otherwise keyword
+      expect(output).toMatch(/\[(keyword|semantic)\]/)
       expect(output).toContain('Results:')
     })
 
@@ -139,8 +140,8 @@ describe('mdtldr CLI e2e', () => {
       expect(output).toContain('Results: 0')
     })
 
-    it('supports -s flag for explicit structural search', () => {
-      const output = run('search -s "Architecture" docs/')
+    it('supports -k flag for explicit keyword search', () => {
+      const output = run('search -k "Architecture" docs/')
       expect(output).toContain('Content search')
     })
 
@@ -154,7 +155,8 @@ describe('mdtldr CLI e2e', () => {
 
     it('shows mode indicator in output', () => {
       const output = run('search "memory" docs/')
-      expect(output).toContain('[structural]')
+      // When embeddings exist, shows [semantic]; otherwise [keyword]
+      expect(output).toMatch(/\[(keyword|semantic)\]/)
     })
 
     it('supports boolean AND operator', () => {
@@ -179,16 +181,15 @@ describe('mdtldr CLI e2e', () => {
     })
 
     it('supports --mode flag', () => {
-      const output = run('search --mode structural "memory" docs/')
-      expect(output).toContain('[structural]')
+      const output = run('search --mode keyword "memory" docs/')
+      expect(output).toContain('[keyword]')
     })
 
-    it('returns error when forcing semantic without embeddings', () => {
-      // With Effect.fail, the process exits non-zero
-      const output = run('search --mode semantic "memory" docs/', {
-        expectError: true,
-      })
-      expect(output).toContain('Semantic search requires embeddings')
+    it('auto-creates embeddings when forcing semantic without them', () => {
+      // With new UX, we auto-create embeddings if they don't exist
+      const output = run('search --mode semantic "memory" docs/')
+      // Should show semantic search results (after auto-creating index)
+      expect(output).toContain('[semantic]')
     })
   })
 
@@ -255,12 +256,12 @@ describe('mdtldr CLI e2e', () => {
     it('supports -C flag for context lines', () => {
       const output = run('search "TODO" . -C 2')
       // Should show context around matches
-      expect(output).toContain('[structural]')
+      expect(output).toContain('[keyword]')
     })
 
     it('supports -B and -A flags for asymmetric context', () => {
       const output = run('search "TODO" . -B 1 -A 3')
-      expect(output).toContain('[structural]')
+      expect(output).toContain('[keyword]')
     })
 
     it('includes contextLines in JSON output', () => {
@@ -358,13 +359,14 @@ describe('mdtldr CLI e2e', () => {
     it('search: allows query before flags', () => {
       // Traditional: search -n 3 "query"
       // Flexible: search "query" -n 3
-      const output = run('search "memory" -n 2 docs/')
+      // Use -k to force keyword mode since embeddings may exist
+      const output = run('search -k "memory" -n 2 docs/')
       expect(output).toContain('Content search')
       expect(output).toContain('Results:')
     })
 
     it('search: allows path after flags', () => {
-      const output = run('search -s "Architecture" docs/')
+      const output = run('search -k "Architecture" docs/')
       expect(output).toContain('Content search')
     })
 
@@ -385,7 +387,8 @@ describe('mdtldr CLI e2e', () => {
     })
 
     it('search: handles --limit=value syntax', () => {
-      const output = run('search "memory" --limit=2 docs/')
+      // Use -k to force keyword mode since embeddings may exist
+      const output = run('search -k "memory" --limit=2 docs/')
       expect(output).toContain('Content search')
     })
   })

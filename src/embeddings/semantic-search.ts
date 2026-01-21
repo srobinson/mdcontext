@@ -173,6 +173,9 @@ export interface BuildEmbeddingsResult {
   readonly cost: number
   readonly duration: number
   readonly filesProcessed: number
+  readonly cacheHit?: boolean | undefined
+  readonly existingVectors?: number | undefined
+  readonly estimatedSavings?: number | undefined
 }
 
 export const buildEmbeddings = (
@@ -209,15 +212,21 @@ export const buildEmbeddings = (
     if (!options.force) {
       const loaded = yield* vectorStore.load()
       if (loaded) {
-        // For now, skip if any embeddings exist
-        if (vectorStore.getStats().count > 0) {
+        const stats = vectorStore.getStats()
+        // Skip if any embeddings exist
+        if (stats.count > 0) {
           const duration = Date.now() - startTime
+          // Estimate savings based on existing tokens
+          const estimatedSavings = (stats.totalTokens / 1_000_000) * EMBEDDING_PRICE_PER_MILLION
           return {
             sectionsEmbedded: 0,
             tokensUsed: 0,
             cost: 0,
             duration,
             filesProcessed: 0,
+            cacheHit: true,
+            existingVectors: stats.count,
+            estimatedSavings,
           }
         }
       }

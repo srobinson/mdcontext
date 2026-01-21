@@ -16,7 +16,7 @@ import {
 } from '../../embeddings/semantic-search.js'
 import { search, searchContent } from '../../search/searcher.js'
 import { jsonOption, prettyOption } from '../options.js'
-import { formatJson, hasEmbeddings, isRegexPattern } from '../utils.js'
+import { formatJson, getIndexInfo, isRegexPattern } from '../utils.js'
 
 // Auto-index threshold in seconds
 const AUTO_INDEX_THRESHOLD_SECONDS = 10
@@ -44,9 +44,9 @@ export const searchCommand = Command.make(
       Args.withDescription('Directory to search in'),
       Args.withDefault('.'),
     ),
-    structural: Options.boolean('structural').pipe(
-      Options.withAlias('s'),
-      Options.withDescription('Force structural search (headings only)'),
+    keyword: Options.boolean('keyword').pipe(
+      Options.withAlias('k'),
+      Options.withDescription('Force keyword search (content text match)'),
       Options.withDefault(false),
     ),
     headingOnly: Options.boolean('heading-only').pipe(
@@ -54,9 +54,9 @@ export const searchCommand = Command.make(
       Options.withDescription('Search headings only (not content)'),
       Options.withDefault(false),
     ),
-    mode: Options.choice('mode', ['semantic', 'structural']).pipe(
+    mode: Options.choice('mode', ['semantic', 'keyword']).pipe(
       Options.withAlias('m'),
-      Options.withDescription('Force search mode: semantic or structural'),
+      Options.withDescription('Force search mode: semantic or keyword'),
       Options.optional,
     ),
     limit: Options.integer('limit').pipe(
@@ -99,7 +99,7 @@ export const searchCommand = Command.make(
   ({
     query,
     path: dirPath,
-    structural,
+    keyword,
     headingOnly,
     mode,
     limit,
@@ -114,12 +114,24 @@ export const searchCommand = Command.make(
     Effect.gen(function* () {
       const resolvedDir = path.resolve(dirPath)
 
+      // Get index info for display
+      const indexInfo = yield* Effect.promise(() => getIndexInfo(resolvedDir))
+
+      // Check if no index exists
+      if (!indexInfo.exists && !json) {
+        yield* Console.log('No index found.')
+        yield* Console.log('')
+        yield* Console.log('Run: mdtldr index /path/to/docs')
+        yield* Console.log('  Add --embed for semantic search capabilities')
+        return
+      }
+
       // Check for embeddings
-      let embedsExist = yield* Effect.promise(() => hasEmbeddings(resolvedDir))
+      let embedsExist = indexInfo.embeddingsExist
 
       // Determine search mode
-      // Priority: --mode flag > --structural flag > regex pattern > embeddings availability
-      let useStructural: boolean
+      // Priority: --mode flag > --keyword flag > regex pattern > embeddings availability
+      let useKeyword: boolean
       let modeReason: string
 
       const modeValue = Option.getOrUndefined(mode)
@@ -138,26 +150,45 @@ export const searchCommand = Command.make(
             return
           }
         }
-        useStructural = false
+        useKeyword = false
         modeReason = '--mode semantic'
-      } else if (modeValue === 'structural') {
-        useStructural = true
-        modeReason = '--mode structural'
-      } else if (structural) {
-        useStructural = true
-        modeReason = '--structural flag'
+      } else if (modeValue === 'keyword') {
+        useKeyword = true
+        modeReason = '--mode keyword'
+      } else if (keyword) {
+        useKeyword = true
+        modeReason = '--keyword flag'
       } else if (isRegexPattern(query)) {
-        useStructural = true
+        useKeyword = true
         modeReason = 'regex pattern detected'
       } else if (!embedsExist) {
-        useStructural = true
+        useKeyword = true
         modeReason = 'no embeddings'
       } else {
-        useStructural = false
+        useKeyword = false
         modeReason = 'embeddings available'
       }
 
-      const modeIndicator = useStructural ? '[structural]' : '[semantic]'
+      const modeIndicator = useKeyword ? '[keyword]' : '[semantic]'
+
+      // Show index info (non-JSON mode)
+      if (!json && indexInfo.lastUpdated) {
+        const lastUpdatedDate = new Date(indexInfo.lastUpdated)
+        const dateStr = lastUpdatedDate.toLocaleDateString('en-CA')
+        const timeStr = lastUpdatedDate.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        })
+        yield* Console.log(`Using index from ${dateStr} ${timeStr}`)
+        yield* Console.log(`  Sections: ${indexInfo.sectionCount ?? 0}`)
+        if (indexInfo.embeddingsExist) {
+          yield* Console.log(`  Embeddings: yes (${indexInfo.vectorCount ?? 0} vectors)`)
+        } else {
+          yield* Console.log('  Embeddings: no')
+        }
+        yield* Console.log('')
+      }
 
       // Calculate context lines
       // -C sets both before and after; -B and -A override individual sides
@@ -168,8 +199,8 @@ export const searchCommand = Command.make(
       const contextBefore = beforeValue ?? contextValue ?? 1
       const contextAfter = afterValue ?? contextValue ?? 1
 
-      if (useStructural) {
-        // Structural search - content by default, heading-only if flag set
+      if (useKeyword) {
+        // Keyword search - content by default, heading-only if flag set
         const results = headingOnly
           ? yield* search(resolvedDir, { heading: query, limit })
           : yield* searchContent(resolvedDir, {
@@ -181,7 +212,7 @@ export const searchCommand = Command.make(
 
         if (json) {
           const output = {
-            mode: 'structural',
+            mode: 'keyword',
             modeReason,
             query,
             contextBefore,
@@ -248,6 +279,11 @@ export const searchCommand = Command.make(
             }
             yield* Console.log('')
           }
+
+          // Show tip for enabling semantic search if no embeddings
+          if (!indexInfo.embeddingsExist) {
+            yield* Console.log("Tip: Run 'mdtldr index --embed' to enable semantic search")
+          }
         }
       } else {
         // Semantic search
@@ -292,6 +328,9 @@ export const searchCommand = Command.make(
             yield* Console.log(`    ${result.heading} (${similarity}% match)`)
             yield* Console.log('')
           }
+
+          // Show tip for keyword search alternative
+          yield* Console.log('Tip: Use --mode keyword for exact text matching')
         }
       }
     }),
@@ -299,7 +338,7 @@ export const searchCommand = Command.make(
 
 /**
  * Handle the case when embeddings don't exist.
- * Returns true if embeddings were created (or already exist), false to fall back to structural search.
+ * Returns true if embeddings were created (or already exist), false to fall back to keyword search.
  */
 const handleMissingEmbeddings = (
   resolvedDir: string,

@@ -47,20 +47,21 @@ Requires Node.js 18+. Semantic search requires `OPENAI_API_KEY`.
 Index markdown files. Run this first.
 
 ```bash
-mdtldr index                       # Index current directory
+mdtldr index                       # Index current directory (prompts for semantic)
 mdtldr index ./docs                # Index specific path
 mdtldr index --embed               # Also build embeddings for semantic search
+mdtldr index --no-embed            # Skip the semantic search prompt
 mdtldr index --watch               # Watch for changes
 mdtldr index --force               # Force full rebuild
 ```
 
 ### search
 
-Search by meaning (semantic) or structure (regex).
+Search by meaning (semantic) or keyword (text match).
 
 ```bash
 mdtldr search "how to authenticate"        # Semantic search (if embeddings exist)
-mdtldr search -s "auth.*flow"              # Structural search (heading regex)
+mdtldr search -k "auth.*flow"              # Keyword search (text match)
 mdtldr search -n 5 "setup"                 # Limit to 5 results
 mdtldr search --threshold 0.8 "deploy"     # Higher similarity threshold
 ```
@@ -74,7 +75,7 @@ mdtldr search "checkpoint" -C 3            # 3 lines before AND after each match
 mdtldr search "error" -B 2 -A 5            # 2 lines before, 5 lines after
 ```
 
-Auto-detection: Uses semantic search if embeddings exist and query looks like natural language. Use `-s` to force structural search.
+Auto-detection: Uses semantic search if embeddings exist and query looks like natural language. Use `-k` to force keyword search.
 
 ### context
 
@@ -149,7 +150,7 @@ mdtldr context -t 500 docs/api.md          # Get summary within token budget
 
 ```bash
 mdtldr search "authentication"             # By meaning
-mdtldr search -s "Setup|Install"           # By heading pattern
+mdtldr search -k "Setup|Install"           # By keyword pattern
 ```
 
 ### Setting Up Semantic Search

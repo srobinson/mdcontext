@@ -1,5 +1,5 @@
 /**
- * Structural search for md-tldr
+ * Keyword search for md-tldr
  */
 
 import * as fs from 'node:fs/promises'

@@ -67,3 +67,60 @@ export const hasEmbeddings = async (dir: string): Promise<boolean> => {
     return false
   }
 }
+
+/**
+ * Get index information for display
+ */
+export interface IndexInfo {
+  exists: boolean
+  lastUpdated?: string | undefined
+  sectionCount?: number | undefined
+  embeddingsExist: boolean
+  vectorCount?: number | undefined
+}
+
+export const getIndexInfo = async (dir: string): Promise<IndexInfo> => {
+  const sectionsPath = path.join(dir, '.md-tldr', 'indexes', 'sections.json')
+  const vectorsMetaPath = path.join(dir, '.md-tldr', 'vectors.meta.json')
+
+  let exists = false
+  let lastUpdated: string | undefined
+  let sectionCount: number | undefined
+  let embeddingsExist = false
+  let vectorCount: number | undefined
+
+  // Check sections index
+  try {
+    const stat = await fsPromises.stat(sectionsPath)
+    exists = true
+    lastUpdated = stat.mtime.toISOString()
+
+    const content = await fsPromises.readFile(sectionsPath, 'utf-8')
+    const sections = JSON.parse(content)
+    sectionCount = Object.keys(sections.sections || {}).length
+  } catch {
+    // Index doesn't exist
+  }
+
+  // Check vectors metadata
+  try {
+    const content = await fsPromises.readFile(vectorsMetaPath, 'utf-8')
+    const meta = JSON.parse(content)
+    embeddingsExist = true
+    vectorCount = Object.keys(meta.entries || {}).length
+    // Use vector meta updatedAt if available
+    if (meta.updatedAt) {
+      lastUpdated = meta.updatedAt
+    }
+  } catch {
+    // Embeddings don't exist
+  }
+
+  return {
+    exists,
+    lastUpdated,
+    sectionCount,
+    embeddingsExist,
+    vectorCount,
+  }
+}

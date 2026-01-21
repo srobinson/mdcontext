@@ -1,5 +1,5 @@
 /**
- * Tests for structural search
+ * Tests for keyword search
  */
 
 import * as fs from 'node:fs/promises'
