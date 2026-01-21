@@ -28,8 +28,8 @@ coverage/
 .env.local
 .env.*.local
 
-# md-tldr indexes (local data)
-.md-tldr/
+# mdcontext indexes (local data)
+.mdcontext/
 
 # Temporary files
 *.tmp

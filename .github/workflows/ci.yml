@@ -3,6 +3,13 @@ name: CI
 on:
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      include_embed_tests:
+        description: 'Run full test suite including embedding/semantic search tests'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   quality:
@@ -51,7 +58,18 @@ jobs:
           cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test
+
+      - name: Run tests (default - no embeddings)
+        if: ${{ !inputs.include_embed_tests }}
+        run: pnpm test
+
+      - name: Run full tests (with embeddings)
+        if: ${{ inputs.include_embed_tests }}
+        env:
+          INCLUDE_EMBED_TESTS: true
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: pnpm test
+
       - run: pnpm build
 
       - name: Test CLI execution

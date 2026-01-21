@@ -1,10 +1,10 @@
-# md-tldr Semantic Search: Current Implementation
+# mdcontext Semantic Search: Current Implementation
 
-This document describes the current semantic search implementation in md-tldr, covering architecture, components, data flow, and known limitations.
+This document describes the current semantic search implementation in mdcontext, covering architecture, components, data flow, and known limitations.
 
 ## Overview
 
-md-tldr provides semantic search capabilities that allow users to search markdown documentation by meaning rather than exact text matching. The system uses OpenAI's text-embedding-3-small model to generate vector embeddings and HNSW (Hierarchical Navigable Small World) for approximate nearest neighbor search.
+mdcontext provides semantic search capabilities that allow users to search markdown documentation by meaning rather than exact text matching. The system uses OpenAI's text-embedding-3-small model to generate vector embeddings and HNSW (Hierarchical Navigable Small World) for approximate nearest neighbor search.
 
 ## Architecture
 
@@ -228,7 +228,7 @@ Document: {documentTitle}
 
 ## Storage Files
 
-Located in `.md-tldr/` directory:
+Located in `.mdcontext/` directory:
 
 | File | Format | Contents |
 |------|--------|----------|

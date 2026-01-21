@@ -1,14 +1,14 @@
-# mdtldr Dogfooding Findings
+# mdcontext Dogfooding Findings
 
 **Date:** 2025-01-19
-**Method:** 6 autonomous agents explored documentation directories using only mdtldr CLI
+**Method:** 6 autonomous agents explored documentation directories using only mdcontext CLI
 **Target directories:** `./docs`, `./doc.llm`, `./docs.amorphic` (in `/Users/alphab/Dev/LLM/DEV/TMP/ralph`)
 
 ---
 
 ## Executive Summary
 
-**Verdict: YES - mdtldr is useful**, with the `context` command being the standout feature delivering 80-99% token reduction. However, several issues limit the tool's effectiveness for discovery workflows.
+**Verdict: YES - mdcontext is useful**, with the `context` command being the standout feature delivering 80-99% token reduction. However, several issues limit the tool's effectiveness for discovery workflows.
 
 ---
 
@@ -27,7 +27,7 @@
 
 ### 3. Help System
 - Well-polished with examples
-- Subcommand help (`mdtldr context --help`) informative
+- Subcommand help (`mdcontext context --help`) informative
 - Agents successfully learned the tool from `--help` alone
 
 ---
@@ -38,7 +38,7 @@
 
 **Symptom:**
 ```bash
-mdtldr index ./docs
+mdcontext index ./docs
 # Output: "Indexed: 0 documents"
 ```
 
@@ -54,7 +54,7 @@ mdtldr index ./docs
 
 **Symptom:**
 ```bash
-mdtldr search "authentication" ./docs
+mdcontext search "authentication" ./docs
 # Returns: Only matches if "authentication" appears in a heading
 ```
 
@@ -70,7 +70,7 @@ mdtldr search "authentication" ./docs
 
 **Symptom:**
 ```bash
-mdtldr context --tokens 500 --brief file.md
+mdcontext context --tokens 500 --brief file.md
 # Output may exceed 500 tokens
 ```
 
@@ -84,7 +84,7 @@ mdtldr context --tokens 500 --brief file.md
 
 **Symptom:**
 ```bash
-mdtldr stats ./docs
+mdcontext stats ./docs
 # Shows basic counts only
 ```
 
@@ -136,15 +136,15 @@ Show useful stats even without embeddings:
 ## Raw Findings Summary
 
 ### What Agents Tried That Failed
-1. `mdtldr index <dir>` → "0 documents"
-2. `mdtldr search "keyword" <dir>` → No results (keyword in content, not heading)
-3. `mdtldr stats <dir>` → Minimal output without embeddings
+1. `mdcontext index <dir>` → "0 documents"
+2. `mdcontext search "keyword" <dir>` → No results (keyword in content, not heading)
+3. `mdcontext stats <dir>` → Minimal output without embeddings
 
 ### What Agents Found Valuable
-1. `mdtldr context --brief file.md` → Instant useful summary
-2. `mdtldr tree <dir>` → Quick structure overview
-3. `mdtldr context file1.md file2.md --tokens 1000` → Multi-file assembly
-4. `mdtldr --help` / `mdtldr <cmd> --help` → Self-discovery worked
+1. `mdcontext context --brief file.md` → Instant useful summary
+2. `mdcontext tree <dir>` → Quick structure overview
+3. `mdcontext context file1.md file2.md --tokens 1000` → Multi-file assembly
+4. `mdcontext --help` / `mdcontext <cmd> --help` → Self-discovery worked
 
 ---
 

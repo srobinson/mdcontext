@@ -1,6 +1,6 @@
-# md-tldr Usage Guide
+# mdcontext Usage Guide
 
-Complete command reference and workflows for md-tldr.
+Complete command reference and workflows for mdcontext.
 
 ## Table of Contents
 
@@ -24,10 +24,10 @@ Complete command reference and workflows for md-tldr.
 
 ```bash
 # Global install
-npm install -g md-tldr
+npm install -g mdcontext
 
 # Or use npx
-npx md-tldr --help
+npx mdcontext --help
 ```
 
 **Requirements:**
@@ -40,19 +40,19 @@ npx md-tldr --help
 
 ```bash
 # 1. Index your markdown files
-mdtldr index ./docs
+mdcontext index ./docs
 
 # 2. View structure
-mdtldr tree ./docs                 # File list
-mdtldr tree ./docs/README.md       # Document outline
+mdcontext tree ./docs                 # File list
+mdcontext tree ./docs/README.md       # Document outline
 
 # 3. Get LLM-ready context
-mdtldr context ./docs/README.md
+mdcontext context ./docs/README.md
 
 # 4. Enable semantic search (optional)
 export OPENAI_API_KEY=sk-...
-mdtldr index --embed
-mdtldr search "how to authenticate"
+mdcontext index --embed
+mdcontext search "how to authenticate"
 ```
 
 ---
@@ -64,7 +64,7 @@ mdtldr search "how to authenticate"
 Build or update the document index. Run this first before using other commands.
 
 ```bash
-mdtldr index [path] [options]
+mdcontext index [path] [options]
 ```
 
 **Arguments:**
@@ -84,22 +84,22 @@ mdtldr index [path] [options]
 **Examples:**
 ```bash
 # Index current directory
-mdtldr index
+mdcontext index
 
 # Index specific directory
-mdtldr index ./docs
+mdcontext index ./docs
 
 # Index with embeddings for semantic search
-mdtldr index --embed
+mdcontext index --embed
 
 # Watch mode for development
-mdtldr index --watch
+mdcontext index --watch
 
 # Force rebuild
-mdtldr index --force
+mdcontext index --force
 ```
 
-**Index location:** `.md-tldr/indexes/`
+**Index location:** `.mdcontext/indexes/`
 
 ---
 
@@ -108,7 +108,7 @@ mdtldr index --force
 Search by meaning (semantic) or by structure (heading patterns).
 
 ```bash
-mdtldr search [options] <query> [path]
+mdcontext search [options] <query> [path]
 ```
 
 **Arguments:**
@@ -133,19 +133,19 @@ mdtldr search [options] <query> [path]
 **Examples:**
 ```bash
 # Semantic search (if embeddings exist)
-mdtldr search "how to authenticate"
+mdcontext search "how to authenticate"
 
 # Keyword search (exact text match)
-mdtldr search -k "Setup|Install"
+mdcontext search -k "Setup|Install"
 
 # Limit results
-mdtldr search -n 5 "api"
+mdcontext search -n 5 "api"
 
 # Higher similarity threshold
-mdtldr search --threshold 0.8 "deploy"
+mdcontext search --threshold 0.8 "deploy"
 
 # Search in specific directory
-mdtldr search "config" ./docs
+mdcontext search "config" ./docs
 ```
 
 ---
@@ -155,7 +155,7 @@ mdtldr search "config" ./docs
 Get LLM-ready context from one or more files.
 
 ```bash
-mdtldr context [options] <files...>
+mdcontext context [options] <files...>
 ```
 
 **Arguments:**
@@ -175,22 +175,22 @@ mdtldr context [options] <files...>
 **Examples:**
 ```bash
 # Single file
-mdtldr context README.md
+mdcontext context README.md
 
 # Multiple files
-mdtldr context README.md docs/api.md docs/setup.md
+mdcontext context README.md docs/api.md docs/setup.md
 
 # Glob patterns
-mdtldr context docs/*.md
+mdcontext context docs/*.md
 
 # With token budget
-mdtldr context -t 500 README.md
+mdcontext context -t 500 README.md
 
 # Brief summary
-mdtldr context --brief README.md
+mdcontext context --brief README.md
 
 # Full content
-mdtldr context --full README.md
+mdcontext context --full README.md
 ```
 
 **Output includes:**
@@ -206,7 +206,7 @@ mdtldr context --full README.md
 Display file structure or document outline.
 
 ```bash
-mdtldr tree [path] [options]
+mdcontext tree [path] [options]
 ```
 
 **Arguments:**
@@ -227,13 +227,13 @@ mdtldr tree [path] [options]
 **Examples:**
 ```bash
 # File list in current directory
-mdtldr tree
+mdcontext tree
 
 # File list in specific directory
-mdtldr tree ./docs
+mdcontext tree ./docs
 
 # Document outline
-mdtldr tree README.md
+mdcontext tree README.md
 ```
 
 **Directory output:**
@@ -265,7 +265,7 @@ docs/
 Show outgoing links from a file.
 
 ```bash
-mdtldr links <file> [options]
+mdcontext links <file> [options]
 ```
 
 **Arguments:**
@@ -282,7 +282,7 @@ mdtldr links <file> [options]
 
 **Example:**
 ```bash
-mdtldr links docs/README.md
+mdcontext links docs/README.md
 ```
 
 **Output:**
@@ -303,7 +303,7 @@ External Links:
 Show files that link to a specific file.
 
 ```bash
-mdtldr backlinks <file> [options]
+mdcontext backlinks <file> [options]
 ```
 
 **Arguments:**
@@ -320,7 +320,7 @@ mdtldr backlinks <file> [options]
 
 **Example:**
 ```bash
-mdtldr backlinks docs/api/authentication.md
+mdcontext backlinks docs/api/authentication.md
 ```
 
 **Output:**
@@ -337,7 +337,7 @@ Files linking to docs/api/authentication.md:
 Show index statistics.
 
 ```bash
-mdtldr stats [path] [options]
+mdcontext stats [path] [options]
 ```
 
 **Arguments:**
@@ -353,7 +353,7 @@ mdtldr stats [path] [options]
 
 **Example:**
 ```bash
-mdtldr stats
+mdcontext stats
 ```
 
 **Output:**
@@ -372,12 +372,12 @@ Index Statistics:
 
 ## MCP Server
 
-md-tldr includes an MCP server for integration with AI assistants.
+mdcontext includes an MCP server for integration with AI assistants.
 
 ### Starting the Server
 
 ```bash
-mdtldr-mcp
+mdcontext-mcp
 ```
 
 ### Available Tools
@@ -395,8 +395,8 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "md-tldr": {
-      "command": "mdtldr-mcp",
+    "mdcontext": {
+      "command": "mdcontext-mcp",
       "args": []
     }
   }
@@ -410,8 +410,8 @@ Add to `.claude/settings.json`:
 ```json
 {
   "mcpServers": {
-    "md-tldr": {
-      "command": "mdtldr-mcp",
+    "mdcontext": {
+      "command": "mdcontext-mcp",
       "args": []
     }
   }
@@ -426,42 +426,42 @@ Add to `.claude/settings.json`:
 
 ```bash
 # 1. See what's available
-mdtldr tree ./docs
+mdcontext tree ./docs
 
 # 2. Check document structure
-mdtldr tree docs/api.md
+mdcontext tree docs/api.md
 
 # 3. Get context for specific file
-mdtldr context -t 500 docs/api.md
+mdcontext context -t 500 docs/api.md
 
 # 4. Or combine multiple files
-mdtldr context -t 2000 README.md docs/setup.md docs/api.md
+mdcontext context -t 2000 README.md docs/setup.md docs/api.md
 ```
 
 ### Finding Related Documentation
 
 ```bash
 # 1. See what a file links to
-mdtldr links docs/README.md
+mdcontext links docs/README.md
 
 # 2. See what links to a file
-mdtldr backlinks docs/api/authentication.md
+mdcontext backlinks docs/api/authentication.md
 
 # 3. Use semantic search to find related content
-mdtldr search "user authentication and session management"
+mdcontext search "user authentication and session management"
 ```
 
 ### Keeping Index Updated
 
 ```bash
 # One-time index
-mdtldr index
+mdcontext index
 
 # Watch mode during development
-mdtldr index --watch
+mdcontext index --watch
 
 # Force full rebuild after major changes
-mdtldr index --force
+mdcontext index --force
 ```
 
 ### Setting Up Semantic Search
@@ -471,26 +471,26 @@ mdtldr index --force
 export OPENAI_API_KEY=sk-...
 
 # 2. Build embeddings
-mdtldr index --embed
+mdcontext index --embed
 
 # 3. Search by meaning
-mdtldr search "how to handle authentication errors"
+mdcontext search "how to handle authentication errors"
 ```
 
 ### Optimizing for Token Budget
 
 ```bash
 # Check document size
-mdtldr tree docs/large-doc.md
+mdcontext tree docs/large-doc.md
 
 # Get brief summary
-mdtldr context docs/large-doc.md --brief
+mdcontext context docs/large-doc.md --brief
 
 # Or set explicit budget
-mdtldr context -t 200 docs/large-doc.md
+mdcontext context -t 200 docs/large-doc.md
 
 # Combine multiple files with shared budget
-mdtldr context -t 1000 a.md b.md c.md
+mdcontext context -t 1000 a.md b.md c.md
 ```
 
 ---
@@ -499,10 +499,10 @@ mdtldr context -t 1000 a.md b.md c.md
 
 ### Index Directory
 
-By default, indexes are stored in `.md-tldr/` in your project root:
+By default, indexes are stored in `.mdcontext/` in your project root:
 
 ```
-.md-tldr/
+.mdcontext/
 ├── indexes/
 │   ├── documents.json    # Document metadata
 │   ├── sections.json     # Section index
@@ -537,17 +537,17 @@ By default, indexes are stored in `.md-tldr/` in your project root:
 
 ### "No index found"
 
-Run `mdtldr index` to build the index first.
+Run `mdcontext index` to build the index first.
 
 ### "Semantic search not available"
 
 1. Set `OPENAI_API_KEY` environment variable
-2. Run `mdtldr index --embed` to build embedding index
+2. Run `mdcontext index --embed` to build embedding index
 
 ### "File not found in index"
 
 1. Check file is in indexed directory
-2. Run `mdtldr index --force` to rebuild
+2. Run `mdcontext index --force` to rebuild
 
 ### High token counts
 

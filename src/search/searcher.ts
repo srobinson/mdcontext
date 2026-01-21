@@ -1,5 +1,5 @@
 /**
- * Keyword search for md-tldr
+ * Keyword search for mdcontext
  */
 
 import * as fs from 'node:fs/promises'
@@ -332,7 +332,10 @@ export const searchContent = (
 
                 // Create snippet with configurable context
                 const snippetStart = Math.max(0, i - contextBefore)
-                const snippetEnd = Math.min(sectionLines.length, i + contextAfter + 1)
+                const snippetEnd = Math.min(
+                  sectionLines.length,
+                  i + contextAfter + 1,
+                )
                 const snippetLines = sectionLines.slice(
                   snippetStart,
                   snippetEnd,
@@ -483,7 +486,7 @@ export const getContext = (
 
     if (!docIndex || !sectionIndex) {
       return yield* Effect.fail(
-        new Error("Index not found. Run 'mdtldr index' first."),
+        new Error("Index not found. Run 'mdcontext index' first."),
       )
     }
 

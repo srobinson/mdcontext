@@ -59,7 +59,7 @@ export const isRegexPattern = (query: string): boolean => {
  * Check if embeddings exist for a directory
  */
 export const hasEmbeddings = async (dir: string): Promise<boolean> => {
-  const vectorsPath = path.join(dir, '.md-tldr', 'vectors.bin')
+  const vectorsPath = path.join(dir, '.mdcontext', 'vectors.bin')
   try {
     await fsPromises.access(vectorsPath)
     return true
@@ -80,8 +80,8 @@ export interface IndexInfo {
 }
 
 export const getIndexInfo = async (dir: string): Promise<IndexInfo> => {
-  const sectionsPath = path.join(dir, '.md-tldr', 'indexes', 'sections.json')
-  const vectorsMetaPath = path.join(dir, '.md-tldr', 'vectors.meta.json')
+  const sectionsPath = path.join(dir, '.mdcontext', 'indexes', 'sections.json')
+  const vectorsMetaPath = path.join(dir, '.mdcontext', 'vectors.meta.json')
 
   let exists = false
   let lastUpdated: string | undefined

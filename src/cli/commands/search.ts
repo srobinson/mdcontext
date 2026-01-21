@@ -4,8 +4,8 @@
  * Search markdown content by meaning or heading pattern.
  */
 
-import * as readline from 'node:readline'
 import * as path from 'node:path'
+import * as readline from 'node:readline'
 import { Args, Command, Options } from '@effect/cli'
 import { Console, Effect, Option } from 'effect'
 import { MissingApiKeyError } from '../../embeddings/openai-provider.js'
@@ -71,16 +71,12 @@ export const searchCommand = Command.make(
     ),
     context: Options.integer('context').pipe(
       Options.withAlias('C'),
-      Options.withDescription(
-        'Lines of context around matches (like grep -C)',
-      ),
+      Options.withDescription('Lines of context around matches (like grep -C)'),
       Options.optional,
     ),
     beforeContext: Options.integer('before-context').pipe(
       Options.withAlias('B'),
-      Options.withDescription(
-        'Lines of context before matches (like grep -B)',
-      ),
+      Options.withDescription('Lines of context before matches (like grep -B)'),
       Options.optional,
     ),
     afterContext: Options.integer('after-context').pipe(
@@ -122,7 +118,7 @@ export const searchCommand = Command.make(
       if (!indexInfo.exists && !json) {
         yield* Console.log('No index found.')
         yield* Console.log('')
-        yield* Console.log('Run: mdtldr index /path/to/docs')
+        yield* Console.log('Run: mdcontext index /path/to/docs')
         yield* Console.log('  Add --embed for semantic search capabilities')
         return
       }
@@ -188,7 +184,9 @@ export const searchCommand = Command.make(
         yield* Console.log(`Using index from ${dateStr} ${timeStr}`)
         yield* Console.log(`  Sections: ${indexInfo.sectionCount ?? 0}`)
         if (indexInfo.embeddingsExist) {
-          yield* Console.log(`  Embeddings: yes (${indexInfo.vectorCount ?? 0} vectors)`)
+          yield* Console.log(
+            `  Embeddings: yes (${indexInfo.vectorCount ?? 0} vectors)`,
+          )
         } else {
           yield* Console.log('  Embeddings: no')
         }
@@ -239,11 +237,12 @@ export const searchCommand = Command.make(
         } else {
           const searchType = headingOnly ? 'Heading' : 'Content'
           // Show mode with explanation for auto-detected modes
-          const showReason = modeReason !== '--mode keyword' && modeReason !== '--keyword flag'
-          const modeStr = showReason ? `${modeIndicator} (${modeReason})` : modeIndicator
-          yield* Console.log(
-            `${modeStr} ${searchType} search: "${query}"`,
-          )
+          const showReason =
+            modeReason !== '--mode keyword' && modeReason !== '--keyword flag'
+          const modeStr = showReason
+            ? `${modeIndicator} (${modeReason})`
+            : modeIndicator
+          yield* Console.log(`${modeStr} ${searchType} search: "${query}"`)
           yield* Console.log(`Results: ${results.length}`)
           yield* Console.log('')
 
@@ -290,7 +289,9 @@ export const searchCommand = Command.make(
 
           // Show tip for enabling semantic search if no embeddings
           if (!indexInfo.embeddingsExist) {
-            yield* Console.log("Tip: Run 'mdtldr index --embed' to enable semantic search")
+            yield* Console.log(
+              "Tip: Run 'mdcontext index --embed' to enable semantic search",
+            )
           }
         }
       } else {
@@ -328,7 +329,9 @@ export const searchCommand = Command.make(
         } else {
           // Show mode with explanation for auto-detected modes
           const showSemanticReason = modeReason !== '--mode semantic'
-          const semanticModeStr = showSemanticReason ? `${modeIndicator} (${modeReason})` : modeIndicator
+          const semanticModeStr = showSemanticReason
+            ? `${modeIndicator} (${modeReason})`
+            : modeIndicator
           yield* Console.log(`${semanticModeStr} Semantic search: "${query}"`)
           yield* Console.log(`Results: ${results.length}`)
           yield* Console.log('')
@@ -363,8 +366,10 @@ const handleMissingEmbeddings = (
     )
 
     if (!estimate) {
-      yield* Console.error('No semantic index found and could not estimate cost.')
-      yield* Console.error('Run "mdtldr index --embed" first.')
+      yield* Console.error(
+        'No semantic index found and could not estimate cost.',
+      )
+      yield* Console.error('Run "mdcontext index --embed" first.')
       return false
     }
 
@@ -410,7 +415,7 @@ const handleMissingEmbeddings = (
       }
 
       if (!json) {
-        process.stdout.write('\r' + ' '.repeat(80) + '\r')
+        process.stdout.write(`\r${' '.repeat(80)}\r`)
         yield* Console.log(
           `Index created (${result.sectionsEmbedded} sections, $${result.cost.toFixed(6)})`,
         )
@@ -476,7 +481,7 @@ const handleMissingEmbeddings = (
       }
 
       if (!json) {
-        process.stdout.write('\r' + ' '.repeat(80) + '\r')
+        process.stdout.write(`\r${' '.repeat(80)}\r`)
         yield* Console.log(
           `Index created (${result.sectionsEmbedded} sections, $${result.cost.toFixed(6)})`,
         )

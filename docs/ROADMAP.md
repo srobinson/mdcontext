@@ -1,4 +1,4 @@
-# Roadmap: @hw/md-tldr
+# Roadmap: @hw/mdcontext
 
 ## Overview
 
@@ -21,7 +21,7 @@ Build a token-efficient markdown analysis tool for LLM consumption. Each phase d
 
 ### 1.1: Project Setup
 
-- Initialize `packages/hw_md_tldr` in monorepo
+- Initialize `packages/hw_mdcontext` in monorepo
 - TypeScript + Effect setup
 - Test infrastructure (vitest)
 - Basic CI integration
@@ -88,7 +88,7 @@ Build a token-efficient markdown analysis tool for LLM consumption. Each phase d
 
 - `MdStore` interface (save, load, query)
 - `MemoryMdStore`
-- `FileMdStore` (JSON files in `.md-tldr/`)
+- `FileMdStore` (JSON files in `.mdcontext/`)
 
 ### 2.2: Document Indexing
 
@@ -114,7 +114,7 @@ Build a token-efficient markdown analysis tool for LLM consumption. Each phase d
 **Deliverables:**
 
 - `watch(dir, options): Effect<void>`
-- `.md-tldrignore` support
+- `.mdcontextignore` support
 - Debounce logic (default 500ms)
 
 ### 2.4: Cache Management
@@ -276,9 +276,9 @@ Build a token-efficient markdown analysis tool for LLM consumption. Each phase d
 
 **Deliverables:**
 
-- `md_tldr_query_duration_ms` histogram
-- `md_tldr_cache_hits_total` counter
-- `md_tldr_index_build_duration_ms` gauge
+- `mdcontext_query_duration_ms` histogram
+- `mdcontext_cache_hits_total` counter
+- `mdcontext_index_build_duration_ms` gauge
 
 ### 5.3: Usage Metrics
 
@@ -289,8 +289,8 @@ Build a token-efficient markdown analysis tool for LLM consumption. Each phase d
 
 **Deliverables:**
 
-- `md_tldr_queries_total` counter
-- `md_tldr_tokens_used` counter
+- `mdcontext_queries_total` counter
+- `mdcontext_tokens_used` counter
 - Query log with timestamps
 
 ### 5.4: Reporting
@@ -301,7 +301,7 @@ Build a token-efficient markdown analysis tool for LLM consumption. Each phase d
 
 **Deliverables:**
 
-- `mdtldr metrics` CLI command
+- `mdcontext metrics` CLI command
 - JSON and text output formats
 - Configurable retention
 
@@ -309,14 +309,14 @@ Build a token-efficient markdown analysis tool for LLM consumption. Each phase d
 
 ## Phase 6: Integration
 
-**Goal:** Make md-tldr usable from CLI, MCP, and HumanWork.
+**Goal:** Make mdcontext usable from CLI, MCP, and HumanWork.
 
 ### 6.1: CLI Tool
 
-- `mdtldr index <dir>` — build index
-- `mdtldr search <query>` — semantic search
-- `mdtldr context <path>` — LLM-ready summary
-- `mdtldr structure <path>` — show document structure
+- `mdcontext index <dir>` — build index
+- `mdcontext search <query>` — semantic search
+- `mdcontext context <path>` — LLM-ready summary
+- `mdcontext structure <path>` — show document structure
 
 **Deliverables:**
 
@@ -326,7 +326,7 @@ Build a token-efficient markdown analysis tool for LLM consumption. Each phase d
 
 ### 6.2: Daemon Mode
 
-- `mdtldr daemon` — run as background service
+- `mdcontext daemon` — run as background service
 - HTTP/IPC API for queries
 - Auto-rebuild on changes
 

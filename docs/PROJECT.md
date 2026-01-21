@@ -1,4 +1,4 @@
-# @hw/md-tldr
+# @hw/mdcontext
 
 ## What This Is
 
@@ -27,7 +27,7 @@ Token-efficient markdown analysis for LLMs. The "TLDR for code" approach applied
 
 ```
                     ┌─────────────────────────────────────┐
-                    │            md-tldr daemon           │
+                    │            mdcontext daemon           │
                     │  ┌─────────┐  ┌─────────────────┐  │
   Markdown ────────▶│  │ Parser  │──│ Structure Index │  │
   Files             │  └─────────┘  └─────────────────┘  │

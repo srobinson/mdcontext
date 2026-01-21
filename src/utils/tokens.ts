@@ -173,3 +173,14 @@ export const countWords = (text: string): number => {
   if (trimmed.length === 0) return 0
   return trimmed.split(/\s+/).length
 }
+
+/**
+ * Free the tiktoken encoder to release WebAssembly resources.
+ * Call this in test teardown to prevent process hang.
+ */
+export const freeEncoder = (): void => {
+  if (encoder !== null) {
+    encoder.free()
+    encoder = null
+  }
+}

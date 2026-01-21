@@ -80,7 +80,7 @@ export const estimateEmbeddingCost = (
 
     if (!docIndex || !sectionIndex) {
       return yield* Effect.fail(
-        new Error("Index not found. Run 'mdtldr index' first."),
+        new Error("Index not found. Run 'mdcontext index' first."),
       )
     }
 
@@ -98,7 +98,7 @@ export const estimateEmbeddingCost = (
       if (options.excludePatterns?.length) {
         const excluded = options.excludePatterns.some((pattern) => {
           const regex = new RegExp(
-            '^' + pattern.replace(/\*/g, '.*').replace(/\?/g, '.') + '$',
+            `^${pattern.replace(/\*/g, '.*').replace(/\?/g, '.')}$`,
           )
           return regex.test(section.documentPath)
         })
@@ -193,7 +193,7 @@ export const buildEmbeddings = (
 
     if (!docIndex || !sectionIndex) {
       return yield* Effect.fail(
-        new Error("Index not found. Run 'mdtldr index' first."),
+        new Error("Index not found. Run 'mdcontext index' first."),
       )
     }
 
@@ -217,7 +217,8 @@ export const buildEmbeddings = (
         if (stats.count > 0) {
           const duration = Date.now() - startTime
           // Estimate savings based on existing tokens
-          const estimatedSavings = (stats.totalTokens / 1_000_000) * EMBEDDING_PRICE_PER_MILLION
+          const estimatedSavings =
+            (stats.totalTokens / 1_000_000) * EMBEDDING_PRICE_PER_MILLION
           return {
             sectionsEmbedded: 0,
             tokensUsed: 0,
@@ -237,7 +238,7 @@ export const buildEmbeddings = (
       if (!options.excludePatterns?.length) return false
       return options.excludePatterns.some((pattern) => {
         const regex = new RegExp(
-          '^' + pattern.replace(/\*/g, '.*').replace(/\?/g, '.') + '$',
+          `^${pattern.replace(/\*/g, '.*').replace(/\?/g, '.')}$`,
         )
         return regex.test(docPath)
       })
@@ -317,7 +318,9 @@ export const buildEmbeddings = (
       const filePath = path.join(resolvedRoot, docPath)
       let fileContent: string
       try {
-        fileContent = yield* Effect.promise(() => fs.readFile(filePath, 'utf-8'))
+        fileContent = yield* Effect.promise(() =>
+          fs.readFile(filePath, 'utf-8'),
+        )
       } catch {
         // Skip files that can't be read
         continue
@@ -419,7 +422,7 @@ export const semanticSearch = (
 
     if (!loaded) {
       return yield* Effect.fail(
-        new Error("Embeddings not found. Run 'mdtldr embed' first."),
+        new Error("Embeddings not found. Run 'mdcontext embed' first."),
       )
     }
 

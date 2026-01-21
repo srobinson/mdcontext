@@ -1,4 +1,4 @@
-# mdtldr Improvement Backlog
+# mdcontext Improvement Backlog
 
 > Generated from validation experiment with 11 AI agents across 3 strategies.
 > See `/reports/FINAL-SYNTHESIS.md` for full analysis.
@@ -16,10 +16,10 @@
 **Solution:** Add boolean operators to search command.
 
 **Acceptance Criteria:**
-- [ ] `mdtldr search "auth AND criticism"` returns results containing both terms
-- [ ] `mdtldr search "checkpoint OR gate"` returns results containing either term
-- [ ] `mdtldr search "implementation NOT example"` excludes results with "example"
-- [ ] `mdtldr search --help` documents boolean syntax
+- [ ] `mdcontext search "auth AND criticism"` returns results containing both terms
+- [ ] `mdcontext search "checkpoint OR gate"` returns results containing either term
+- [ ] `mdcontext search "implementation NOT example"` excludes results with "example"
+- [ ] `mdcontext search --help` documents boolean syntax
 
 **Effort:** Medium
 
@@ -36,10 +36,10 @@
 **Solution:** Auto-detect embeddings state and provide clear feedback.
 
 **Acceptance Criteria:**
-- [ ] When embeddings don't exist, search shows: "Semantic search unavailable. Using structural search. Run `mdtldr index --embed` for semantic search."
+- [ ] When embeddings don't exist, search shows: "Semantic search unavailable. Using structural search. Run `mdcontext index --embed` for semantic search."
 - [ ] OR: Auto-prompt on first search: "Enable semantic search? (requires ~30s indexing)"
 - [ ] Search output shows mode indicator: `[semantic]` or `[structural]`
-- [ ] `mdtldr stats` shows embeddings status: "Embeddings: Yes/No (run index --embed to enable)"
+- [ ] `mdcontext stats` shows embeddings status: "Embeddings: Yes/No (run index --embed to enable)"
 
 **Effort:** Low-Medium
 
@@ -56,9 +56,9 @@
 **Solution:** Enable section-targeted context extraction.
 
 **Acceptance Criteria:**
-- [ ] `mdtldr context file.md --section "Memory Model"` returns only that section
-- [ ] `mdtldr context file.md:5.3` returns section 5.3 (by number)
-- [ ] `mdtldr context file.md --section "Memory*"` supports glob patterns
+- [ ] `mdcontext context file.md --section "Memory Model"` returns only that section
+- [ ] `mdcontext context file.md:5.3` returns section 5.3 (by number)
+- [ ] `mdcontext context file.md --section "Memory*"` supports glob patterns
 - [ ] Nested sections included by default, `--shallow` flag for top-level only
 
 **Effort:** Medium-High
@@ -78,8 +78,8 @@
 **Solution:** Add context lines around search matches.
 
 **Acceptance Criteria:**
-- [ ] `mdtldr search "checkpoint" -C 3` shows 3 lines before/after each match
-- [ ] `mdtldr search "checkpoint" -B 2 -A 5` shows 2 before, 5 after
+- [ ] `mdcontext search "checkpoint" -C 3` shows 3 lines before/after each match
+- [ ] `mdcontext search "checkpoint" -B 2 -A 5` shows 2 before, 5 after
 - [ ] Context lines clearly delineated from match lines
 - [ ] Works with both structural and semantic search
 
@@ -98,9 +98,9 @@
 **Solution:** Add flags for result limit control.
 
 **Acceptance Criteria:**
-- [ ] `mdtldr search "workflow" --all` shows all matches (no limit)
-- [ ] `mdtldr search "workflow" -n 50` shows up to 50 results
-- [ ] `mdtldr search "workflow" --offset 10 -n 10` for pagination
+- [ ] `mdcontext search "workflow" --all` shows all matches (no limit)
+- [ ] `mdcontext search "workflow" -n 50` shows up to 50 results
+- [ ] `mdcontext search "workflow" --offset 10 -n 10` for pagination
 - [ ] Default remains 10 for quick searches
 
 **Effort:** Low
@@ -119,9 +119,9 @@
 
 **Acceptance Criteria:**
 - [ ] Truncation warning appears at TOP of output: "Output truncated (showing 2000/8500 tokens). Use --full or --section to retrieve more."
-- [ ] `mdtldr context file.md --full` shows complete content (no truncation)
+- [ ] `mdcontext context file.md --full` shows complete content (no truncation)
 - [ ] Truncated output shows which sections were included/excluded
-- [ ] `mdtldr context file.md --sections` lists available sections for targeted retrieval
+- [ ] `mdcontext context file.md --sections` lists available sections for targeted retrieval
 
 **Effort:** Medium
 
@@ -138,10 +138,10 @@
 **Solution:** Support quoted phrase search.
 
 **Acceptance Criteria:**
-- [ ] `mdtldr search '"context resumption"'` matches exact phrase only
-- [ ] `mdtldr search '"drift-free"'` matches hyphenated terms
-- [ ] Can combine with boolean: `mdtldr search '"context resumption" AND drift`
-- [ ] `mdtldr search --help` documents phrase syntax
+- [ ] `mdcontext search '"context resumption"'` matches exact phrase only
+- [ ] `mdcontext search '"drift-free"'` matches hyphenated terms
+- [ ] Can combine with boolean: `mdcontext search '"context resumption" AND drift`
+- [ ] `mdcontext search --help` documents phrase syntax
 
 **Effort:** Medium
 
@@ -160,9 +160,9 @@
 **Solution:** Implement concept-based cross-file analysis.
 
 **Acceptance Criteria:**
-- [ ] `mdtldr refs "Execution Context"` shows all files mentioning this concept
-- [ ] `mdtldr refs --graph` outputs dependency graph (mermaid/dot format)
-- [ ] `mdtldr backlinks file.md` shows files that link TO this file
+- [ ] `mdcontext refs "Execution Context"` shows all files mentioning this concept
+- [ ] `mdcontext refs --graph` outputs dependency graph (mermaid/dot format)
+- [ ] `mdcontext backlinks file.md` shows files that link TO this file
 - [ ] Works with markdown links `[text](file.md)` and concept mentions
 
 **Effort:** High
@@ -180,7 +180,7 @@
 **Solution:** Add section-level context around search results.
 
 **Acceptance Criteria:**
-- [ ] `mdtldr search "checkpoint" --context-sections 1` shows 1 section before/after each match
+- [ ] `mdcontext search "checkpoint" --context-sections 1` shows 1 section before/after each match
 - [ ] Section context clearly labeled with headers
 - [ ] Works with structural and semantic search
 
@@ -201,7 +201,7 @@
 **Acceptance Criteria:**
 - [ ] Search results header shows: `[semantic search]` or `[structural search]`
 - [ ] If semantic attempted but embeddings missing, show: `[structural search - embeddings not found]`
-- [ ] `mdtldr search --mode` flag to force mode: `--mode semantic` or `--mode structural`
+- [ ] `mdcontext search --mode` flag to force mode: `--mode semantic` or `--mode structural`
 
 **Effort:** Low
 
@@ -218,16 +218,16 @@
 **Solution:** Improve search help with examples.
 
 **Acceptance Criteria:**
-- [ ] `mdtldr search --help` includes example section:
+- [ ] `mdcontext search --help` includes example section:
   ```
   EXAMPLES:
-    mdtldr search "auth"                    # Single term (structural)
-    mdtldr search "how to deploy"           # Semantic (if embeddings exist)
-    mdtldr search "auth AND deploy"         # Boolean AND
-    mdtldr search '"context resumption"'    # Exact phrase
-    mdtldr search "impl NOT test" -C 3      # Exclude term, show context
+    mdcontext search "auth"                    # Single term (structural)
+    mdcontext search "how to deploy"           # Semantic (if embeddings exist)
+    mdcontext search "auth AND deploy"         # Boolean AND
+    mdcontext search '"context resumption"'    # Exact phrase
+    mdcontext search "impl NOT test" -C 3      # Exclude term, show context
   ```
-- [ ] `mdtldr search --examples` shows extended examples with explanations
+- [ ] `mdcontext search --examples` shows extended examples with explanations
 
 **Effort:** Low
 
@@ -246,8 +246,8 @@
 **Solution:** Support glob patterns in context command.
 
 **Acceptance Criteria:**
-- [ ] `mdtldr context "docs/**/*.md"` extracts context from all matching files
-- [ ] `mdtldr context "docs/*.md" -t 5000` applies token budget across all files
+- [ ] `mdcontext context "docs/**/*.md"` extracts context from all matching files
+- [ ] `mdcontext context "docs/*.md" -t 5000` applies token budget across all files
 - [ ] Output clearly shows which content came from which file
 
 **Effort:** Medium
@@ -265,9 +265,9 @@
 **Solution:** Allow saving common query patterns.
 
 **Acceptance Criteria:**
-- [ ] `mdtldr alias add arch-issues "search 'architecture AND (problem OR issue OR concern)'"`
-- [ ] `mdtldr arch-issues` runs saved query
-- [ ] Aliases stored in `.md-tldr/aliases.json`
+- [ ] `mdcontext alias add arch-issues "search 'architecture AND (problem OR issue OR concern)'"`
+- [ ] `mdcontext arch-issues` runs saved query
+- [ ] Aliases stored in `.mdcontext/aliases.json`
 
 **Effort:** Medium
 
@@ -303,7 +303,7 @@
 **Solution:** Add troubleshooting documentation.
 
 **Acceptance Criteria:**
-- [ ] `mdtldr troubleshoot` command shows common issues and fixes
+- [ ] `mdcontext troubleshoot` command shows common issues and fixes
 - [ ] Covers: 0 results, embeddings setup, truncation, index staleness
 - [ ] OR: Add troubleshooting section to README
 

@@ -1,5 +1,5 @@
 /**
- * Custom help system for mdtldr CLI
+ * Custom help system for mdcontext CLI
  *
  * Provides beautiful, useful help output that matches the quality of
  * professional CLI tools like git and gh.
@@ -24,14 +24,14 @@ interface CommandHelp {
 export const helpContent: Record<string, CommandHelp> = {
   index: {
     description: 'Index markdown files for fast searching',
-    usage: 'mdtldr index [path] [options]',
+    usage: 'mdcontext index [path] [options]',
     examples: [
-      'mdtldr index                    # Index current directory',
-      'mdtldr index docs/              # Index specific directory',
-      'mdtldr index --embed            # Include semantic embeddings',
-      'mdtldr index --watch            # Watch for file changes',
-      'mdtldr index --embed --watch    # Full setup with live updates',
-      'mdtldr index --force            # Rebuild from scratch',
+      'mdcontext index                    # Index current directory',
+      'mdcontext index docs/              # Index specific directory',
+      'mdcontext index --embed            # Include semantic embeddings',
+      'mdcontext index --watch            # Watch for file changes',
+      'mdcontext index --embed --watch    # Full setup with live updates',
+      'mdcontext index --force            # Rebuild from scratch',
     ],
     options: [
       {
@@ -53,29 +53,29 @@ export const helpContent: Record<string, CommandHelp> = {
     notes: [
       'After indexing, prompts to enable semantic search (use --no-embed to skip).',
       'Embedding requires OPENAI_API_KEY environment variable.',
-      'Index is stored in .md-tldr/ directory.',
+      'Index is stored in .mdcontext/ directory.',
     ],
   },
   search: {
     description: 'Search markdown content by meaning or heading pattern',
-    usage: 'mdtldr search [options] <query> [path]',
+    usage: 'mdcontext search [options] <query> [path]',
     examples: [
-      'mdtldr search "auth"                    # Simple term search',
-      'mdtldr search "auth AND deploy"         # Both terms required',
-      'mdtldr search "error OR bug"            # Either term matches',
-      'mdtldr search "impl NOT test"           # Exclude "test"',
-      'mdtldr search "auth AND (error OR bug)" # Grouped expressions',
-      'mdtldr search \'"exact phrase"\'          # Exact phrase match',
-      'mdtldr search \'"context resumption" AND drift\'  # Phrase + boolean',
-      'mdtldr search -H "API.*"                # Regex on headings only',
-      'mdtldr search --mode keyword "auth"     # Force keyword mode',
-      'mdtldr search --mode semantic "auth"    # Force semantic mode',
-      'mdtldr search -n 5 "setup"              # Limit to 5 results',
-      'mdtldr search "config" docs/            # Search in specific directory',
+      'mdcontext search "auth"                    # Simple term search',
+      'mdcontext search "auth AND deploy"         # Both terms required',
+      'mdcontext search "error OR bug"            # Either term matches',
+      'mdcontext search "impl NOT test"           # Exclude "test"',
+      'mdcontext search "auth AND (error OR bug)" # Grouped expressions',
+      'mdcontext search \'"exact phrase"\'          # Exact phrase match',
+      'mdcontext search \'"context resumption" AND drift\'  # Phrase + boolean',
+      'mdcontext search -H "API.*"                # Regex on headings only',
+      'mdcontext search --mode keyword "auth"     # Force keyword mode',
+      'mdcontext search --mode semantic "auth"    # Force semantic mode',
+      'mdcontext search -n 5 "setup"              # Limit to 5 results',
+      'mdcontext search "config" docs/            # Search in specific directory',
       '',
       '# Context lines (like grep):',
-      'mdtldr search "checkpoint" -C 3         # 3 lines before AND after',
-      'mdtldr search "error" -B 2 -A 5         # 2 before, 5 after',
+      'mdcontext search "checkpoint" -C 3         # 3 lines before AND after',
+      'mdcontext search "error" -B 2 -A 5         # 2 before, 5 after',
     ],
     options: [
       {
@@ -119,26 +119,26 @@ export const helpContent: Record<string, CommandHelp> = {
       'Boolean operators: AND, OR, NOT (case-insensitive).',
       'Quoted phrases match exactly: "context resumption".',
       'Regex patterns (e.g., "API.*") always use keyword search.',
-      'Run "mdtldr index --embed" first for semantic search.',
+      'Run "mdcontext index --embed" first for semantic search.',
     ],
   },
   context: {
     description: 'Get LLM-ready summary of markdown files',
-    usage: 'mdtldr context [options] <files>...',
+    usage: 'mdcontext context [options] <files>...',
     examples: [
-      'mdtldr context README.md        # Summarize single file',
-      'mdtldr context *.md             # Summarize all markdown files',
-      'mdtldr context -t 1000 *.md     # Fit within 1000 token budget',
-      'mdtldr context --brief *.md     # Minimal output (headings only)',
-      'mdtldr context --full doc.md    # Include full content',
-      'mdtldr context *.md | pbcopy    # Copy to clipboard (macOS)',
+      'mdcontext context README.md        # Summarize single file',
+      'mdcontext context *.md             # Summarize all markdown files',
+      'mdcontext context -t 1000 *.md     # Fit within 1000 token budget',
+      'mdcontext context --brief *.md     # Minimal output (headings only)',
+      'mdcontext context --full doc.md    # Include full content',
+      'mdcontext context *.md | pbcopy    # Copy to clipboard (macOS)',
       '',
       '# Section filtering:',
-      'mdtldr context doc.md --sections                # List available sections',
-      'mdtldr context doc.md --section "Setup"         # Extract by section name',
-      'mdtldr context doc.md --section "2.1"           # Extract by section number',
-      'mdtldr context doc.md --section "API*"          # Glob pattern matching',
-      'mdtldr context doc.md --section "Config" --shallow  # Top-level only',
+      'mdcontext context doc.md --sections                # List available sections',
+      'mdcontext context doc.md --section "Setup"         # Extract by section name',
+      'mdcontext context doc.md --section "2.1"           # Extract by section number',
+      'mdcontext context doc.md --section "API*"          # Glob pattern matching',
+      'mdcontext context doc.md --section "Config" --shallow  # Top-level only',
     ],
     options: [
       {
@@ -155,7 +155,8 @@ export const helpContent: Record<string, CommandHelp> = {
       },
       {
         name: '--section <name>',
-        description: 'Extract specific section by name, number, or glob pattern',
+        description:
+          'Extract specific section by name, number, or glob pattern',
       },
       {
         name: '--sections',
@@ -177,12 +178,12 @@ export const helpContent: Record<string, CommandHelp> = {
   },
   tree: {
     description: 'Show file tree or document outline',
-    usage: 'mdtldr tree [path] [options]',
+    usage: 'mdcontext tree [path] [options]',
     examples: [
-      'mdtldr tree                     # List markdown files in current dir',
-      'mdtldr tree docs/               # List files in specific directory',
-      'mdtldr tree README.md           # Show document outline (headings)',
-      'mdtldr tree doc.md --json       # Outline as JSON',
+      'mdcontext tree                     # List markdown files in current dir',
+      'mdcontext tree docs/               # List files in specific directory',
+      'mdcontext tree README.md           # Show document outline (headings)',
+      'mdcontext tree doc.md --json       # Outline as JSON',
     ],
     options: [
       { name: '--json', description: 'Output as JSON' },
@@ -195,11 +196,11 @@ export const helpContent: Record<string, CommandHelp> = {
   },
   links: {
     description: 'Show what a file links to (outgoing links)',
-    usage: 'mdtldr links <file> [options]',
+    usage: 'mdcontext links <file> [options]',
     examples: [
-      'mdtldr links README.md          # Show outgoing links',
-      'mdtldr links doc.md --json      # Output as JSON',
-      'mdtldr links doc.md -r docs/    # Resolve links relative to docs/',
+      'mdcontext links README.md          # Show outgoing links',
+      'mdcontext links doc.md --json      # Output as JSON',
+      'mdcontext links doc.md -r docs/    # Resolve links relative to docs/',
     ],
     options: [
       {
@@ -212,11 +213,11 @@ export const helpContent: Record<string, CommandHelp> = {
   },
   backlinks: {
     description: 'Show what links to a file (incoming links)',
-    usage: 'mdtldr backlinks <file> [options]',
+    usage: 'mdcontext backlinks <file> [options]',
     examples: [
-      'mdtldr backlinks api.md         # What links to api.md?',
-      'mdtldr backlinks doc.md --json  # Output as JSON',
-      'mdtldr backlinks doc.md -r ./   # Resolve from current directory',
+      'mdcontext backlinks api.md         # What links to api.md?',
+      'mdcontext backlinks doc.md --json  # Output as JSON',
+      'mdcontext backlinks doc.md -r ./   # Resolve from current directory',
     ],
     options: [
       {
@@ -226,15 +227,15 @@ export const helpContent: Record<string, CommandHelp> = {
       { name: '--json', description: 'Output as JSON' },
       { name: '--pretty', description: 'Pretty-print JSON output' },
     ],
-    notes: ['Requires index to exist. Run "mdtldr index" first.'],
+    notes: ['Requires index to exist. Run "mdcontext index" first.'],
   },
   stats: {
     description: 'Show index statistics',
-    usage: 'mdtldr stats [path] [options]',
+    usage: 'mdcontext stats [path] [options]',
     examples: [
-      'mdtldr stats                    # Show stats for current directory',
-      'mdtldr stats docs/              # Show stats for specific directory',
-      'mdtldr stats --json             # Output as JSON',
+      'mdcontext stats                    # Show stats for current directory',
+      'mdcontext stats docs/              # Show stats for specific directory',
+      'mdcontext stats --json             # Output as JSON',
     ],
     options: [
       { name: '--json', description: 'Output as JSON' },
@@ -255,12 +256,12 @@ export const showSubcommandHelp = (command: string): void => {
   const help = helpContent[command]
   if (!help) {
     console.log(`Unknown command: ${command}`)
-    console.log('Run "mdtldr --help" for available commands.')
+    console.log('Run "mdcontext --help" for available commands.')
     process.exit(1)
   }
 
   // Header
-  console.log(`\n\x1b[1mmdtldr ${command}\x1b[0m - ${help.description}`)
+  console.log(`\n\x1b[1mmdcontext ${command}\x1b[0m - ${help.description}`)
 
   // Usage
   console.log(`\n\x1b[33mUSAGE\x1b[0m`)
@@ -296,7 +297,7 @@ export const showSubcommandHelp = (command: string): void => {
  */
 export const showMainHelp = (): void => {
   const help = `
-\x1b[1mmdtldr\x1b[0m - Token-efficient markdown analysis for LLMs
+\x1b[1mmdcontext\x1b[0m - Token-efficient markdown analysis for LLMs
 
 \x1b[33mCOMMANDS\x1b[0m
   index [path]              Index markdown files (default: .)
@@ -308,33 +309,33 @@ export const showMainHelp = (): void => {
   stats [path]              Index statistics
 
 \x1b[33mEXAMPLES\x1b[0m
-  mdtldr tree                         # List all markdown files
-  mdtldr tree README.md               # Show document outline
-  mdtldr index                        # Index current directory
-  mdtldr index --embed                # Index with semantic embeddings
-  mdtldr search "auth"                # Simple term search
-  mdtldr search "auth AND deploy"     # Boolean AND (both required)
-  mdtldr search "error OR bug"        # Boolean OR (either matches)
-  mdtldr search '"exact phrase"'      # Quoted phrase (exact match)
-  mdtldr search "how to deploy"       # Semantic search (if embeddings exist)
-  mdtldr context README.md            # Summarize a file
-  mdtldr context *.md -t 2000         # Multi-file with token budget
+  mdcontext tree                         # List all markdown files
+  mdcontext tree README.md               # Show document outline
+  mdcontext index                        # Index current directory
+  mdcontext index --embed                # Index with semantic embeddings
+  mdcontext search "auth"                # Simple term search
+  mdcontext search "auth AND deploy"     # Boolean AND (both required)
+  mdcontext search "error OR bug"        # Boolean OR (either matches)
+  mdcontext search '"exact phrase"'      # Quoted phrase (exact match)
+  mdcontext search "how to deploy"       # Semantic search (if embeddings exist)
+  mdcontext context README.md            # Summarize a file
+  mdcontext context *.md -t 2000         # Multi-file with token budget
 
 \x1b[33mWORKFLOWS\x1b[0m
   \x1b[2m# Quick context for LLM\x1b[0m
-  mdtldr context README.md docs/*.md | pbcopy
+  mdcontext context README.md docs/*.md | pbcopy
 
   \x1b[2m# Find relevant documentation\x1b[0m
-  mdtldr search "error handling"
+  mdcontext search "error handling"
 
   \x1b[2m# Complex queries with boolean operators\x1b[0m
-  mdtldr search "auth AND (error OR exception) NOT test"
+  mdcontext search "auth AND (error OR exception) NOT test"
 
   \x1b[2m# Explore a new codebase\x1b[0m
-  mdtldr tree && mdtldr stats
+  mdcontext tree && mdcontext stats
 
   \x1b[2m# Build semantic search\x1b[0m
-  mdtldr index --embed && mdtldr search "authentication flow"
+  mdcontext index --embed && mdcontext search "authentication flow"
 
 \x1b[33mGLOBAL OPTIONS\x1b[0m
   --json          Output as JSON
@@ -342,7 +343,7 @@ export const showMainHelp = (): void => {
   --help, -h      Show help
   --version, -v   Show version
 
-Run \x1b[36mmdtldr <command> --help\x1b[0m for command-specific options.
+Run \x1b[36mmdcontext <command> --help\x1b[0m for command-specific options.
 `
   console.log(help)
 }
@@ -352,7 +353,7 @@ Run \x1b[36mmdtldr <command> --help\x1b[0m for command-specific options.
 // ============================================================================
 
 /**
- * Check for subcommand help pattern: mdtldr <cmd> --help or mdtldr <cmd> -h
+ * Check for subcommand help pattern: mdcontext <cmd> --help or mdcontext <cmd> -h
  * Returns true if help was shown and we should exit
  */
 export const checkSubcommandHelp = (): boolean => {

@@ -1,5 +1,5 @@
 /**
- * Embedding types for md-tldr
+ * Embedding types for mdcontext
  */
 
 // ============================================================================

@@ -7,7 +7,7 @@ import { preprocessArgvWithValidation } from './argv-preprocessor.js'
 
 describe('preprocessArgvWithValidation', () => {
   const node = '/usr/bin/node'
-  const script = '/path/to/mdtldr'
+  const script = '/path/to/mdcontext'
 
   describe('flag reordering', () => {
     it('reorders flags before positional args', () => {

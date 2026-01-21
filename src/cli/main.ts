@@ -1,20 +1,20 @@
 #!/usr/bin/env node
 
 /**
- * md-tldr CLI - Token-efficient markdown analysis
+ * mdcontext CLI - Token-efficient markdown analysis
  *
  * CORE COMMANDS
- *   mdtldr index [path]           Index markdown files (default: .)
- *   mdtldr search <query> [path]  Search by meaning or structure
- *   mdtldr context <files...>     Get LLM-ready summary
- *   mdtldr tree [path|file]       Show files or document outline
+ *   mdcontext index [path]           Index markdown files (default: .)
+ *   mdcontext search <query> [path]  Search by meaning or structure
+ *   mdcontext context <files...>     Get LLM-ready summary
+ *   mdcontext tree [path|file]       Show files or document outline
  *
  * LINK ANALYSIS
- *   mdtldr links <file>           What does this link to?
- *   mdtldr backlinks <file>       What links to this?
+ *   mdcontext links <file>           What does this link to?
+ *   mdcontext backlinks <file>       What links to this?
  *
  * INSPECTION
- *   mdtldr stats [path]           Index statistics
+ *   mdcontext stats [path]           Index statistics
  */
 
 import { CliConfig, Command } from '@effect/cli'
@@ -40,7 +40,7 @@ import {
 // Main CLI
 // ============================================================================
 
-const mainCommand = Command.make('mdtldr').pipe(
+const mainCommand = Command.make('mdcontext').pipe(
   Command.withDescription('Token-efficient markdown analysis for LLMs'),
   Command.withSubcommands([
     indexCommand,
@@ -54,7 +54,7 @@ const mainCommand = Command.make('mdtldr').pipe(
 )
 
 const cli = Command.run(mainCommand, {
-  name: 'mdtldr',
+  name: 'mdcontext',
   version: '0.1.0',
 })
 
@@ -134,7 +134,7 @@ Effect.suspend(() => cli(processedArgv)).pipe(
       if (isValidationError(error)) {
         const message = formatCliError(error)
         console.error(`\nError: ${message}`)
-        console.error('\nRun "mdtldr --help" for usage information.')
+        console.error('\nRun "mdcontext --help" for usage information.')
         process.exit(1)
       }
       // Re-throw other errors to be handled normally

@@ -1,4 +1,4 @@
-# Design: @hw/md-tldr
+# Design: @hw/mdcontext
 
 ## Data Model
 
@@ -82,7 +82,7 @@ interface MdCodeBlock {
 ### File Layout
 
 ```
-.md-tldr/
+.mdcontext/
   config.json              # Configuration
   indexes/
     documents.json         # Document metadata index
@@ -254,29 +254,29 @@ Level 3: Collection summary (key documents, themes)
 
 | Metric                           | Type      | Labels  | Description               |
 | -------------------------------- | --------- | ------- | ------------------------- |
-| `mdtldr_parse_duration_ms`       | Histogram | -       | Time to parse a document  |
-| `mdtldr_index_build_duration_ms` | Histogram | `type`  | Time to build index       |
-| `mdtldr_query_duration_ms`       | Histogram | `type`  | Query execution time      |
-| `mdtldr_embed_duration_ms`       | Histogram | `model` | Embedding generation time |
-| `mdtldr_cache_hit_total`         | Counter   | `cache` | Cache hits                |
-| `mdtldr_cache_miss_total`        | Counter   | `cache` | Cache misses              |
+| `mdcontext_parse_duration_ms`       | Histogram | -       | Time to parse a document  |
+| `mdcontext_index_build_duration_ms` | Histogram | `type`  | Time to build index       |
+| `mdcontext_query_duration_ms`       | Histogram | `type`  | Query execution time      |
+| `mdcontext_embed_duration_ms`       | Histogram | `model` | Embedding generation time |
+| `mdcontext_cache_hit_total`         | Counter   | `cache` | Cache hits                |
+| `mdcontext_cache_miss_total`        | Counter   | `cache` | Cache misses              |
 
 #### Usage Metrics
 
 | Metric                       | Type    | Labels | Description              |
 | ---------------------------- | ------- | ------ | ------------------------ |
-| `mdtldr_queries_total`       | Counter | `type` | Total queries            |
-| `mdtldr_tokens_input_total`  | Counter | -      | Tokens sent to embedding |
-| `mdtldr_tokens_output_total` | Counter | -      | Tokens in responses      |
-| `mdtldr_documents_indexed`   | Gauge   | -      | Documents in index       |
-| `mdtldr_sections_indexed`    | Gauge   | -      | Sections in index        |
+| `mdcontext_queries_total`       | Counter | `type` | Total queries            |
+| `mdcontext_tokens_input_total`  | Counter | -      | Tokens sent to embedding |
+| `mdcontext_tokens_output_total` | Counter | -      | Tokens in responses      |
+| `mdcontext_documents_indexed`   | Gauge   | -      | Documents in index       |
+| `mdcontext_sections_indexed`    | Gauge   | -      | Sections in index        |
 
 #### Quality Metrics
 
 | Metric                           | Type      | Labels  | Description              |
 | -------------------------------- | --------- | ------- | ------------------------ |
-| `mdtldr_search_results_returned` | Histogram | -       | Results per query        |
-| `mdtldr_compression_ratio`       | Histogram | `level` | Token reduction achieved |
+| `mdcontext_search_results_returned` | Histogram | -       | Results per query        |
+| `mdcontext_compression_ratio`       | Histogram | `level` | Token reduction achieved |
 
 ### Query Logging
 
@@ -362,34 +362,34 @@ interface ContextOptions {
 
 ```bash
 # Indexing
-mdtldr index [dir]                 # Index directory (default: .)
-mdtldr index --watch               # Index and watch for changes
-mdtldr index --force               # Force full rebuild
+mdcontext index [dir]                 # Index directory (default: .)
+mdcontext index --watch               # Index and watch for changes
+mdcontext index --force               # Force full rebuild
 
 # Search
-mdtldr search "query"              # Semantic search
-mdtldr search "query" --limit 5    # Limit results
-mdtldr search "query" --json       # JSON output
+mdcontext search "query"              # Semantic search
+mdcontext search "query" --limit 5    # Limit results
+mdcontext search "query" --json       # JSON output
 
 # Context
-mdtldr context <path>              # Full document context
-mdtldr context <path> --brief      # Brief summary
-mdtldr context <path> --tokens 500 # Token budget
+mdcontext context <path>              # Full document context
+mdcontext context <path> --brief      # Brief summary
+mdcontext context <path> --tokens 500 # Token budget
 
 # Structure
-mdtldr structure <path>            # Show document structure
-mdtldr structure <path> --tree     # Tree view
-mdtldr links <path>                # Show link graph
-mdtldr backlinks <path>            # What links to this?
+mdcontext structure <path>            # Show document structure
+mdcontext structure <path> --tree     # Tree view
+mdcontext links <path>                # Show link graph
+mdcontext backlinks <path>            # What links to this?
 
 # Metrics
-mdtldr metrics                     # Show current metrics
-mdtldr metrics --json              # JSON format
-mdtldr metrics --reset             # Reset counters
+mdcontext metrics                     # Show current metrics
+mdcontext metrics --json              # JSON format
+mdcontext metrics --reset             # Reset counters
 
 # Daemon
-mdtldr daemon                      # Run as daemon
-mdtldr daemon --port 8765          # Custom port
+mdcontext daemon                      # Run as daemon
+mdcontext daemon --port 8765          # Custom port
 ```
 
 ---

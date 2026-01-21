@@ -1,18 +1,19 @@
 {
-  "name": "md-tldr",
+  "name": "mdcontext",
   "version": "0.1.0",
   "description": "Token-efficient markdown analysis tool for LLM consumption",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "mdtldr": "./dist/cli/main.js",
-    "mdtldr-mcp": "./dist/mcp/server.js"
+    "mdcontext": "./dist/cli/main.js",
+    "mdcontext-mcp": "./dist/mcp/server.js"
   },
   "scripts": {
     "build": "tsup src/cli/main.ts src/mcp/server.ts src/index.ts --format esm --dts",
     "dev": "tsc --watch",
     "test": "vitest run",
+    "test:full": "INCLUDE_EMBED_TESTS=true vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "lint": "biome lint --write .",

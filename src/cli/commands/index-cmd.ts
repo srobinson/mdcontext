@@ -4,8 +4,8 @@
  * Index markdown files for fast searching.
  */
 
-import * as readline from 'node:readline'
 import * as path from 'node:path'
+import * as readline from 'node:readline'
 import { Args, Command, Options } from '@effect/cli'
 import { Console, Effect } from 'effect'
 import { MissingApiKeyError } from '../../embeddings/openai-provider.js'
@@ -63,14 +63,24 @@ export const indexCommand = Command.make(
     json: jsonOption,
     pretty: prettyOption,
   },
-  ({ path: dirPath, embed, noEmbed, exclude, watch: watchMode, force, json, pretty }) =>
+  ({
+    path: dirPath,
+    embed,
+    noEmbed,
+    exclude,
+    watch: watchMode,
+    force,
+    json,
+    pretty,
+  }) =>
     Effect.gen(function* () {
       const resolvedDir = path.resolve(dirPath)
 
       // Parse exclude patterns
-      const excludePatterns = exclude._tag === 'Some'
-        ? exclude.value.split(',').map((p) => p.trim())
-        : undefined
+      const excludePatterns =
+        exclude._tag === 'Some'
+          ? exclude.value.split(',').map((p) => p.trim())
+          : undefined
 
       if (watchMode) {
         yield* Console.log(`Watching ${resolvedDir} for changes...`)
@@ -129,7 +139,9 @@ export const indexCommand = Command.make(
         }
 
         // Check if we should prompt for semantic search
-        const embedsExist = yield* Effect.promise(() => hasEmbeddings(resolvedDir))
+        const embedsExist = yield* Effect.promise(() =>
+          hasEmbeddings(resolvedDir),
+        )
 
         // Build embeddings if requested or after user prompt
         if (embed) {
@@ -160,9 +172,10 @@ export const indexCommand = Command.make(
           if (!json) {
             yield* Console.log(`Found ${estimate.totalFiles} files to embed:`)
             for (const dir of estimate.byDirectory) {
-              const costStr = dir.estimatedCost < 0.001
-                ? '<$0.001'
-                : `~$${dir.estimatedCost.toFixed(4)}`
+              const costStr =
+                dir.estimatedCost < 0.001
+                  ? '<$0.001'
+                  : `~$${dir.estimatedCost.toFixed(4)}`
               yield* Console.log(
                 `  ${dir.directory.padEnd(20)} ${String(dir.fileCount).padStart(3)} files   ${costStr}`,
               )
@@ -211,31 +224,41 @@ export const indexCommand = Command.make(
 
           if (!json) {
             // Clear the progress line
-            process.stdout.write('\r' + ' '.repeat(80) + '\r')
+            process.stdout.write(`\r${' '.repeat(80)}\r`)
             yield* Console.log('')
 
             if (embedResult.cacheHit) {
               // Cache hit - embeddings already exist
-              yield* Console.log(`Embeddings already exist (${embedResult.existingVectors} vectors)`)
+              yield* Console.log(
+                `Embeddings already exist (${embedResult.existingVectors} vectors)`,
+              )
               yield* Console.log('  Use --force to rebuild')
               yield* Console.log('')
-              yield* Console.log(`Skipped embedding generation (saved ~$${(embedResult.estimatedSavings ?? 0).toFixed(4)})`)
+              yield* Console.log(
+                `Skipped embedding generation (saved ~$${(embedResult.estimatedSavings ?? 0).toFixed(4)})`,
+              )
             } else {
               // New embeddings were created
-              yield* Console.log(`Completed in ${(embedResult.duration / 1000).toFixed(1)}s`)
-              yield* Console.log(`  Files: ${embedResult.filesProcessed}`)
               yield* Console.log(
-                `  Sections: ${embedResult.sectionsEmbedded}`,
+                `Completed in ${(embedResult.duration / 1000).toFixed(1)}s`,
               )
-              yield* Console.log(`  Tokens: ${embedResult.tokensUsed.toLocaleString()}`)
+              yield* Console.log(`  Files: ${embedResult.filesProcessed}`)
+              yield* Console.log(`  Sections: ${embedResult.sectionsEmbedded}`)
+              yield* Console.log(
+                `  Tokens: ${embedResult.tokensUsed.toLocaleString()}`,
+              )
               yield* Console.log(`  Cost: $${embedResult.cost.toFixed(6)}`)
             }
           }
         } else if (!noEmbed && !embedsExist && !json) {
           // Prompt user to enable semantic search
           yield* Console.log('')
-          yield* Console.log('Enable semantic search? This allows natural language queries like:')
-          yield* Console.log('  "how does authentication work" instead of exact keyword matches')
+          yield* Console.log(
+            'Enable semantic search? This allows natural language queries like:',
+          )
+          yield* Console.log(
+            '  "how does authentication work" instead of exact keyword matches',
+          )
           yield* Console.log('')
 
           // Get cost estimate for the prompt
@@ -244,12 +267,16 @@ export const indexCommand = Command.make(
           )
 
           if (estimate) {
-            yield* Console.log(`Cost: ~$${estimate.totalCost.toFixed(4)} for this corpus (~${estimate.estimatedTimeSeconds}s)`)
+            yield* Console.log(
+              `Cost: ~$${estimate.totalCost.toFixed(4)} for this corpus (~${estimate.estimatedTimeSeconds}s)`,
+            )
           }
           yield* Console.log('Requires: OPENAI_API_KEY environment variable')
           yield* Console.log('')
 
-          const answer = yield* Effect.promise(() => promptUser('Create semantic index? [y/N]: '))
+          const answer = yield* Effect.promise(() =>
+            promptUser('Create semantic index? [y/N]: '),
+          )
 
           if (answer === 'y' || answer === 'yes') {
             // Check for API key
@@ -257,7 +284,9 @@ export const indexCommand = Command.make(
               yield* Console.log('')
               yield* Console.log('OPENAI_API_KEY not set.')
               yield* Console.log('')
-              yield* Console.log('To enable semantic search, set your OpenAI API key:')
+              yield* Console.log(
+                'To enable semantic search, set your OpenAI API key:',
+              )
               yield* Console.log('  export OPENAI_API_KEY=sk-...')
               yield* Console.log('')
               yield* Console.log('Or add to .env file in project root.')
@@ -274,7 +303,8 @@ export const indexCommand = Command.make(
                 },
               }).pipe(
                 Effect.catchIf(
-                  (e): e is MissingApiKeyError => e instanceof MissingApiKeyError,
+                  (e): e is MissingApiKeyError =>
+                    e instanceof MissingApiKeyError,
                   () =>
                     Effect.gen(function* () {
                       yield* Console.error('')
@@ -285,7 +315,9 @@ export const indexCommand = Command.make(
                       )
                       yield* Console.error('  export OPENAI_API_KEY=sk-...')
                       yield* Console.error('')
-                      yield* Console.error('Or add to .env file in project root.')
+                      yield* Console.error(
+                        'Or add to .env file in project root.',
+                      )
                       return yield* Effect.fail(new Error('Missing API key'))
                     }),
                 ),
@@ -294,12 +326,18 @@ export const indexCommand = Command.make(
 
               if (embedResult) {
                 // Clear the progress line
-                process.stdout.write('\r' + ' '.repeat(80) + '\r')
+                process.stdout.write(`\r${' '.repeat(80)}\r`)
                 yield* Console.log('')
-                yield* Console.log(`Completed in ${(embedResult.duration / 1000).toFixed(1)}s`)
+                yield* Console.log(
+                  `Completed in ${(embedResult.duration / 1000).toFixed(1)}s`,
+                )
                 yield* Console.log(`  Files: ${embedResult.filesProcessed}`)
-                yield* Console.log(`  Sections: ${embedResult.sectionsEmbedded}`)
-                yield* Console.log(`  Tokens: ${embedResult.tokensUsed.toLocaleString()}`)
+                yield* Console.log(
+                  `  Sections: ${embedResult.sectionsEmbedded}`,
+                )
+                yield* Console.log(
+                  `  Tokens: ${embedResult.tokensUsed.toLocaleString()}`,
+                )
                 yield* Console.log(`  Cost: $${embedResult.cost.toFixed(6)}`)
               }
             }

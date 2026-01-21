@@ -1,5 +1,5 @@
 /**
- * Index data types for md-tldr
+ * Index data types for mdcontext
  */
 
 // ============================================================================
@@ -95,7 +95,7 @@ export interface IndexBuildError {
 // Index Paths
 // ============================================================================
 
-export const INDEX_DIR = '.md-tldr'
+export const INDEX_DIR = '.mdcontext'
 export const INDEX_VERSION = 1
 
 export const getIndexPaths = (rootPath: string) => ({

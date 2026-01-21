@@ -1,5 +1,5 @@
 /**
- * md-tldr - Token-efficient markdown analysis for LLMs
+ * mdcontext - Token-efficient markdown analysis for LLMs
  */
 
 export * from './core/index.js'

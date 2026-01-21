@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * MCP Server for md-tldr
+ * MCP Server for mdcontext
  *
  * Exposes markdown analysis tools for Claude integration
  */
@@ -411,7 +411,7 @@ const handleMdIndex = async (
 const createServer = (rootPath: string) => {
   const server = new Server(
     {
-      name: 'mdtldr-mcp',
+      name: 'mdcontext-mcp',
       version: '0.1.0',
     },
     {

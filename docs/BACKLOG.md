@@ -13,7 +13,7 @@ Ideas and improvements to revisit later.
 ### Problem
 
 ```bash
-mdtldr context --json docs/*.md --pretty -x 200
+mdcontext context --json docs/*.md --pretty -x 200
 # Error: ENOENT: no such file or directory, open '.../-x'
 ```
 

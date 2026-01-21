@@ -69,7 +69,7 @@ export const contextCommand = Command.make(
       if (fileList.length === 0) {
         yield* Effect.fail(
           new Error(
-            'At least one file is required. Usage: mdtldr context <file> [files...]',
+            'At least one file is required. Usage: mdcontext context <file> [files...]',
           ),
         )
       }
@@ -126,9 +126,7 @@ export const contextCommand = Command.make(
             yield* Console.error(
               `No sections found matching "${sectionSelector}" in ${file}`,
             )
-            yield* Console.error(
-              'Use --sections to list available sections.',
-            )
+            yield* Console.error('Use --sections to list available sections.')
             continue
           }
 

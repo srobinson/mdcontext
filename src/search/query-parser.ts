@@ -1,5 +1,5 @@
 /**
- * Query Parser for md-tldr search
+ * Query Parser for mdcontext search
  *
  * Supports:
  * - Boolean operators: AND, OR, NOT (case-insensitive)
