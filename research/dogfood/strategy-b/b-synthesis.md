@@ -7,7 +7,7 @@ The three Strategy B agents collectively identified a mature, self-aware specifi
 ## Cross-Agent Patterns
 
 **Theme 1: Semantic Search Underperformance**
-All three agents found semantic search unreliable for multi-word conceptual queries. All fell back to keyword search frequently. This is the strongest cross-agent signal about the mdtldr tool.
+All three agents found semantic search unreliable for multi-word conceptual queries. All fell back to keyword search frequently. This is the strongest cross-agent signal about the mdcontext tool.
 
 **Theme 2: HumanWork-Evolution.md as Critical Source**
 Both B1 and B2 independently discovered this document as the authoritative source for gaps and critiques, validating its importance.
@@ -138,7 +138,7 @@ B1 found checkpoints in anti-patterns, B3 found them in workflow design - the sp
 
 ## Tool Evaluation Synthesis
 
-All three agents used the mdtldr tool extensively (38, 35, and 41 commands respectively = 114 total commands). Their assessments were remarkably consistent.
+All three agents used the mdcontext tool extensively (38, 35, and 41 commands respectively = 114 total commands). Their assessments were remarkably consistent.
 
 ### Common Praise
 

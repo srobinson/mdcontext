@@ -6,7 +6,7 @@ Strategy C employed a **Two-Phase Explore-Then-Dive** methodology to comprehensi
 
 **Phase 1** (C1 Explorer) mapped the documentation landscape, identified the structural organization across three folders (docs/, docs.amorphic/, docs.llm/), and prioritized five themes for deep investigation.
 
-**Phase 2** deployed five specialized divers (C2-C6) who each conducted deep explorations into their assigned themes using the mdtldr tool.
+**Phase 2** deployed five specialized divers (C2-C6) who each conducted deep explorations into their assigned themes using the mdcontext tool.
 
 ### Key Framework Discovery
 
@@ -330,15 +330,15 @@ Consolidated and prioritized from all agents:
 
 ### 6.2 Common Praise (What Worked Well)
 
-| Feature                                                    | Mentions | Details                                                 |
-| ---------------------------------------------------------- | -------- | ------------------------------------------------------- |
-| `mdtldr tree <file>` - Document outlines with token counts | 6/6      | "Perfect for planning", "Invaluable for prioritization" |
-| `mdtldr context --section` - Precise section extraction    | 5/6      | "Game-changer for deep dives", "Surgical extraction"    |
-| `mdtldr search` - Fast keyword discovery                   | 6/6      | "Found relevant content quickly", "Good context lines"  |
-| `mdtldr context --sections` - Section listing              | 4/6      | "Essential for finding exact section names"             |
-| `mdtldr stats` - Quick index overview                      | 3/6      | "Instant scope understanding"                           |
-| Token budgeting (`-t` flag)                                | 2/6      | "Respects limits while showing included/excluded"       |
-| Boolean operators (OR, AND)                                | 2/6      | "Worked as expected"                                    |
+| Feature                                                       | Mentions | Details                                                 |
+| ------------------------------------------------------------- | -------- | ------------------------------------------------------- |
+| `mdcontext tree <file>` - Document outlines with token counts | 6/6      | "Perfect for planning", "Invaluable for prioritization" |
+| `mdcontext context --section` - Precise section extraction    | 5/6      | "Game-changer for deep dives", "Surgical extraction"    |
+| `mdcontext search` - Fast keyword discovery                   | 6/6      | "Found relevant content quickly", "Good context lines"  |
+| `mdcontext context --sections` - Section listing              | 4/6      | "Essential for finding exact section names"             |
+| `mdcontext stats` - Quick index overview                      | 3/6      | "Instant scope understanding"                           |
+| Token budgeting (`-t` flag)                                   | 2/6      | "Respects limits while showing included/excluded"       |
+| Boolean operators (OR, AND)                                   | 2/6      | "Worked as expected"                                    |
 
 ### 6.3 Common Frustrations (Pain Points)
 
@@ -367,16 +367,16 @@ Consolidated and prioritized from all agents:
 | Add cross-file relationship detection     | 1/6      |
 | Show explicit "section won't fit" warning | 1/6      |
 
-### 6.5 Overall Verdict on mdtldr Tool
+### 6.5 Overall Verdict on mdcontext Tool
 
 **Highly Effective for Structured Documentation Research**
 
-The mdtldr tool enabled efficient exploration of a large documentation corpus (179K tokens) that would be impossible to read directly. The **tree-search-context workflow** emerged as the optimal pattern:
+The mdcontext tool enabled efficient exploration of a large documentation corpus (179K tokens) that would be impossible to read directly. The **tree-search-context workflow** emerged as the optimal pattern:
 
-1. `mdtldr tree <file>` - See structure and token counts
-2. `mdtldr context --sections <file>` - Get exact section names
-3. `mdtldr context <file> --section "X"` - Extract needed sections
-4. `mdtldr search "term"` - Find cross-references
+1. `mdcontext tree <file>` - See structure and token counts
+2. `mdcontext context --sections <file>` - Get exact section names
+3. `mdcontext context <file> --section "X"` - Extract needed sections
+4. `mdcontext search "term"` - Find cross-references
 5. Repeat as needed
 
 **Strengths**: Excellent for systematic exploration of well-structured markdown. Section-level extraction is a major differentiator. Token-aware budgeting enables efficient context management.

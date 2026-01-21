@@ -1,8 +1,8 @@
-# Embedding Models Research for md-tldr
+# Embedding Models Research for mdcontext
 
 _Research conducted: January 2026_
 
-This document provides comprehensive research on embedding models for improving md-tldr's semantic search capabilities. The current implementation uses OpenAI's `text-embedding-3-small` (1536 dimensions, $0.02/1M tokens).
+This document provides comprehensive research on embedding models for improving mdcontext's semantic search capabilities. The current implementation uses OpenAI's `text-embedding-3-small` (1536 dimensions, $0.02/1M tokens).
 
 ## Table of Contents
 
@@ -24,7 +24,7 @@ This document provides comprehensive research on embedding models for improving 
 
 | Provider  | Model                  | Dimensions          | Cost/1M tokens           | MTEB Score | Context Length | Notes                      |
 | --------- | ---------------------- | ------------------- | ------------------------ | ---------- | -------------- | -------------------------- |
-| OpenAI    | text-embedding-3-small | 1536 (configurable) | $0.02                    | 62.3       | 8,192          | Current md-tldr model      |
+| OpenAI    | text-embedding-3-small | 1536 (configurable) | $0.02                    | 62.3       | 8,192          | Current mdcontext model    |
 | OpenAI    | text-embedding-3-large | 3072 (configurable) | $0.13                    | 64.6       | 8,192          | Best OpenAI option         |
 | Voyage AI | voyage-3.5             | 1024                | $0.06                    | ~66+       | 32,000         | Excellent retrieval        |
 | Voyage AI | voyage-3.5-lite        | 512                 | $0.02                    | ~64+       | 32,000         | Same price as OpenAI small |
@@ -108,7 +108,7 @@ OpenAI's text-embedding-3 models use Matryoshka Representation Learning, allowin
 
 ## Local/Offline Models Analysis
 
-### Tier 1: High Quality (Recommended for md-tldr)
+### Tier 1: High Quality (Recommended for mdcontext)
 
 #### nomic-embed-text-v1.5
 
@@ -128,7 +128,7 @@ OpenAI's text-embedding-3 models use Matryoshka Representation Learning, allowin
 - Ollama: `nomic-embed-text`
 - sentence-transformers compatible
 
-**Best for:** General documentation search, md-tldr's primary use case
+**Best for:** General documentation search, mdcontext's primary use case
 
 #### mxbai-embed-large
 
@@ -189,19 +189,19 @@ OpenAI's text-embedding-3 models use Matryoshka Representation Learning, allowin
 
 **Best for:** When you need better accuracy than MiniLM but can't run larger models
 
-### Local Model Comparison for md-tldr
+### Local Model Comparison for mdcontext
 
-| Factor       | nomic-embed-text-v1.5 | mxbai-embed-large | BGE-M3    |
-| ------------ | --------------------- | ----------------- | --------- |
-| Quality      | High                  | Highest           | High      |
-| Speed        | Very Fast             | Fast              | Medium    |
-| Memory       | 0.5GB                 | 1.2GB             | 2GB       |
-| Context      | 8,192                 | Standard          | 8,192     |
-| Matryoshka   | Yes                   | No                | No        |
-| Multilingual | Moderate              | Moderate          | Excellent |
-| md-tldr fit  | Excellent             | Good              | Good      |
+| Factor        | nomic-embed-text-v1.5 | mxbai-embed-large | BGE-M3    |
+| ------------- | --------------------- | ----------------- | --------- |
+| Quality       | High                  | Highest           | High      |
+| Speed         | Very Fast             | Fast              | Medium    |
+| Memory        | 0.5GB                 | 1.2GB             | 2GB       |
+| Context       | 8,192                 | Standard          | 8,192     |
+| Matryoshka    | Yes                   | No                | No        |
+| Multilingual  | Moderate              | Moderate          | Excellent |
+| mdcontext fit | Excellent             | Good              | Good      |
 
-**Recommendation:** nomic-embed-text-v1.5 is the best fit for md-tldr due to its balance of quality, speed, long context, and Matryoshka support.
+**Recommendation:** nomic-embed-text-v1.5 is the best fit for mdcontext due to its balance of quality, speed, long context, and Matryoshka support.
 
 ---
 
@@ -273,7 +273,7 @@ OpenAI's text-embedding-3 models use Matryoshka Representation Learning, allowin
 
 ### Why Hybrid Search Matters
 
-Current md-tldr limitation: semantic and keyword search are mutually exclusive.
+Current mdcontext limitation: semantic and keyword search are mutually exclusive.
 
 **Hybrid approach benefits:**
 
@@ -312,7 +312,7 @@ BGE-M3 uniquely supports all three retrieval methods in one model:
 - Sparse retrieval (lexical, like BM25)
 - Multi-vector retrieval (ColBERT-style)
 
-This could eliminate the need for a separate BM25 index in md-tldr.
+This could eliminate the need for a separate BM25 index in mdcontext.
 
 ---
 
@@ -327,7 +327,7 @@ This could eliminate the need for a separate BM25 index in md-tldr.
 - Zero ongoing API costs
 - 8,192 token context matches current implementation
 - Matryoshka support enables storage optimization
-- Excellent performance on Apple Silicon (md-tldr's likely dev environment)
+- Excellent performance on Apple Silicon (mdcontext's likely dev environment)
 
 **Implementation approach:**
 

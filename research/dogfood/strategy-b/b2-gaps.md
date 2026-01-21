@@ -10,43 +10,43 @@ What's missing from the spec? What gaps were identified?
 
 ## Command Log
 
-| #   | Command                                                                                | Purpose                 | Result                                              | Useful?   |
-| --- | -------------------------------------------------------------------------------------- | ----------------------- | --------------------------------------------------- | --------- |
-| 1   | `mdtldr --help`                                                                        | Learn tool              | Showed all commands and examples                    | Yes       |
-| 2   | `mdtldr index`                                                                         | Index markdown files    | 23 docs, 922 sections indexed                       | Yes       |
-| 3   | `mdtldr tree`                                                                          | List all files          | Showed 23 files in docs/, docs.amorphic/, docs.llm/ | Yes       |
-| 4   | `mdtldr search "gaps missing omissions"`                                               | Find gap mentions       | 0 results (semantic)                                | No        |
-| 5   | `mdtldr search "gaps missing omissions" --mode keyword`                                | Find gap mentions       | 0 results                                           | No        |
-| 6   | `mdtldr search "missing" --mode keyword`                                               | Find missing items      | 10 results - found "missing primitive" narrative    | Yes       |
-| 7   | `mdtldr search "gap" --mode keyword`                                                   | Find gap mentions       | 8 results - found "Judgment Gap", "AI fatigue gap"  | Yes       |
-| 8   | `mdtldr search "TODO" --mode keyword`                                                  | Find TODOs              | 1 result (Letta integration)                        | Minimal   |
-| 9   | `mdtldr search "not yet" --mode keyword`                                               | Find incomplete         | 10 results (mostly SPEC.md headers)                 | No        |
-| 10  | `mdtldr search "incomplete" --mode keyword`                                            | Find incomplete         | 2 results                                           | Minimal   |
-| 11  | `mdtldr search "needs" --mode keyword`                                                 | Find needs              | 10 results - coordination, clarification needs      | Yes       |
-| 12  | `mdtldr search "question" --mode keyword`                                              | Find questions          | 10 results                                          | Minimal   |
-| 13  | `mdtldr search "problem" --mode keyword`                                               | Find problems           | 10 results - handoff problem, problem space         | Yes       |
-| 14  | `mdtldr search "issue" --mode keyword`                                                 | Find issues             | 10 results - mostly examples                        | Minimal   |
-| 15  | `mdtldr search "limitation" --mode keyword`                                            | Find limitations        | 3 results - judgment limitation                     | Yes       |
-| 16  | `mdtldr search "concern" --mode keyword`                                               | Find concerns           | 10 results - architecture concerns                  | Minimal   |
-| 17  | `mdtldr search "feedback" --mode keyword`                                              | Find feedback           | 10 results - key evolution doc                      | Yes       |
-| 18  | `mdtldr context docs.llm/feedback.md -t 3000`                                          | Get feedback context    | Truncated summary                                   | Partial   |
-| 19  | `mdtldr search "recommend" --mode keyword`                                             | Find recommendations    | 10 results - recommendation primitive               | Yes       |
-| 20  | `mdtldr search "suggested" --mode keyword`                                             | Find suggestions        | 6 results                                           | Minimal   |
-| 21  | `mdtldr search "should" --mode keyword`                                                | Find should-statements  | 10 results - evolution suggestions                  | Yes       |
-| 22  | `mdtldr context docs/HumanWork-Evolution.md --full`                                    | Get evolution doc       | Full synthesis of all gaps                          | Critical  |
-| 23  | `mdtldr search "security" --mode keyword`                                              | Find security gaps      | 10 results                                          | Minimal   |
-| 24  | `mdtldr search "failure" --mode keyword`                                               | Find failure handling   | 10 results - failure recovery                       | Minimal   |
-| 25  | `mdtldr search "privacy" --mode keyword`                                               | Find privacy gaps       | 2 results - minimal coverage                        | Yes (gap) |
-| 26  | `mdtldr context docs/03-ORG_WORKSPACE_MODEL.md --section "11. Privacy and Visibility"` | Get privacy details     | Very brief - "policy overlay"                       | Yes (gap) |
-| 27  | `mdtldr search "cost" --mode keyword`                                                  | Find cost model         | 10 results - basic cost tracking                    | Yes       |
-| 28  | `mdtldr search "testing" --mode keyword`                                               | Find testing mentions   | 10 results - mostly examples                        | Minimal   |
-| 29  | `mdtldr search "API" --mode keyword`                                                   | Find API spec           | 10 results - no formal API spec                     | Yes (gap) |
-| 30  | `mdtldr context docs/05-MEMORY_MODEL.md --section "15. Implementation Guidance"`       | Get impl guidance       | Technology suggestions only                         | Yes       |
-| 31  | `mdtldr search "evolution" --mode keyword`                                             | Find evolution plans    | 10 results - evolution document                     | Yes       |
-| 32  | `mdtldr context docs/LETTA_INTEGRATION_PLAN.md -t 3000`                                | Get Letta plan          | Integration phases                                  | Yes       |
-| 33  | `mdtldr search "rename" --mode keyword`                                                | Find rename suggestions | 1 result - terminology changes                      | Yes       |
-| 34  | `mdtldr search "replaces" --mode keyword`                                              | Find replacements       | 2 results - Actor/Deliverable                       | Yes       |
-| 35  | `mdtldr stats`                                                                         | Index statistics        | 23 docs, 922 sections, 178K tokens                  | Yes       |
+| #   | Command                                                                                   | Purpose                 | Result                                              | Useful?   |
+| --- | ----------------------------------------------------------------------------------------- | ----------------------- | --------------------------------------------------- | --------- |
+| 1   | `mdcontext --help`                                                                        | Learn tool              | Showed all commands and examples                    | Yes       |
+| 2   | `mdcontext index`                                                                         | Index markdown files    | 23 docs, 922 sections indexed                       | Yes       |
+| 3   | `mdcontext tree`                                                                          | List all files          | Showed 23 files in docs/, docs.amorphic/, docs.llm/ | Yes       |
+| 4   | `mdcontext search "gaps missing omissions"`                                               | Find gap mentions       | 0 results (semantic)                                | No        |
+| 5   | `mdcontext search "gaps missing omissions" --mode keyword`                                | Find gap mentions       | 0 results                                           | No        |
+| 6   | `mdcontext search "missing" --mode keyword`                                               | Find missing items      | 10 results - found "missing primitive" narrative    | Yes       |
+| 7   | `mdcontext search "gap" --mode keyword`                                                   | Find gap mentions       | 8 results - found "Judgment Gap", "AI fatigue gap"  | Yes       |
+| 8   | `mdcontext search "TODO" --mode keyword`                                                  | Find TODOs              | 1 result (Letta integration)                        | Minimal   |
+| 9   | `mdcontext search "not yet" --mode keyword`                                               | Find incomplete         | 10 results (mostly SPEC.md headers)                 | No        |
+| 10  | `mdcontext search "incomplete" --mode keyword`                                            | Find incomplete         | 2 results                                           | Minimal   |
+| 11  | `mdcontext search "needs" --mode keyword`                                                 | Find needs              | 10 results - coordination, clarification needs      | Yes       |
+| 12  | `mdcontext search "question" --mode keyword`                                              | Find questions          | 10 results                                          | Minimal   |
+| 13  | `mdcontext search "problem" --mode keyword`                                               | Find problems           | 10 results - handoff problem, problem space         | Yes       |
+| 14  | `mdcontext search "issue" --mode keyword`                                                 | Find issues             | 10 results - mostly examples                        | Minimal   |
+| 15  | `mdcontext search "limitation" --mode keyword`                                            | Find limitations        | 3 results - judgment limitation                     | Yes       |
+| 16  | `mdcontext search "concern" --mode keyword`                                               | Find concerns           | 10 results - architecture concerns                  | Minimal   |
+| 17  | `mdcontext search "feedback" --mode keyword`                                              | Find feedback           | 10 results - key evolution doc                      | Yes       |
+| 18  | `mdcontext context docs.llm/feedback.md -t 3000`                                          | Get feedback context    | Truncated summary                                   | Partial   |
+| 19  | `mdcontext search "recommend" --mode keyword`                                             | Find recommendations    | 10 results - recommendation primitive               | Yes       |
+| 20  | `mdcontext search "suggested" --mode keyword`                                             | Find suggestions        | 6 results                                           | Minimal   |
+| 21  | `mdcontext search "should" --mode keyword`                                                | Find should-statements  | 10 results - evolution suggestions                  | Yes       |
+| 22  | `mdcontext context docs/HumanWork-Evolution.md --full`                                    | Get evolution doc       | Full synthesis of all gaps                          | Critical  |
+| 23  | `mdcontext search "security" --mode keyword`                                              | Find security gaps      | 10 results                                          | Minimal   |
+| 24  | `mdcontext search "failure" --mode keyword`                                               | Find failure handling   | 10 results - failure recovery                       | Minimal   |
+| 25  | `mdcontext search "privacy" --mode keyword`                                               | Find privacy gaps       | 2 results - minimal coverage                        | Yes (gap) |
+| 26  | `mdcontext context docs/03-ORG_WORKSPACE_MODEL.md --section "11. Privacy and Visibility"` | Get privacy details     | Very brief - "policy overlay"                       | Yes (gap) |
+| 27  | `mdcontext search "cost" --mode keyword`                                                  | Find cost model         | 10 results - basic cost tracking                    | Yes       |
+| 28  | `mdcontext search "testing" --mode keyword`                                               | Find testing mentions   | 10 results - mostly examples                        | Minimal   |
+| 29  | `mdcontext search "API" --mode keyword`                                                   | Find API spec           | 10 results - no formal API spec                     | Yes (gap) |
+| 30  | `mdcontext context docs/05-MEMORY_MODEL.md --section "15. Implementation Guidance"`       | Get impl guidance       | Technology suggestions only                         | Yes       |
+| 31  | `mdcontext search "evolution" --mode keyword`                                             | Find evolution plans    | 10 results - evolution document                     | Yes       |
+| 32  | `mdcontext context docs/LETTA_INTEGRATION_PLAN.md -t 3000`                                | Get Letta plan          | Integration phases                                  | Yes       |
+| 33  | `mdcontext search "rename" --mode keyword`                                                | Find rename suggestions | 1 result - terminology changes                      | Yes       |
+| 34  | `mdcontext search "replaces" --mode keyword`                                              | Find replacements       | 2 results - Actor/Deliverable                       | Yes       |
+| 35  | `mdcontext stats`                                                                         | Index statistics        | 23 docs, 922 sections, 178K tokens                  | Yes       |
 
 ## Findings
 
@@ -190,8 +190,8 @@ Based on the feedback synthesis in HumanWork-Evolution.md:
 ### What Worked Well
 
 - **Keyword search** was essential - semantic search returned 0 results for "gaps missing omissions"
-- **`mdtldr context --full`** for single large documents (HumanWork-Evolution.md) was extremely valuable
-- **`mdtldr tree`** gave quick overview of document structure
+- **`mdcontext context --full`** for single large documents (HumanWork-Evolution.md) was extremely valuable
+- **`mdcontext tree`** gave quick overview of document structure
 - **Section-specific context** (`--section`) provided targeted extraction
 - **Stats command** helped understand corpus size (178K tokens across 23 docs)
 - Searching for key terms like "missing", "gap", "limitation", "recommendation" found relevant content

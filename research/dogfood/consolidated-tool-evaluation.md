@@ -1,8 +1,8 @@
-# Consolidated Tool Evaluation Report: mdtldr
+# Consolidated Tool Evaluation Report: mdcontext
 
 ## 1. Executive Summary
 
-**Overall Verdict**: The mdtldr tool is **highly effective for structured documentation research** with an average rating of **4.06/5** across all three strategies (15 total agents). The tool successfully enabled exploration of a ~207K token documentation corpus while reading only 25-30% of raw content through targeted extraction.
+**Overall Verdict**: The mdcontext tool is **highly effective for structured documentation research** with an average rating of **4.06/5** across all three strategies (15 total agents). The tool successfully enabled exploration of a ~207K token documentation corpus while reading only 25-30% of raw content through targeted extraction.
 
 **Key Strengths**: The `tree`, `context --section`, and keyword `search` commands form a powerful workflow for systematic documentation analysis. Token-aware budgeting and section-level extraction are major differentiators.
 
@@ -45,16 +45,16 @@
 
 Features praised across multiple strategies, with frequency counts:
 
-| Feature                                                 | Strategy A | Strategy B | Strategy C | Total Mentions | Notes                                                         |
-| ------------------------------------------------------- | ---------- | ---------- | ---------- | -------------- | ------------------------------------------------------------- |
-| `mdtldr tree` - Document structure with token counts    | 3/3        | 3/3        | 6/6        | **12/12**      | "Perfect for planning", "Invaluable for prioritization"       |
-| `mdtldr context --section` - Precise section extraction | 3/3        | 3/3        | 5/6        | **11/12**      | "Game-changer", "Surgical extraction", 44-61% token reduction |
-| `mdtldr search` - Fast keyword discovery                | 3/3        | 3/3        | 6/6        | **12/12**      | "Found relevant content quickly", "Good context lines"        |
-| Token budgeting (`-t` flag)                             | 3/3        | 3/3        | 2/6        | **8/12**       | "Respects limits while showing included/excluded"             |
-| `mdtldr stats` - Quick index overview                   | 2/3        | 2/3        | 3/6        | **7/12**       | "Instant scope understanding"                                 |
-| Boolean search operators (AND/OR/quoted phrases)        | 2/3        | 0/3        | 2/6        | **4/12**       | "Worked as expected"                                          |
-| Fast indexing speed                                     | 1/3        | 1/3        | 0/6        | **2/12**       | 535ms for 23 docs, ~$0.003 cost                               |
-| `mdtldr context --sections` - Section listing           | 0/3        | 0/3        | 4/6        | **4/12**       | "Essential for finding exact section names"                   |
+| Feature                                                    | Strategy A | Strategy B | Strategy C | Total Mentions | Notes                                                         |
+| ---------------------------------------------------------- | ---------- | ---------- | ---------- | -------------- | ------------------------------------------------------------- |
+| `mdcontext tree` - Document structure with token counts    | 3/3        | 3/3        | 6/6        | **12/12**      | "Perfect for planning", "Invaluable for prioritization"       |
+| `mdcontext context --section` - Precise section extraction | 3/3        | 3/3        | 5/6        | **11/12**      | "Game-changer", "Surgical extraction", 44-61% token reduction |
+| `mdcontext search` - Fast keyword discovery                | 3/3        | 3/3        | 6/6        | **12/12**      | "Found relevant content quickly", "Good context lines"        |
+| Token budgeting (`-t` flag)                                | 3/3        | 3/3        | 2/6        | **8/12**       | "Respects limits while showing included/excluded"             |
+| `mdcontext stats` - Quick index overview                   | 2/3        | 2/3        | 3/6        | **7/12**       | "Instant scope understanding"                                 |
+| Boolean search operators (AND/OR/quoted phrases)           | 2/3        | 0/3        | 2/6        | **4/12**       | "Worked as expected"                                          |
+| Fast indexing speed                                        | 1/3        | 1/3        | 0/6        | **2/12**       | 535ms for 23 docs, ~$0.003 cost                               |
+| `mdcontext context --sections` - Section listing           | 0/3        | 0/3        | 4/6        | **4/12**       | "Essential for finding exact section names"                   |
 
 ### Consensus Highlights
 
@@ -65,10 +65,10 @@ Features praised across multiple strategies, with frequency counts:
    - Token budget control
 
 2. **The Optimal Workflow Pattern** (emerged from Strategy C):
-   1. `mdtldr tree <file>` - See structure and token counts
-   2. `mdtldr context --sections <file>` - Get exact section names
-   3. `mdtldr context <file> --section "X"` - Extract needed sections
-   4. `mdtldr search "term"` - Find cross-references
+   1. `mdcontext tree <file>` - See structure and token counts
+   2. `mdcontext context --sections <file>` - Get exact section names
+   3. `mdcontext context <file> --section "X"` - Extract needed sections
+   4. `mdcontext search "term"` - Find cross-references
    5. Repeat as needed
 
 ---
@@ -96,7 +96,7 @@ Pain points identified across multiple strategies, with frequency counts:
 1. **Semantic Search Failure** (10/12 mentions)
    - "All three agents found semantic search unreliable for multi-word conceptual queries"
    - "All fell back to keyword search frequently"
-   - "Strongest cross-agent signal about the mdtldr tool"
+   - "Strongest cross-agent signal about the mdcontext tool"
    - Root cause: Multi-word queries like "failure automation", "job context" return 0 results
 
 2. **Search Result Cap** (6/12 mentions)
@@ -105,7 +105,7 @@ Pain points identified across multiple strategies, with frequency counts:
    - "Sometimes wanted more matches"
 
 3. **Directory-Scoped Search Broken** (3/12 mentions, but all in Strategy A)
-   - `mdtldr search "term" docs/` fails with "No index found" even when index exists
+   - `mdcontext search "term" docs/` fails with "No index found" even when index exists
    - Critical for multi-folder repositories
 
 ---
@@ -139,7 +139,7 @@ Feature requests and gaps identified, with frequency counts:
 
 ## 6. Feature-Specific Feedback
 
-### 6.1 `mdtldr tree`
+### 6.1 `mdcontext tree`
 
 **Rating**: Excellent (12/12 positive mentions)
 
@@ -162,7 +162,7 @@ Feature requests and gaps identified, with frequency counts:
 
 ---
 
-### 6.2 `mdtldr search`
+### 6.2 `mdcontext search`
 
 **Rating**: Mixed (keyword good, semantic problematic)
 
@@ -202,7 +202,7 @@ Feature requests and gaps identified, with frequency counts:
 
 ---
 
-### 6.3 `mdtldr context`
+### 6.3 `mdcontext context`
 
 **Rating**: Very Good (11/12 positive mentions for `--section`)
 
@@ -232,7 +232,7 @@ Feature requests and gaps identified, with frequency counts:
 
 ---
 
-### 6.4 `mdtldr stats`
+### 6.4 `mdcontext stats`
 
 **Rating**: Good (7/12 positive mentions)
 
@@ -248,7 +248,7 @@ Feature requests and gaps identified, with frequency counts:
 
 ---
 
-### 6.5 `mdtldr index`
+### 6.5 `mdcontext index`
 
 **Rating**: Good (2/12 explicit mentions, but used by all)
 
@@ -280,9 +280,9 @@ Feature requests and gaps identified, with frequency counts:
 | Issue                                 | Strategies     | Recommendation                                                         |
 | ------------------------------------- | -------------- | ---------------------------------------------------------------------- |
 | **Token truncation unclear**          | A, B           | Add explicit warning when content is truncated; show what was excluded |
-| **Directory-scoped search broken**    | A (all agents) | Fix path filtering: `mdtldr search "term" docs/` should work           |
+| **Directory-scoped search broken**    | A (all agents) | Fix path filtering: `mdcontext search "term" docs/` should work        |
 | **No fuzzy/stemmed search**           | B, C           | Add stemming support: "suggest" should match "suggestion"              |
-| **No cross-file operations**          | A, B           | Add batch context extraction: `mdtldr context docs/*.md -t 10000`      |
+| **No cross-file operations**          | A, B           | Add batch context extraction: `mdcontext context docs/*.md -t 10000`   |
 | **Section name requires exact match** | B, C           | Add fuzzy section name matching                                        |
 
 ### P2 (Medium): Mentioned by 1 Strategy but Significant Impact

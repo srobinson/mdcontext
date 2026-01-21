@@ -6,48 +6,48 @@ Extract the current spec's structure, key claims, and design decisions from docs
 
 ## Command Log
 
-| #   | Command                                                                           | Purpose                    | Result                                  | Useful? |
-| --- | --------------------------------------------------------------------------------- | -------------------------- | --------------------------------------- | ------- |
-| 1   | `mdtldr --help`                                                                   | Learn tool                 | Full command list with examples         | Yes     |
-| 2   | `mdtldr index --help`                                                             | Learn index options        | Options for --embed, --watch, --force   | Yes     |
-| 3   | `mdtldr search --help`                                                            | Learn search options       | Boolean ops, context lines, modes       | Yes     |
-| 4   | `mdtldr context --help`                                                           | Learn context options      | Token budgets, section filtering        | Yes     |
-| 5   | `mdtldr index --force --no-embed`                                                 | Index workspace            | 23 docs, 922 sections, 535ms            | Yes     |
-| 6   | `mdtldr tree`                                                                     | List all markdown files    | 23 files including 10 in docs/          | Yes     |
-| 7   | `mdtldr tree docs/00-README.md`                                                   | Show doc outline           | 9 sections, 1637 tokens                 | Yes     |
-| 8   | `mdtldr tree docs/01-ARCHITECTURE.md`                                             | Architecture outline       | 49 sections, 5037 tokens                | Yes     |
-| 9   | `mdtldr tree docs/02-PRIMITIVES.md`                                               | Primitives outline         | 67 sections, 6803 tokens                | Yes     |
-| 10  | `mdtldr tree docs/03-ORG_WORKSPACE_MODEL.md`                                      | Org/Workspace outline      | 52 sections, 5360 tokens                | Yes     |
-| 11  | `mdtldr tree docs/04-EXECUTION_MODEL.md`                                          | Execution outline          | 63 sections, 7418 tokens                | Yes     |
-| 12  | `mdtldr tree docs/05-MEMORY_MODEL.md`                                             | Memory outline             | 56 sections, 6848 tokens                | Yes     |
-| 13  | `mdtldr tree docs/06-WORKFLOWS.md`                                                | Workflows outline          | 65 sections, 8541 tokens                | Yes     |
-| 14  | `mdtldr tree docs/07-EXAMPLE_WORKFLOWS.md`                                        | Examples outline           | 55 sections, 14423 tokens               | Yes     |
-| 15  | `mdtldr context docs/00-README.md -t 3000`                                        | Get README summary         | Full content with 50% reduction         | Yes     |
-| 16  | `mdtldr context docs/01-ARCHITECTURE.md --section "Architectural Overview"`       | Get overview               | Core separation of concerns             | Yes     |
-| 17  | `mdtldr context docs/01-ARCHITECTURE.md --section "Why This Architecture Works"`  | Get justification          | 6 key reasons                           | Yes     |
-| 18  | `mdtldr search "human control"`                                                   | Find human control theme   | 10 results across docs                  | Yes     |
-| 19  | `mdtldr search "immutable"`                                                       | Find immutability theme    | 10 results                              | Yes     |
-| 20  | `mdtldr search "workspace"`                                                       | Find workspace concept     | 5 results                               | Yes     |
-| 21  | `mdtldr search "checkpoint"`                                                      | Find checkpoint references | 8 results                               | Yes     |
-| 22  | `mdtldr search "safety"`                                                          | Find safety theme          | 5 results                               | Yes     |
-| 23  | `mdtldr context docs/01-ARCHITECTURE.md --section "Architectural Invariants"`     | Get invariants             | 8 system invariants                     | Yes     |
-| 24  | `mdtldr context docs/02-PRIMITIVES.md --section "Summary"`                        | Get primitives summary     | Minimal primitive philosophy            | Yes     |
-| 25  | `mdtldr context docs/05-MEMORY_MODEL.md --section "Memory Philosophy"`            | Get memory philosophy      | Memory defined as derived understanding | Yes     |
-| 26  | `mdtldr context docs/05-MEMORY_MODEL.md --section "Why This Model Works"`         | Get memory justification   | Enables/Prevents/Supports/Scales        | Yes     |
-| 27  | `mdtldr context docs/06-WORKFLOWS.md --section "Workflow Philosophy"`             | Get workflow philosophy    | Guidance, not law                       | Yes     |
-| 28  | `mdtldr search "three-layer"`                                                     | Find memory layers         | 5 results                               | Yes     |
-| 29  | `mdtldr context docs/05-MEMORY_MODEL.md --section "The Three-Layer Architecture"` | Get layer details          | Event/Status/Semantic layers            | Yes     |
-| 30  | `mdtldr search '"execution context"'`                                             | Find execution contexts    | 5 results (exact phrase)                | Yes     |
-| 31  | `mdtldr search "parallel exploration"`                                            | Find parallel work         | 5 results                               | Yes     |
-| 32  | `mdtldr search "cost"`                                                            | Find cost model            | 5 results                               | Yes     |
-| 33  | `mdtldr search "Control Plane"`                                                   | Find control plane         | 5 results                               | Yes     |
-| 34  | `mdtldr context docs/02-PRIMITIVES.md --section "Control Plane"`                  | Get control plane details  | Full primitive definition               | Yes     |
-| 35  | `mdtldr search "time travel"`                                                     | Find time travel           | 5 results                               | Yes     |
-| 36  | `mdtldr search "branching"`                                                       | Find branching             | 5 results                               | Yes     |
-| 37  | `mdtldr context docs/05-MEMORY_MODEL.md --section "Time Travel"`                  | Get time travel details    | Query-based, not feature                | Yes     |
-| 38  | `mdtldr search "guarantee"`                                                       | Find guarantees            | 8 results                               | Yes     |
-| 39  | `mdtldr context docs/04-EXECUTION_MODEL.md --section "Guarantees"`                | Get execution guarantees   | 7 explicit guarantees                   | Yes     |
-| 40  | `mdtldr stats`                                                                    | Get index statistics       | 23 docs, 178K tokens, 922 sections      | Yes     |
+| #   | Command                                                                              | Purpose                    | Result                                  | Useful? |
+| --- | ------------------------------------------------------------------------------------ | -------------------------- | --------------------------------------- | ------- |
+| 1   | `mdcontext --help`                                                                   | Learn tool                 | Full command list with examples         | Yes     |
+| 2   | `mdcontext index --help`                                                             | Learn index options        | Options for --embed, --watch, --force   | Yes     |
+| 3   | `mdcontext search --help`                                                            | Learn search options       | Boolean ops, context lines, modes       | Yes     |
+| 4   | `mdcontext context --help`                                                           | Learn context options      | Token budgets, section filtering        | Yes     |
+| 5   | `mdcontext index --force --no-embed`                                                 | Index workspace            | 23 docs, 922 sections, 535ms            | Yes     |
+| 6   | `mdcontext tree`                                                                     | List all markdown files    | 23 files including 10 in docs/          | Yes     |
+| 7   | `mdcontext tree docs/00-README.md`                                                   | Show doc outline           | 9 sections, 1637 tokens                 | Yes     |
+| 8   | `mdcontext tree docs/01-ARCHITECTURE.md`                                             | Architecture outline       | 49 sections, 5037 tokens                | Yes     |
+| 9   | `mdcontext tree docs/02-PRIMITIVES.md`                                               | Primitives outline         | 67 sections, 6803 tokens                | Yes     |
+| 10  | `mdcontext tree docs/03-ORG_WORKSPACE_MODEL.md`                                      | Org/Workspace outline      | 52 sections, 5360 tokens                | Yes     |
+| 11  | `mdcontext tree docs/04-EXECUTION_MODEL.md`                                          | Execution outline          | 63 sections, 7418 tokens                | Yes     |
+| 12  | `mdcontext tree docs/05-MEMORY_MODEL.md`                                             | Memory outline             | 56 sections, 6848 tokens                | Yes     |
+| 13  | `mdcontext tree docs/06-WORKFLOWS.md`                                                | Workflows outline          | 65 sections, 8541 tokens                | Yes     |
+| 14  | `mdcontext tree docs/07-EXAMPLE_WORKFLOWS.md`                                        | Examples outline           | 55 sections, 14423 tokens               | Yes     |
+| 15  | `mdcontext context docs/00-README.md -t 3000`                                        | Get README summary         | Full content with 50% reduction         | Yes     |
+| 16  | `mdcontext context docs/01-ARCHITECTURE.md --section "Architectural Overview"`       | Get overview               | Core separation of concerns             | Yes     |
+| 17  | `mdcontext context docs/01-ARCHITECTURE.md --section "Why This Architecture Works"`  | Get justification          | 6 key reasons                           | Yes     |
+| 18  | `mdcontext search "human control"`                                                   | Find human control theme   | 10 results across docs                  | Yes     |
+| 19  | `mdcontext search "immutable"`                                                       | Find immutability theme    | 10 results                              | Yes     |
+| 20  | `mdcontext search "workspace"`                                                       | Find workspace concept     | 5 results                               | Yes     |
+| 21  | `mdcontext search "checkpoint"`                                                      | Find checkpoint references | 8 results                               | Yes     |
+| 22  | `mdcontext search "safety"`                                                          | Find safety theme          | 5 results                               | Yes     |
+| 23  | `mdcontext context docs/01-ARCHITECTURE.md --section "Architectural Invariants"`     | Get invariants             | 8 system invariants                     | Yes     |
+| 24  | `mdcontext context docs/02-PRIMITIVES.md --section "Summary"`                        | Get primitives summary     | Minimal primitive philosophy            | Yes     |
+| 25  | `mdcontext context docs/05-MEMORY_MODEL.md --section "Memory Philosophy"`            | Get memory philosophy      | Memory defined as derived understanding | Yes     |
+| 26  | `mdcontext context docs/05-MEMORY_MODEL.md --section "Why This Model Works"`         | Get memory justification   | Enables/Prevents/Supports/Scales        | Yes     |
+| 27  | `mdcontext context docs/06-WORKFLOWS.md --section "Workflow Philosophy"`             | Get workflow philosophy    | Guidance, not law                       | Yes     |
+| 28  | `mdcontext search "three-layer"`                                                     | Find memory layers         | 5 results                               | Yes     |
+| 29  | `mdcontext context docs/05-MEMORY_MODEL.md --section "The Three-Layer Architecture"` | Get layer details          | Event/Status/Semantic layers            | Yes     |
+| 30  | `mdcontext search '"execution context"'`                                             | Find execution contexts    | 5 results (exact phrase)                | Yes     |
+| 31  | `mdcontext search "parallel exploration"`                                            | Find parallel work         | 5 results                               | Yes     |
+| 32  | `mdcontext search "cost"`                                                            | Find cost model            | 5 results                               | Yes     |
+| 33  | `mdcontext search "Control Plane"`                                                   | Find control plane         | 5 results                               | Yes     |
+| 34  | `mdcontext context docs/02-PRIMITIVES.md --section "Control Plane"`                  | Get control plane details  | Full primitive definition               | Yes     |
+| 35  | `mdcontext search "time travel"`                                                     | Find time travel           | 5 results                               | Yes     |
+| 36  | `mdcontext search "branching"`                                                       | Find branching             | 5 results                               | Yes     |
+| 37  | `mdcontext context docs/05-MEMORY_MODEL.md --section "Time Travel"`                  | Get time travel details    | Query-based, not feature                | Yes     |
+| 38  | `mdcontext search "guarantee"`                                                       | Find guarantees            | 8 results                               | Yes     |
+| 39  | `mdcontext context docs/04-EXECUTION_MODEL.md --section "Guarantees"`                | Get execution guarantees   | 7 explicit guarantees                   | Yes     |
+| 40  | `mdcontext stats`                                                                    | Get index statistics       | 23 docs, 178K tokens, 922 sections      | Yes     |
 
 ## Findings
 
@@ -183,7 +183,7 @@ Control actions: pause, resume, cancel, reassign, modify_metadata, inject_step, 
 
 ### What Was Frustrating
 
-- **search from subdirectory failed**: `mdtldr search "..." docs/` returned "No index found" even though index existed - had to search from root
+- **search from subdirectory failed**: `mdcontext search "..." docs/` returned "No index found" even though index existed - had to search from root
 - **No semantic search by default**: Required --embed flag and OPENAI_API_KEY; keyword search adequate but limited
 - **Context duplication**: `--section "Time Travel"` returned the same section twice (once as parent, once as subsection match)
 - **No way to search AND get context**: Search shows snippets but can't easily expand; had to follow up with context command
@@ -208,7 +208,7 @@ I found all major structural elements, design decisions, and key claims. The too
 ## Time & Efficiency
 
 - Commands run: **40**
-- Tokens read via mdtldr: ~15,000 (estimated from context outputs)
+- Tokens read via mdcontext: ~15,000 (estimated from context outputs)
 - Total docs tokens: 56,000+ in docs/ alone
 - Compared to reading all files: **much less** - approximately 25-30% of raw content needed to extract key information
 
@@ -223,4 +223,4 @@ The HumanWork spec defines a comprehensive multi-agent orchestration system with
 - **Workflow as guidance** not enforcement
 - **8 architectural invariants** as hard system rules
 
-The mdtldr tool proved effective for navigating this large specification efficiently.
+The mdcontext tool proved effective for navigating this large specification efficiently.

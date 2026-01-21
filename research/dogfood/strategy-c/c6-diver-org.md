@@ -6,37 +6,37 @@ Deep-dive into: Org-Workspace-Cost Model (Theme #5 from C1 Explorer)
 
 ## Command Log
 
-| #   | Command                                                         | Purpose                         | Result                                  | Useful? |
-| --- | --------------------------------------------------------------- | ------------------------------- | --------------------------------------- | ------- |
-| 1   | `mdtldr search "workspace"`                                     | Find workspace content          | 10 results spanning 4 docs              | Yes     |
-| 2   | `mdtldr search "org"`                                           | Find org content                | 10 results, good coverage               | Yes     |
-| 3   | `mdtldr search "cost"`                                          | Find cost-related content       | 10 results, found key docs              | Yes     |
-| 4   | `mdtldr context docs/03-ORG_WORKSPACE_MODEL.md`                 | Get main doc overview           | Truncated to 24%, but overview helpful  | Partial |
-| 5   | `mdtldr context --section "5. Authority Model"`                 | Get authority details           | Complete section retrieved              | Yes     |
-| 6   | `mdtldr context --sections`                                     | List all sections               | Full section index shown                | Yes     |
-| 7   | `mdtldr context --section "6. Cost and Resource Model"`         | Get cost model details          | Complete section with all subsections   | Yes     |
-| 8   | `mdtldr context --section "9. Org-Workspace Information Flow"`  | Cross-workspace learning        | Found key principle on authority flow   | Yes     |
-| 9   | `mdtldr search "promotion"`                                     | Find artifact promotion content | 10 results, good workflow examples      | Yes     |
-| 10  | `mdtldr context --section "Phase 11: Promotion to Org Level"`   | Example workflow                | Concrete promotion example              | Yes     |
-| 11  | `mdtldr search "governance"`                                    | Find governance content         | 10 results including enterprise docs    | Yes     |
-| 12  | `mdtldr context --section "12. Why This Model Works"`           | Model rationale                 | Scaling from individuals to enterprises | Yes     |
-| 13  | `mdtldr search "job"`                                           | Find job layer content          | 10 results, found architecture section  | Yes     |
-| 14  | `mdtldr context --section "6. Job Layer"`                       | Get job definition              | Complete job layer explanation          | Yes     |
-| 15  | `mdtldr search "execution context"`                             | Find context layer content      | 10 results                              | Yes     |
-| 16  | `mdtldr context --section "7. Execution Context Layer"`         | Get context definition          | Full lifecycle and semantics            | Yes     |
-| 17  | `mdtldr context --section "2. High-Level Stack"`                | Get hierarchy diagram           | ASCII stack visualization               | Yes     |
-| 18  | `mdtldr context --section "15. Cost and Resource Model"` (arch) | Architecture cost summary       | Concise cost flow explanation           | Yes     |
-| 19  | `mdtldr search "enterprise"`                                    | Find enterprise examples        | Example 5 compliance review             | Yes     |
-| 20  | `mdtldr context --section "Example 5: Enterprise"`              | Get enterprise workflow         | Detailed compliance review walkthrough  | Yes     |
-| 21  | `mdtldr search "knowledge graph"`                               | Find org knowledge graph        | Found definitions and usage             | Yes     |
-| 22  | `mdtldr context --section "Org Knowledge Graph"`                | Get knowledge graph details     | Derived graph properties                | Yes     |
-| 23  | `mdtldr context --section "13. Summary"`                        | Get model summary               | Core principles list                    | Yes     |
-| 24  | `mdtldr search "policy"`                                        | Find policy overlay content     | 10 results on optional controls         | Yes     |
-| 25  | `mdtldr context --section "Cost Attribution"` (exec)            | Get cost attribution levels     | Three-level cost hierarchy              | Yes     |
-| 26  | `mdtldr search "authority"`                                     | Find authority invariants       | Key authority principles                | Yes     |
-| 27  | `mdtldr search "boundary"`                                      | Find containment boundaries     | Workspace isolation semantics           | Yes     |
-| 28  | `mdtldr context --section "Workspace Boundaries"`               | Get boundary details            | Strict isolation guarantees             | Yes     |
-| 29  | `mdtldr context --section "17. Org Knowledge Graph"` (prim)     | Formal knowledge graph def      | Guarantees and properties               | Yes     |
+| #   | Command                                                            | Purpose                         | Result                                  | Useful? |
+| --- | ------------------------------------------------------------------ | ------------------------------- | --------------------------------------- | ------- |
+| 1   | `mdcontext search "workspace"`                                     | Find workspace content          | 10 results spanning 4 docs              | Yes     |
+| 2   | `mdcontext search "org"`                                           | Find org content                | 10 results, good coverage               | Yes     |
+| 3   | `mdcontext search "cost"`                                          | Find cost-related content       | 10 results, found key docs              | Yes     |
+| 4   | `mdcontext context docs/03-ORG_WORKSPACE_MODEL.md`                 | Get main doc overview           | Truncated to 24%, but overview helpful  | Partial |
+| 5   | `mdcontext context --section "5. Authority Model"`                 | Get authority details           | Complete section retrieved              | Yes     |
+| 6   | `mdcontext context --sections`                                     | List all sections               | Full section index shown                | Yes     |
+| 7   | `mdcontext context --section "6. Cost and Resource Model"`         | Get cost model details          | Complete section with all subsections   | Yes     |
+| 8   | `mdcontext context --section "9. Org-Workspace Information Flow"`  | Cross-workspace learning        | Found key principle on authority flow   | Yes     |
+| 9   | `mdcontext search "promotion"`                                     | Find artifact promotion content | 10 results, good workflow examples      | Yes     |
+| 10  | `mdcontext context --section "Phase 11: Promotion to Org Level"`   | Example workflow                | Concrete promotion example              | Yes     |
+| 11  | `mdcontext search "governance"`                                    | Find governance content         | 10 results including enterprise docs    | Yes     |
+| 12  | `mdcontext context --section "12. Why This Model Works"`           | Model rationale                 | Scaling from individuals to enterprises | Yes     |
+| 13  | `mdcontext search "job"`                                           | Find job layer content          | 10 results, found architecture section  | Yes     |
+| 14  | `mdcontext context --section "6. Job Layer"`                       | Get job definition              | Complete job layer explanation          | Yes     |
+| 15  | `mdcontext search "execution context"`                             | Find context layer content      | 10 results                              | Yes     |
+| 16  | `mdcontext context --section "7. Execution Context Layer"`         | Get context definition          | Full lifecycle and semantics            | Yes     |
+| 17  | `mdcontext context --section "2. High-Level Stack"`                | Get hierarchy diagram           | ASCII stack visualization               | Yes     |
+| 18  | `mdcontext context --section "15. Cost and Resource Model"` (arch) | Architecture cost summary       | Concise cost flow explanation           | Yes     |
+| 19  | `mdcontext search "enterprise"`                                    | Find enterprise examples        | Example 5 compliance review             | Yes     |
+| 20  | `mdcontext context --section "Example 5: Enterprise"`              | Get enterprise workflow         | Detailed compliance review walkthrough  | Yes     |
+| 21  | `mdcontext search "knowledge graph"`                               | Find org knowledge graph        | Found definitions and usage             | Yes     |
+| 22  | `mdcontext context --section "Org Knowledge Graph"`                | Get knowledge graph details     | Derived graph properties                | Yes     |
+| 23  | `mdcontext context --section "13. Summary"`                        | Get model summary               | Core principles list                    | Yes     |
+| 24  | `mdcontext search "policy"`                                        | Find policy overlay content     | 10 results on optional controls         | Yes     |
+| 25  | `mdcontext context --section "Cost Attribution"` (exec)            | Get cost attribution levels     | Three-level cost hierarchy              | Yes     |
+| 26  | `mdcontext search "authority"`                                     | Find authority invariants       | Key authority principles                | Yes     |
+| 27  | `mdcontext search "boundary"`                                      | Find containment boundaries     | Workspace isolation semantics           | Yes     |
+| 28  | `mdcontext context --section "Workspace Boundaries"`               | Get boundary details            | Strict isolation guarantees             | Yes     |
+| 29  | `mdcontext context --section "17. Org Knowledge Graph"` (prim)     | Formal knowledge graph def      | Guarantees and properties               | Yes     |
 
 ## Findings
 
@@ -200,7 +200,7 @@ The Org-Workspace model enables governance through:
 ### What Was Frustrating
 
 - **Initial context truncation**: Default context command only showed 24% of large document
-- **Two-word search failure**: `mdtldr search "job context"` returned 0 results (had to search separately)
+- **Two-word search failure**: `mdcontext search "job context"` returned 0 results (had to search separately)
 - **No semantic search**: Tip kept reminding to run `--embed` but this was out of scope
 - **Section name matching**: Had to get exact section names (e.g., "6" didn't work, needed "6. Cost and Resource Model")
 

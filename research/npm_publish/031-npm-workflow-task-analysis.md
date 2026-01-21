@@ -56,7 +56,7 @@ GitHub Actions workflow has `id-token: write` but npm package needs to be config
 1. Go to npmjs.com > Package (`mdcontext`) > Settings > Trusted Publishers
 2. Add GitHub Actions as trusted publisher:
    - Organization/User: `alphab`
-   - Repository: `md-tldr`
+   - Repository: `mdcontext`
    - Workflow file: `release.yml`
    - Environment: (leave blank or use `production`)
 

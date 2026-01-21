@@ -14,10 +14,10 @@
  * - `pnpm test:full` - Runs all tests including semantic search (requires OPENAI_API_KEY)
  */
 
-import { Effect } from 'effect'
 import { exec } from 'node:child_process'
 import * as path from 'node:path'
 import { promisify } from 'node:util'
+import { Effect } from 'effect'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { buildEmbeddings } from '../embeddings/semantic-search.js'
 import { buildIndex } from '../index/indexer.js'

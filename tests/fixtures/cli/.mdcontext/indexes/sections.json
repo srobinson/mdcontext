@@ -222,14 +222,8 @@
     ]
   },
   "byDocument": {
-    "04c6e90faac2": [
-      "04c6e90faac2-test-project",
-      "04c6e90faac2-overview"
-    ],
-    "392e93c0f22d": [
-      "392e93c0f22d-api-reference",
-      "392e93c0f22d-endpoints"
-    ],
+    "04c6e90faac2": ["04c6e90faac2-test-project", "04c6e90faac2-overview"],
+    "392e93c0f22d": ["392e93c0f22d-api-reference", "392e93c0f22d-endpoints"],
     "b6885e1f8555": [
       "b6885e1f8555-getting-started",
       "b6885e1f8555-installation",

@@ -12,7 +12,7 @@ The mdcontext codebase currently has a **minimal, decentralized approach** to co
 
 The CLI uses `@effect/cli` for argument parsing, with a custom preprocessor for flexible flag positioning.
 
-**Location:** `/Users/alphab/Dev/LLM/DEV/md-tldr/src/cli/main.ts`
+**Location:** `/Users/alphab/Dev/LLM/DEV/mdcontext/src/cli/main.ts`
 
 ```typescript
 import { CliConfig, Command } from "@effect/cli";
@@ -40,7 +40,7 @@ const cli = Command.run(mainCommand, {
 
 Each command defines its own options inline using `Options` from `@effect/cli`.
 
-**Location:** `/Users/alphab/Dev/LLM/DEV/md-tldr/src/cli/commands/context.ts`
+**Location:** `/Users/alphab/Dev/LLM/DEV/mdcontext/src/cli/commands/context.ts`
 
 ```typescript
 export const contextCommand = Command.make(
@@ -72,7 +72,7 @@ export const contextCommand = Command.make(
 
 Common options are defined in a separate file.
 
-**Location:** `/Users/alphab/Dev/LLM/DEV/md-tldr/src/cli/options.ts`
+**Location:** `/Users/alphab/Dev/LLM/DEV/mdcontext/src/cli/options.ts`
 
 ```typescript
 export const jsonOption = Options.boolean("json").pipe(
@@ -95,7 +95,7 @@ export const forceOption = Options.boolean("force").pipe(
 
 A separate schema system exists for unknown flag detection and typo suggestions.
 
-**Location:** `/Users/alphab/Dev/LLM/DEV/md-tldr/src/cli/flag-schemas.ts`
+**Location:** `/Users/alphab/Dev/LLM/DEV/mdcontext/src/cli/flag-schemas.ts`
 
 ```typescript
 export interface FlagSpec {
@@ -140,7 +140,7 @@ export const commandSchemas: Record<string, CommandSchema> = {
 
 Only **one environment variable** is used in the entire codebase:
 
-**Location:** `/Users/alphab/Dev/LLM/DEV/md-tldr/src/embeddings/openai-provider.ts`
+**Location:** `/Users/alphab/Dev/LLM/DEV/mdcontext/src/embeddings/openai-provider.ts`
 
 ```typescript
 export class OpenAIProvider implements EmbeddingProvider {
@@ -154,7 +154,7 @@ export class OpenAIProvider implements EmbeddingProvider {
 }
 ```
 
-**Location:** `/Users/alphab/Dev/LLM/DEV/md-tldr/src/cli/commands/index-cmd.ts`
+**Location:** `/Users/alphab/Dev/LLM/DEV/mdcontext/src/cli/commands/index-cmd.ts`
 
 ```typescript
 // Direct env check for user prompt
@@ -180,7 +180,7 @@ Currently no support for:
 
 When an index is created, a config file is stored in `.mdcontext/config.json`.
 
-**Location:** `/Users/alphab/Dev/LLM/DEV/md-tldr/src/index/types.ts`
+**Location:** `/Users/alphab/Dev/LLM/DEV/mdcontext/src/index/types.ts`
 
 ```typescript
 export interface IndexConfig {
@@ -206,7 +206,7 @@ export const getIndexPaths = (rootPath: string) => ({
 });
 ```
 
-**Location:** `/Users/alphab/Dev/LLM/DEV/md-tldr/src/index/storage.ts`
+**Location:** `/Users/alphab/Dev/LLM/DEV/mdcontext/src/index/storage.ts`
 
 ```typescript
 export const initializeIndex = (
@@ -247,7 +247,7 @@ There is **no** support for:
 
 Services receive configuration through **function parameters**, not dependency injection or a config service.
 
-**Location:** `/Users/alphab/Dev/LLM/DEV/md-tldr/src/index/indexer.ts`
+**Location:** `/Users/alphab/Dev/LLM/DEV/mdcontext/src/index/indexer.ts`
 
 ```typescript
 export interface IndexOptions {
@@ -266,7 +266,7 @@ export const buildIndex = (
   });
 ```
 
-**Location:** `/Users/alphab/Dev/LLM/DEV/md-tldr/src/summarize/summarizer.ts`
+**Location:** `/Users/alphab/Dev/LLM/DEV/mdcontext/src/summarize/summarizer.ts`
 
 ```typescript
 export interface SummarizeOptions {
@@ -289,7 +289,7 @@ export const summarizeFile = (
 
 Many configuration values are defined as module-level constants.
 
-**Location:** `/Users/alphab/Dev/LLM/DEV/md-tldr/src/summarize/summarizer.ts`
+**Location:** `/Users/alphab/Dev/LLM/DEV/mdcontext/src/summarize/summarizer.ts`
 
 ```typescript
 const TOKEN_BUDGETS: Record<CompressionLevel, number> = {
@@ -306,7 +306,7 @@ const MIN_SECTION_TOKENS = 20;
 // ...
 ```
 
-**Location:** `/Users/alphab/Dev/LLM/DEV/md-tldr/src/embeddings/openai-provider.ts`
+**Location:** `/Users/alphab/Dev/LLM/DEV/mdcontext/src/embeddings/openai-provider.ts`
 
 ```typescript
 const PRICING: Record<string, number> = {
@@ -320,7 +320,7 @@ const PRICING: Record<string, number> = {
 
 The MCP server receives root path from `process.cwd()`.
 
-**Location:** `/Users/alphab/Dev/LLM/DEV/md-tldr/src/mcp/server.ts`
+**Location:** `/Users/alphab/Dev/LLM/DEV/mdcontext/src/mcp/server.ts`
 
 ```typescript
 const main = async () => {

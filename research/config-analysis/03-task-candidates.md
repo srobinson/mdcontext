@@ -2,8 +2,8 @@
 
 This document outlines implementation tasks for enhancing mdcontext's configuration system, based on research from:
 
-- [033-research-configuration-management.md](/Users/alphab/Dev/LLM/DEV/md-tldr/docs/033-research-configuration-management.md)
-- [034-research-effect-cli-config.md](/Users/alphab/Dev/LLM/DEV/md-tldr/docs/034-research-effect-cli-config.md)
+- [033-research-configuration-management.md](/Users/alphab/Dev/LLM/DEV/mdcontext/docs/033-research-configuration-management.md)
+- [034-research-effect-cli-config.md](/Users/alphab/Dev/LLM/DEV/mdcontext/docs/034-research-effect-cli-config.md)
 
 Tasks are ordered by recommended implementation sequence.
 

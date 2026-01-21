@@ -10,49 +10,49 @@ What workflow and process improvements are suggested?
 
 ## Command Log
 
-| #   | Command                                                                                                     | Purpose                        | Result                                       | Useful?  |
-| --- | ----------------------------------------------------------------------------------------------------------- | ------------------------------ | -------------------------------------------- | -------- |
-| 1   | mdtldr --help                                                                                               | Learn tool capabilities        | Showed commands, workflows, options          | Yes      |
-| 2   | mdtldr tree                                                                                                 | List all markdown files        | Found 23 files across 3 folders              | Yes      |
-| 3   | mdtldr index --force                                                                                        | Re-index all files             | Indexed 922 sections, 904 vectors            | Yes      |
-| 4   | mdtldr search "workflow improvement"                                                                        | Find workflow improvements     | 2 results (versioning, team review)          | Moderate |
-| 5   | mdtldr search "process automation"                                                                          | Find automation content        | 10 results (failure of automation, paradox)  | Yes      |
-| 6   | mdtldr search "human agent collaboration"                                                                   | Find collaboration patterns    | 10 results (71.6% top match)                 | Yes      |
-| 7   | mdtldr search "execution model"                                                                             | Find execution concepts        | 10 results                                   | Yes      |
-| 8   | mdtldr search "best practices"                                                                              | Find best practices            | 4 results                                    | Moderate |
-| 9   | mdtldr search "transformation organizational"                                                               | Find org transformation        | 10 results (62.7% top)                       | Yes      |
-| 10  | mdtldr search "intervention points human decision"                                                          | Find human intervention points | 10 results (68.7% top)                       | Yes      |
-| 11  | mdtldr context docs/06-WORKFLOWS.md -t 3000                                                                 | Get workflows overview         | Core workflow concepts extracted             | Yes      |
-| 12  | mdtldr context docs/06-WORKFLOWS.md --section "Workflow Design Principles"                                  | Get design principles          | Do/Don't guidelines                          | Yes      |
-| 13  | mdtldr context docs.amorphic/04-THE_HUMAN-AGENT_COLLABORATION_MODEL.md --section "Intervention Points"      | Get intervention details       | Redirect, override, inject, escalate         | Yes      |
-| 14  | mdtldr context docs.amorphic/06-ORGANIZATIONAL_TRANSFORMATION.md -t 3000                                    | Get org transformation         | Roles, culture, governance, implementation   | Yes      |
-| 15  | mdtldr context docs.amorphic/02-THE_FAILURE_OF_PURE_AUTOMATION.md -t 2500                                   | Get automation failures        | Brittleness, context collapse, judgment gap  | Yes      |
-| 16  | mdtldr context docs/04-EXECUTION_MODEL.md --section "Execution Philosophy"                                  | Get execution philosophy       | Scoped, disposable attempts                  | Yes      |
-| 17  | mdtldr context docs/04-EXECUTION_MODEL.md --section "Key Execution Patterns"                                | Get execution patterns         | Ad-hoc, guided, long-running, parallel       | Yes      |
-| 18  | mdtldr search "continuous improvement feedback loop"                                                        | Find feedback loops            | 3 results (learning loop)                    | Moderate |
-| 19  | mdtldr context docs/06-WORKFLOWS.md --section "Learning Loop"                                               | Get learning loop details      | Metrics feed refinement                      | Moderate |
-| 20  | mdtldr context docs.llm/feedback.md -t 2500                                                                 | Get feedback concepts          | Hybrid intelligence, resonance               | Yes      |
-| 21  | mdtldr search "checkpoint governance approval"                                                              | Find checkpoint content        | 5 results (executive decision)               | Moderate |
-| 22  | mdtldr context docs/07-EXAMPLE_WORKFLOWS.md -t 3000                                                         | Get example workflows          | Individual idea exploration example          | Yes      |
-| 23  | mdtldr search "versioning iteration reuse"                                                                  | Find versioning content        | 6 results                                    | Moderate |
-| 24  | mdtldr context docs/06-WORKFLOWS.md --section "Workflow Versioning"                                         | Get versioning details         | Immutable versioning model                   | Yes      |
-| 25  | mdtldr search "human override control interrupt"                                                            | Find human control             | 3 results (Human Interrupts)                 | Yes      |
-| 26  | mdtldr context docs/01-ARCHITECTURE.md --section "Human Interrupts"                                         | Get interrupt flow             | Control plane directive flow                 | Moderate |
-| 27  | mdtldr search "memory workspace context"                                                                    | Find memory concepts           | 10 results (Workspace Memory top)            | Yes      |
-| 28  | mdtldr context docs/05-MEMORY_MODEL.md -t 2500                                                              | Get memory model               | Three-layer architecture                     | Yes      |
-| 29  | mdtldr search "parallel exploration concurrent"                                                             | Find parallel patterns         | 10 results (67% match)                       | Yes      |
-| 30  | mdtldr context docs/04-EXECUTION_MODEL.md --section "Parallel Exploration"                                  | Get parallel pattern           | Fan-out/fan-in pattern                       | Yes      |
-| 31  | mdtldr search "audit trail transparency accountability"                                                     | Find audit content             | 6 results (67.1% match)                      | Yes      |
-| 32  | mdtldr context docs.amorphic/04-THE_HUMAN-AGENT_COLLABORATION_MODEL.md --section "Audit Trails That Matter" | Get audit trails               | Immutable records that tell stories          | Yes      |
-| 33  | mdtldr search "decision making recommendation suggestions"                                                  | Find recommendations           | 1 result (Recommendation primitive)          | Moderate |
-| 34  | mdtldr context docs/02-PRIMITIVES.md --section "Recommendation"                                             | Get recommendation definition  | Ranked suggestions with confidence           | Yes      |
-| 35  | mdtldr context docs/03-ORG_WORKSPACE_MODEL.md -t 2500                                                       | Get org/workspace model        | Two-tier identity model                      | Yes      |
-| 36  | mdtldr search "time travel rollback branching"                                                              | Find branching concepts        | 8 results (62.6% match)                      | Yes      |
-| 37  | mdtldr context docs/05-MEMORY_MODEL.md --section "Time Travel and Branching"                                | Get time travel details        | Rewind, compare, branch capabilities         | Yes      |
-| 38  | mdtldr search "compliance governance regulation"                                                            | Find compliance content        | 8 results                                    | Yes      |
-| 39  | mdtldr context docs/07-EXAMPLE_WORKFLOWS.md --section "Example 5: Enterprise-Compliance Review"             | Get compliance example         | Full enterprise workflow example             | Yes      |
-| 40  | mdtldr context docs/02-PRIMITIVES.md --section "Signal"                                                     | Get signal primitive           | Activity, outcome, attention, health signals | Yes      |
-| 41  | mdtldr context docs.amorphic/04-THE_HUMAN-AGENT_COLLABORATION_MODEL.md -t 3000                              | Get full collaboration model   | Authority gradient, spectrum of modes        | Yes      |
+| #   | Command                                                                                                        | Purpose                        | Result                                       | Useful?  |
+| --- | -------------------------------------------------------------------------------------------------------------- | ------------------------------ | -------------------------------------------- | -------- |
+| 1   | mdcontext --help                                                                                               | Learn tool capabilities        | Showed commands, workflows, options          | Yes      |
+| 2   | mdcontext tree                                                                                                 | List all markdown files        | Found 23 files across 3 folders              | Yes      |
+| 3   | mdcontext index --force                                                                                        | Re-index all files             | Indexed 922 sections, 904 vectors            | Yes      |
+| 4   | mdcontext search "workflow improvement"                                                                        | Find workflow improvements     | 2 results (versioning, team review)          | Moderate |
+| 5   | mdcontext search "process automation"                                                                          | Find automation content        | 10 results (failure of automation, paradox)  | Yes      |
+| 6   | mdcontext search "human agent collaboration"                                                                   | Find collaboration patterns    | 10 results (71.6% top match)                 | Yes      |
+| 7   | mdcontext search "execution model"                                                                             | Find execution concepts        | 10 results                                   | Yes      |
+| 8   | mdcontext search "best practices"                                                                              | Find best practices            | 4 results                                    | Moderate |
+| 9   | mdcontext search "transformation organizational"                                                               | Find org transformation        | 10 results (62.7% top)                       | Yes      |
+| 10  | mdcontext search "intervention points human decision"                                                          | Find human intervention points | 10 results (68.7% top)                       | Yes      |
+| 11  | mdcontext context docs/06-WORKFLOWS.md -t 3000                                                                 | Get workflows overview         | Core workflow concepts extracted             | Yes      |
+| 12  | mdcontext context docs/06-WORKFLOWS.md --section "Workflow Design Principles"                                  | Get design principles          | Do/Don't guidelines                          | Yes      |
+| 13  | mdcontext context docs.amorphic/04-THE_HUMAN-AGENT_COLLABORATION_MODEL.md --section "Intervention Points"      | Get intervention details       | Redirect, override, inject, escalate         | Yes      |
+| 14  | mdcontext context docs.amorphic/06-ORGANIZATIONAL_TRANSFORMATION.md -t 3000                                    | Get org transformation         | Roles, culture, governance, implementation   | Yes      |
+| 15  | mdcontext context docs.amorphic/02-THE_FAILURE_OF_PURE_AUTOMATION.md -t 2500                                   | Get automation failures        | Brittleness, context collapse, judgment gap  | Yes      |
+| 16  | mdcontext context docs/04-EXECUTION_MODEL.md --section "Execution Philosophy"                                  | Get execution philosophy       | Scoped, disposable attempts                  | Yes      |
+| 17  | mdcontext context docs/04-EXECUTION_MODEL.md --section "Key Execution Patterns"                                | Get execution patterns         | Ad-hoc, guided, long-running, parallel       | Yes      |
+| 18  | mdcontext search "continuous improvement feedback loop"                                                        | Find feedback loops            | 3 results (learning loop)                    | Moderate |
+| 19  | mdcontext context docs/06-WORKFLOWS.md --section "Learning Loop"                                               | Get learning loop details      | Metrics feed refinement                      | Moderate |
+| 20  | mdcontext context docs.llm/feedback.md -t 2500                                                                 | Get feedback concepts          | Hybrid intelligence, resonance               | Yes      |
+| 21  | mdcontext search "checkpoint governance approval"                                                              | Find checkpoint content        | 5 results (executive decision)               | Moderate |
+| 22  | mdcontext context docs/07-EXAMPLE_WORKFLOWS.md -t 3000                                                         | Get example workflows          | Individual idea exploration example          | Yes      |
+| 23  | mdcontext search "versioning iteration reuse"                                                                  | Find versioning content        | 6 results                                    | Moderate |
+| 24  | mdcontext context docs/06-WORKFLOWS.md --section "Workflow Versioning"                                         | Get versioning details         | Immutable versioning model                   | Yes      |
+| 25  | mdcontext search "human override control interrupt"                                                            | Find human control             | 3 results (Human Interrupts)                 | Yes      |
+| 26  | mdcontext context docs/01-ARCHITECTURE.md --section "Human Interrupts"                                         | Get interrupt flow             | Control plane directive flow                 | Moderate |
+| 27  | mdcontext search "memory workspace context"                                                                    | Find memory concepts           | 10 results (Workspace Memory top)            | Yes      |
+| 28  | mdcontext context docs/05-MEMORY_MODEL.md -t 2500                                                              | Get memory model               | Three-layer architecture                     | Yes      |
+| 29  | mdcontext search "parallel exploration concurrent"                                                             | Find parallel patterns         | 10 results (67% match)                       | Yes      |
+| 30  | mdcontext context docs/04-EXECUTION_MODEL.md --section "Parallel Exploration"                                  | Get parallel pattern           | Fan-out/fan-in pattern                       | Yes      |
+| 31  | mdcontext search "audit trail transparency accountability"                                                     | Find audit content             | 6 results (67.1% match)                      | Yes      |
+| 32  | mdcontext context docs.amorphic/04-THE_HUMAN-AGENT_COLLABORATION_MODEL.md --section "Audit Trails That Matter" | Get audit trails               | Immutable records that tell stories          | Yes      |
+| 33  | mdcontext search "decision making recommendation suggestions"                                                  | Find recommendations           | 1 result (Recommendation primitive)          | Moderate |
+| 34  | mdcontext context docs/02-PRIMITIVES.md --section "Recommendation"                                             | Get recommendation definition  | Ranked suggestions with confidence           | Yes      |
+| 35  | mdcontext context docs/03-ORG_WORKSPACE_MODEL.md -t 2500                                                       | Get org/workspace model        | Two-tier identity model                      | Yes      |
+| 36  | mdcontext search "time travel rollback branching"                                                              | Find branching concepts        | 8 results (62.6% match)                      | Yes      |
+| 37  | mdcontext context docs/05-MEMORY_MODEL.md --section "Time Travel and Branching"                                | Get time travel details        | Rewind, compare, branch capabilities         | Yes      |
+| 38  | mdcontext search "compliance governance regulation"                                                            | Find compliance content        | 8 results                                    | Yes      |
+| 39  | mdcontext context docs/07-EXAMPLE_WORKFLOWS.md --section "Example 5: Enterprise-Compliance Review"             | Get compliance example         | Full enterprise workflow example             | Yes      |
+| 40  | mdcontext context docs/02-PRIMITIVES.md --section "Signal"                                                     | Get signal primitive           | Activity, outcome, attention, health signals | Yes      |
+| 41  | mdcontext context docs.amorphic/04-THE_HUMAN-AGENT_COLLABORATION_MODEL.md -t 3000                              | Get full collaboration model   | Authority gradient, spectrum of modes        | Yes      |
 
 ## Findings
 

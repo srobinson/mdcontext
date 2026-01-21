@@ -373,7 +373,10 @@ const handleMissingEmbeddings = (
             )
           }
         },
-      }).pipe(handleApiKeyError, Effect.catchAll(() => Effect.succeed(null)))
+      }).pipe(
+        handleApiKeyError,
+        Effect.catchAll(() => Effect.succeed(null)),
+      )
 
       if (!result) {
         return false
@@ -421,7 +424,10 @@ const handleMissingEmbeddings = (
             )
           }
         },
-      }).pipe(handleApiKeyError, Effect.catchAll(() => Effect.succeed(null)))
+      }).pipe(
+        handleApiKeyError,
+        Effect.catchAll(() => Effect.succeed(null)),
+      )
 
       if (!result) {
         return false

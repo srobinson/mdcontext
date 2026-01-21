@@ -1,6 +1,6 @@
 # Vector Search Research: Patterns and Techniques (2025-2026)
 
-Research findings for improving md-tldr semantic search capabilities.
+Research findings for improving mdcontext semantic search capabilities.
 
 ## Table of Contents
 
@@ -161,7 +161,7 @@ Re-ranking is a two-stage retrieval pattern: first retrieve candidates with a fa
 
 ### Cross-Encoder Models
 
-#### MS-MARCO MiniLM (Recommended for md-tldr)
+#### MS-MARCO MiniLM (Recommended for mdcontext)
 
 | Model                     | Parameters | Latency          | Use Case                   |
 | ------------------------- | ---------- | ---------------- | -------------------------- |
@@ -204,7 +204,7 @@ Score:    MaxSim(Q, D) = Σ max(qi · dj)
 - RAGatouille library provides easy Python integration
 - Active research area (ECIR 2026 workshop on Late Interaction)
 
-**For md-tldr**: ColBERT is likely overkill given the modest corpus size. Cross-encoders offer simpler integration with similar quality benefits.
+**For mdcontext**: ColBERT is likely overkill given the modest corpus size. Cross-encoders offer simpler integration with similar quality benefits.
 
 ### LLM-Based Re-ranking
 
@@ -225,7 +225,7 @@ Return only the numbers in ranked order.
 **Pros**: Highly accurate, understands nuance
 **Cons**: Slow, expensive, adds LLM dependency
 
-**Recommendation for md-tldr**: Not recommended. Cross-encoders provide good accuracy without LLM cost/latency.
+**Recommendation for mdcontext**: Not recommended. Cross-encoders provide good accuracy without LLM cost/latency.
 
 ### JavaScript/TypeScript Implementation Options
 
@@ -289,13 +289,13 @@ const response = await fetch("https://api.cohere.ai/v1/rerank", {
 | Real-time autocomplete         | Low (latency)    |
 | Very small result sets (<5)    | Low              |
 
-**For md-tldr**: Medium-high value. Documentation search benefits from re-ranking because section embeddings may rank "close enough" results highly, and cross-encoders can distinguish subtle relevance differences.
+**For mdcontext**: Medium-high value. Documentation search benefits from re-ranking because section embeddings may rank "close enough" results highly, and cross-encoders can distinguish subtle relevance differences.
 
 ---
 
 ## 3. Vector Index Alternatives
 
-### HNSW (Current md-tldr Implementation)
+### HNSW (Current mdcontext Implementation)
 
 **Strengths**:
 
@@ -359,12 +359,12 @@ const response = await fetch("https://api.cohere.ai/v1/rerank", {
 
 | Library                  | Index Types   | Notes                                         |
 | ------------------------ | ------------- | --------------------------------------------- |
-| **hnswlib-node**         | HNSW only     | Mature, reliable, current md-tldr choice      |
+| **hnswlib-node**         | HNSW only     | Mature, reliable, current mdcontext choice    |
 | **faiss-node**           | IVF, HNSW, PQ | Facebook's FAISS bindings, more index options |
 | **LangChain FaissStore** | FAISS-backed  | Higher-level API, LangChain ecosystem         |
 | **hnswsqlite**           | HNSW + SQLite | Persistence with metadata                     |
 
-**Recommendation for md-tldr**: Stay with hnswlib-node. Documentation corpora are typically <100K sections, well within HNSW's sweet spot. The complexity of FAISS isn't warranted.
+**Recommendation for mdcontext**: Stay with hnswlib-node. Documentation corpora are typically <100K sections, well within HNSW's sweet spot. The complexity of FAISS isn't warranted.
 
 ---
 
@@ -419,14 +419,14 @@ Modern vector databases modify the search algorithm to be filter-aware:
 
 **Performance**: Engines with integrated filtering maintain recall and often get _faster_ with filters (less work to do).
 
-### Current md-tldr Filtering
+### Current mdcontext Filtering
 
 From `current-implementation.md`:
 
 - Only path pattern filtering supported (`pathPattern` option)
 - Implemented as post-filtering
 
-### Recommended Approach for md-tldr
+### Recommended Approach for mdcontext
 
 Given typical documentation corpus sizes (<100K sections), a pragmatic hybrid approach:
 
@@ -500,7 +500,7 @@ async function filteredSearch(query: string, options: FilteredSearchOptions) {
 - Best results with hybrid sparse+dense approaches
 - New pruning techniques (Superblock Pruning) up to 16x faster
 
-**For md-tldr**: Interesting but adds complexity. BM25 + semantic hybrid likely sufficient.
+**For mdcontext**: Interesting but adds complexity. BM25 + semantic hybrid likely sufficient.
 
 ### Query Expansion with HyDE
 
@@ -542,7 +542,7 @@ async function hydeSearch(query: string) {
 - Works poorly if LLM has no domain knowledge
 - May hallucinate misleading hypotheticals
 
-**For md-tldr**: Good option for complex queries, could be opt-in feature.
+**For mdcontext**: Good option for complex queries, could be opt-in feature.
 
 ### GraphRAG
 
@@ -552,7 +552,7 @@ Combines vector search with knowledge graphs:
 - Queries traverse both vector space and graph
 - Claims 99% precision in some benchmarks
 
-**For md-tldr**: Overkill for documentation search. More relevant for enterprise knowledge bases.
+**For mdcontext**: Overkill for documentation search. More relevant for enterprise knowledge bases.
 
 ### Long-Context RAG
 
@@ -564,7 +564,7 @@ Processing longer retrieval units (sections, documents) rather than small chunks
 - Reduces fragmentation
 - Better for coherent understanding
 
-**md-tldr alignment**: Already uses section-level granularity, well-aligned with this trend.
+**mdcontext alignment**: Already uses section-level granularity, well-aligned with this trend.
 
 ### Self-RAG
 
@@ -574,13 +574,13 @@ Self-reflective retrieval that:
 2. Evaluates retrieval quality
 3. Critiques generated outputs
 
-**For md-tldr**: Beyond current scope, more relevant for RAG pipelines with generation.
+**For mdcontext**: Beyond current scope, more relevant for RAG pipelines with generation.
 
 ---
 
 ## 6. Quick Wins: HNSW Parameter Tuning
 
-Current md-tldr parameters (from `current-implementation.md`):
+Current mdcontext parameters (from `current-implementation.md`):
 
 ```typescript
 M: 16; // Max connections per node

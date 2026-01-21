@@ -6,46 +6,46 @@ Extract feedback, criticism, suggestions, and concerns from docs.amorphic/
 
 ## Command Log
 
-| # | Command | Purpose | Result | Useful? |
-|---|---------|---------|--------|---------|
-| 1 | mdtldr --help | Learn tool capabilities | Showed commands: index, search, context, tree, links, backlinks, stats | Yes |
-| 2 | ls docs.amorphic/ | See available files | 9 markdown files covering executive summary, failure analysis, architecture, collaboration, technical patterns, org transformation, future directions | Yes |
-| 3 | mdtldr index --force | Force index the directory | Indexed 23 documents, 922 sections | Yes |
-| 4 | mdtldr tree docs.amorphic/ | List markdown files | Confirmed 9 files in the folder | Yes |
-| 5 | mdtldr tree docs.amorphic/00-INDEX.md | Document outline | Showed 2 sections, 731 tokens | Yes |
-| 6 | mdtldr search "feedback" | Find feedback mentions | 10 results, 3 from docs.amorphic | Moderate |
-| 7 | mdtldr search "criticism" | Find criticism | Only 1 result (from SPEC.md) | No |
-| 8 | mdtldr search "suggestion" | Find suggestions | 10 results, limited docs.amorphic hits | Moderate |
-| 9 | mdtldr search "concern" | Find concerns | 10 results, mostly from other docs | Moderate |
-| 10 | mdtldr search "failure" | Find failure themes | 10 results, strong docs.amorphic coverage | Yes |
-| 11 | mdtldr context docs.amorphic/02-THE_FAILURE_OF_PURE_AUTOMATION.md -t 4000 | Get full context summary | Excellent summary of automation failures | Very useful |
-| 12 | mdtldr search "problem" | Find problems identified | 10 results, good docs.amorphic coverage | Yes |
-| 13 | mdtldr search "limitation" | Find limitations | 3 results, 1 from docs.amorphic | Yes |
-| 14 | mdtldr search "challenge" | Find challenges | 10 results, 3 from docs.amorphic | Moderate |
-| 15 | mdtldr search "risk" | Find risks | 10 results, minimal docs.amorphic | Moderate |
-| 16 | mdtldr context docs.amorphic/01-EXECUTIVE_SUMMARY.md -t 3000 | Summary context | 61% token reduction, key innovations extracted | Very useful |
-| 17 | mdtldr tree docs.amorphic/03-ARCHITECTURAL_FOUNDATIONS.md | Document outline | 6 major sections | Yes |
-| 18 | mdtldr context docs.amorphic/03-ARCHITECTURAL_FOUNDATIONS.md -t 3500 | Architecture context | Memory architecture, dynamic graphs, state management | Very useful |
-| 19 | mdtldr context docs.amorphic/04-THE_HUMAN-AGENT_COLLABORATION_MODEL.md -t 3500 | Collaboration context | Authority gradient, collaboration modes, transparency | Very useful |
-| 20 | mdtldr context docs.amorphic/08-FUTURE_IMPLICATIONS_AND_RESEARCH_DIRECTIONS.md -t 3000 | Future/research context | Open questions, research frontiers | Very useful |
-| 21 | mdtldr search "improve" | Find improvement areas | 10 results, 2 from docs.amorphic | Moderate |
-| 22 | mdtldr search "issue" | Find issues raised | 10 results, mostly technical | Low |
-| 23 | mdtldr search "question" | Find questions raised | 10 results, 2 from docs.amorphic | Moderate |
-| 24 | mdtldr context docs.amorphic/06-ORGANIZATIONAL_TRANSFORMATION.md -t 4000 | Org transformation | Choreographic maturity, cultural shifts | Very useful |
-| 25 | mdtldr context docs.amorphic/05-TECHNICAL_IMPLEMENTATION_PATTERNS.md -t 3000 | Technical patterns | Primitive-first, memory infrastructure | Very useful |
-| 26 | mdtldr search "should" | Find prescriptive statements | 10 results, 2 from docs.amorphic | Moderate |
-| 27 | mdtldr search "must" | Find requirements | 10 results, minimal docs.amorphic | Low |
-| 28 | mdtldr search "handoff" | Find handoff discussion | 10 results, 5 from docs.amorphic | Yes |
-| 29 | mdtldr context docs.amorphic/_0.BLURB.md -t 3000 | Get blurb context | Very minimal output (100% reduction) | No |
-| 30 | mdtldr search "brittle" | Find brittleness concerns | 10 results, 5 from docs.amorphic | Yes |
-| 31 | mdtldr search "open question" | Find open questions | 4 results, 2 from docs.amorphic | Yes |
-| 32 | mdtldr search "research" | Find research directions | 10 results | Moderate |
-| 33 | mdtldr search "trust" | Find trust discussions | 10 results | Moderate |
-| 34 | mdtldr search "cost" | Find cost concerns | 10 results | Moderate |
-| 35 | mdtldr search "autonomy" | Find autonomy balance | 10 results, 1 from docs.amorphic | Moderate |
-| 36 | mdtldr search "evolution" | Find evolution themes | 10 results, 2 from docs.amorphic | Moderate |
-| 37 | mdtldr search "need" | Find expressed needs | 10 results | Low |
-| 38 | mdtldr context docs.amorphic/00-INDEX.md -t 2000 | Index overview | Document structure overview | Moderate |
+| #   | Command                                                                                   | Purpose                      | Result                                                                                                                                                | Useful?     |
+| --- | ----------------------------------------------------------------------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| 1   | mdcontext --help                                                                          | Learn tool capabilities      | Showed commands: index, search, context, tree, links, backlinks, stats                                                                                | Yes         |
+| 2   | ls docs.amorphic/                                                                         | See available files          | 9 markdown files covering executive summary, failure analysis, architecture, collaboration, technical patterns, org transformation, future directions | Yes         |
+| 3   | mdcontext index --force                                                                   | Force index the directory    | Indexed 23 documents, 922 sections                                                                                                                    | Yes         |
+| 4   | mdcontext tree docs.amorphic/                                                             | List markdown files          | Confirmed 9 files in the folder                                                                                                                       | Yes         |
+| 5   | mdcontext tree docs.amorphic/00-INDEX.md                                                  | Document outline             | Showed 2 sections, 731 tokens                                                                                                                         | Yes         |
+| 6   | mdcontext search "feedback"                                                               | Find feedback mentions       | 10 results, 3 from docs.amorphic                                                                                                                      | Moderate    |
+| 7   | mdcontext search "criticism"                                                              | Find criticism               | Only 1 result (from SPEC.md)                                                                                                                          | No          |
+| 8   | mdcontext search "suggestion"                                                             | Find suggestions             | 10 results, limited docs.amorphic hits                                                                                                                | Moderate    |
+| 9   | mdcontext search "concern"                                                                | Find concerns                | 10 results, mostly from other docs                                                                                                                    | Moderate    |
+| 10  | mdcontext search "failure"                                                                | Find failure themes          | 10 results, strong docs.amorphic coverage                                                                                                             | Yes         |
+| 11  | mdcontext context docs.amorphic/02-THE_FAILURE_OF_PURE_AUTOMATION.md -t 4000              | Get full context summary     | Excellent summary of automation failures                                                                                                              | Very useful |
+| 12  | mdcontext search "problem"                                                                | Find problems identified     | 10 results, good docs.amorphic coverage                                                                                                               | Yes         |
+| 13  | mdcontext search "limitation"                                                             | Find limitations             | 3 results, 1 from docs.amorphic                                                                                                                       | Yes         |
+| 14  | mdcontext search "challenge"                                                              | Find challenges              | 10 results, 3 from docs.amorphic                                                                                                                      | Moderate    |
+| 15  | mdcontext search "risk"                                                                   | Find risks                   | 10 results, minimal docs.amorphic                                                                                                                     | Moderate    |
+| 16  | mdcontext context docs.amorphic/01-EXECUTIVE_SUMMARY.md -t 3000                           | Summary context              | 61% token reduction, key innovations extracted                                                                                                        | Very useful |
+| 17  | mdcontext tree docs.amorphic/03-ARCHITECTURAL_FOUNDATIONS.md                              | Document outline             | 6 major sections                                                                                                                                      | Yes         |
+| 18  | mdcontext context docs.amorphic/03-ARCHITECTURAL_FOUNDATIONS.md -t 3500                   | Architecture context         | Memory architecture, dynamic graphs, state management                                                                                                 | Very useful |
+| 19  | mdcontext context docs.amorphic/04-THE_HUMAN-AGENT_COLLABORATION_MODEL.md -t 3500         | Collaboration context        | Authority gradient, collaboration modes, transparency                                                                                                 | Very useful |
+| 20  | mdcontext context docs.amorphic/08-FUTURE_IMPLICATIONS_AND_RESEARCH_DIRECTIONS.md -t 3000 | Future/research context      | Open questions, research frontiers                                                                                                                    | Very useful |
+| 21  | mdcontext search "improve"                                                                | Find improvement areas       | 10 results, 2 from docs.amorphic                                                                                                                      | Moderate    |
+| 22  | mdcontext search "issue"                                                                  | Find issues raised           | 10 results, mostly technical                                                                                                                          | Low         |
+| 23  | mdcontext search "question"                                                               | Find questions raised        | 10 results, 2 from docs.amorphic                                                                                                                      | Moderate    |
+| 24  | mdcontext context docs.amorphic/06-ORGANIZATIONAL_TRANSFORMATION.md -t 4000               | Org transformation           | Choreographic maturity, cultural shifts                                                                                                               | Very useful |
+| 25  | mdcontext context docs.amorphic/05-TECHNICAL_IMPLEMENTATION_PATTERNS.md -t 3000           | Technical patterns           | Primitive-first, memory infrastructure                                                                                                                | Very useful |
+| 26  | mdcontext search "should"                                                                 | Find prescriptive statements | 10 results, 2 from docs.amorphic                                                                                                                      | Moderate    |
+| 27  | mdcontext search "must"                                                                   | Find requirements            | 10 results, minimal docs.amorphic                                                                                                                     | Low         |
+| 28  | mdcontext search "handoff"                                                                | Find handoff discussion      | 10 results, 5 from docs.amorphic                                                                                                                      | Yes         |
+| 29  | mdcontext context docs.amorphic/\_0.BLURB.md -t 3000                                      | Get blurb context            | Very minimal output (100% reduction)                                                                                                                  | No          |
+| 30  | mdcontext search "brittle"                                                                | Find brittleness concerns    | 10 results, 5 from docs.amorphic                                                                                                                      | Yes         |
+| 31  | mdcontext search "open question"                                                          | Find open questions          | 4 results, 2 from docs.amorphic                                                                                                                       | Yes         |
+| 32  | mdcontext search "research"                                                               | Find research directions     | 10 results                                                                                                                                            | Moderate    |
+| 33  | mdcontext search "trust"                                                                  | Find trust discussions       | 10 results                                                                                                                                            | Moderate    |
+| 34  | mdcontext search "cost"                                                                   | Find cost concerns           | 10 results                                                                                                                                            | Moderate    |
+| 35  | mdcontext search "autonomy"                                                               | Find autonomy balance        | 10 results, 1 from docs.amorphic                                                                                                                      | Moderate    |
+| 36  | mdcontext search "evolution"                                                              | Find evolution themes        | 10 results, 2 from docs.amorphic                                                                                                                      | Moderate    |
+| 37  | mdcontext search "need"                                                                   | Find expressed needs         | 10 results                                                                                                                                            | Low         |
+| 38  | mdcontext context docs.amorphic/00-INDEX.md -t 2000                                       | Index overview               | Document structure overview                                                                                                                           | Moderate    |
 
 ## Findings
 
@@ -112,16 +112,16 @@ Extract feedback, criticism, suggestions, and concerns from docs.amorphic/
 
 ### What Worked Well
 
-- `mdtldr context` command is excellent - 44-61% token reduction while preserving key content
-- `mdtldr tree` for document outlines is helpful for understanding structure
-- `mdtldr search` works well for keyword-based exploration
+- `mdcontext context` command is excellent - 44-61% token reduction while preserving key content
+- `mdcontext tree` for document outlines is helpful for understanding structure
+- `mdcontext search` works well for keyword-based exploration
 - Token counts shown everywhere help with context budgeting
 - Stats command gives good overview of indexed content
 - Multiple output formats supported (normal, JSON, pretty JSON)
 
 ### What Was Frustrating
 
-- Search doesn't work with path argument like `mdtldr search "term" docs.amorphic/` - always says "No index found" even though index exists
+- Search doesn't work with path argument like `mdcontext search "term" docs.amorphic/` - always says "No index found" even though index exists
 - The `_0.BLURB.md` context returned essentially nothing (100% reduction to 57 tokens from 2449) - unclear why
 - No way to filter search results to specific directories/paths after indexing
 - Index command prompts for semantic search confirmation which blocks in non-interactive use
@@ -132,7 +132,7 @@ Extract feedback, criticism, suggestions, and concerns from docs.amorphic/
 
 - **Directory-scoped search**: Critical for multi-folder repos. Having to search the whole index then mentally filter is inefficient
 - **Semantic search without embeddings**: The tool prompts for OpenAI API but doesn't make it easy to do without
-- **Context for multiple files at once**: Would love `mdtldr context docs.amorphic/*.md -t 10000`
+- **Context for multiple files at once**: Would love `mdcontext context docs.amorphic/*.md -t 10000`
 - **Search result limits/pagination**: Hard to know if I'm missing relevant results
 - **Fuzzy/stemmed search**: Searching "suggest" doesn't find "suggestion" - need exact terms
 - **Negative filtering**: Can't easily exclude certain directories or patterns

@@ -1,4 +1,4 @@
-# npm Publishing Workflow Synthesis: Final Recommendations for md-tldr
+# npm Publishing Workflow Synthesis: Final Recommendations for mdcontext
 
 > Consolidated from 3 research agents | January 2026
 
@@ -33,7 +33,7 @@ This document synthesizes research from three independent agents into actionable
 
 ### Key Insight
 
-All agents independently arrived at the same conclusion: **pnpm + Changesets + OIDC** is the optimal stack for md-tldr in 2026. This represents strong consensus across different research approaches.
+All agents independently arrived at the same conclusion: **pnpm + Changesets + OIDC** is the optimal stack for mdcontext in 2026. This represents strong consensus across different research approaches.
 
 ---
 
@@ -149,7 +149,7 @@ All three agents independently reached the same conclusion.
 | Native addon issues          | `hnswlib-node`, `tiktoken` may break | Agent 3                |
 | Workspace publishing bugs    | References may not resolve           | Agent 1 (Issue #15246) |
 
-### md-tldr Specific Concerns
+### mdcontext Specific Concerns
 
 ```
 Dependencies with Bun risk:
@@ -168,7 +168,7 @@ Low-risk dependencies:
 1. `--provenance` flag is implemented (track Issue #15601)
 2. Native addon compatibility reaches 95%+
 3. `hnswlib-node` and `tiktoken` confirmed working
-4. md-tldr usage grows enough to warrant dual distribution
+4. mdcontext usage grows enough to warrant dual distribution
 
 **Potential hybrid approach (future):**
 
@@ -423,7 +423,7 @@ Create `.changeset/config.json`:
 ```json
 {
   "$schema": "https://unpkg.com/@changesets/config@3.0.0/schema.json",
-  "changelog": ["@changesets/changelog-github", { "repo": "alphab/md-tldr" }],
+  "changelog": ["@changesets/changelog-github", { "repo": "alphab/mdcontext" }],
   "commit": false,
   "fixed": [],
   "linked": [],
@@ -439,7 +439,7 @@ Create `.changeset/config.json`:
 1. **Go to npmjs.com** > Package (`mdcontext`) > Settings > Trusted Publishers
 2. **Add GitHub Actions** as trusted publisher:
    - Organization/User: `alphab` (or your npm username)
-   - Repository: `md-tldr`
+   - Repository: `mdcontext`
    - Workflow file: `release.yml`
    - Environment: (leave blank or use `production`)
 3. **Verify** the package is configured for OIDC

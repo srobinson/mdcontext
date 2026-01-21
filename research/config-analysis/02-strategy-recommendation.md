@@ -412,8 +412,8 @@ export async function loadMdcontextConfig(overrides?: Partial<Config>) {
 
 ### Source Documents
 
-- `/Users/alphab/Dev/LLM/DEV/md-tldr/docs/033-research-configuration-management.md`
-- `/Users/alphab/Dev/LLM/DEV/md-tldr/docs/034-research-effect-cli-config.md`
+- `/Users/alphab/Dev/LLM/DEV/mdcontext/docs/033-research-configuration-management.md`
+- `/Users/alphab/Dev/LLM/DEV/mdcontext/docs/034-research-effect-cli-config.md`
 
 ### Key Libraries
 

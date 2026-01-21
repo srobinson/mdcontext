@@ -6,35 +6,35 @@ Deep-dive into: Three-Layer Memory Architecture
 
 ## Command Log
 
-| #   | Command                                                                                         | Purpose                            | Result                                     | Useful? |
-| --- | ----------------------------------------------------------------------------------------------- | ---------------------------------- | ------------------------------------------ | ------- |
-| 1   | `mdtldr search "memory"`                                                                        | Find memory content                | 10 results, found key files and references | Yes     |
-| 2   | `mdtldr search "event memory"`                                                                  | Find event memory specifics        | 10 results with detailed sections          | Yes     |
-| 3   | `mdtldr search "semantic memory"`                                                               | Find semantic memory specifics     | 10 results covering definition and usage   | Yes     |
-| 4   | `mdtldr search "status memory"`                                                                 | Find status memory specifics       | 10 results with operational details        | Yes     |
-| 5   | `mdtldr context docs/05-MEMORY_MODEL.md "## 2."`                                                | Try positional context (failed)    | ENOENT error - wrong syntax                | No      |
-| 6   | `mdtldr context docs/05-MEMORY_MODEL.md --section "The Three-Layer Architecture"`               | Get architecture overview          | Clean section output                       | Yes     |
-| 7   | `mdtldr context docs/05-MEMORY_MODEL.md --section "Layer 1: Event Memory"`                      | Get event memory details           | No match found                             | No      |
-| 8   | `mdtldr context --sections docs/05-MEMORY_MODEL.md`                                             | List available sections            | Full section tree (17 top-level)           | Yes     |
-| 9   | `mdtldr context docs/05-MEMORY_MODEL.md --section "3. Layer 1: Event / Fact Memory"`            | Get event memory with correct name | Full section with all subsections          | Yes     |
-| 10  | `mdtldr context docs/05-MEMORY_MODEL.md --section "4. Layer 2: Status Memory"`                  | Get status memory details          | Complete operational truth section         | Yes     |
-| 11  | `mdtldr context docs/05-MEMORY_MODEL.md --section "5. Layer 3: Semantic Memory"`                | Get semantic memory details        | Full knowledge graph layer info            | Yes     |
-| 12  | `mdtldr context docs/05-MEMORY_MODEL.md --section "8. Time Travel and Branching"`               | Get time travel features           | Branching and replay mechanics             | Yes     |
-| 13  | `mdtldr context docs/05-MEMORY_MODEL.md --section "7. Memory and Execution Context Resumption"` | Get resumption pattern             | Critical 5-step resumption flow            | Yes     |
-| 14  | `mdtldr context docs/05-MEMORY_MODEL.md --section "1. Memory Philosophy"`                       | Get design rationale               | Core philosophy defined                    | Yes     |
-| 15  | `mdtldr search "immutable"`                                                                     | Find immutability references       | 10 cross-doc references                    | Yes     |
-| 16  | `mdtldr context docs/05-MEMORY_MODEL.md --section "13. Memory Guarantees"`                      | Get guarantees                     | 5 guarantee categories                     | Yes     |
-| 17  | `mdtldr context docs/05-MEMORY_MODEL.md --section "14. Anti-Patterns (Explicitly Forbidden)"`   | Get anti-patterns                  | 7 forbidden patterns                       | Yes     |
-| 18  | `mdtldr context docs/01-ARCHITECTURE.md --section "Workspace Memory"`                           | Get architecture view              | Concise 3-layer summary                    | Yes     |
-| 19  | `mdtldr context docs/05-MEMORY_MODEL.md --section "17. Summary"`                                | Get summary                        | Concluding philosophy                      | Yes     |
-| 20  | `mdtldr search "replay"`                                                                        | Find replay capability             | 7 replay references                        | Yes     |
-| 21  | `mdtldr search "derived"`                                                                       | Find derived state refs            | 10 references showing derivation chain     | Yes     |
-| 22  | `mdtldr context docs/05-MEMORY_MODEL.md --section "6. Memory Composition"`                      | Get composition details            | Layer relationships and consumers          | Yes     |
-| 23  | `mdtldr context docs/05-MEMORY_MODEL.md --section "9. Org-Level Memory"`                        | Get org memory                     | Workspace-to-org flow                      | Yes     |
-| 24  | `mdtldr search "knowledge graph"`                                                               | Find knowledge graph refs          | 7 results covering semantic layer          | Yes     |
-| 25  | `mdtldr context docs/05-MEMORY_MODEL.md --section "16. Why This Model Works"`                   | Get rationale                      | Benefits and scaling                       | Yes     |
-| 26  | `mdtldr context docs/05-MEMORY_MODEL.md --section "15. Implementation Guidance"`                | Get implementation tech            | Tech stack recommendations                 | Yes     |
-| 27  | `mdtldr context docs/04-EXECUTION_MODEL.md --section "What Agents Receive"`                     | Get agent context details          | 4 memory sources for agents                | Yes     |
+| #   | Command                                                                                            | Purpose                            | Result                                     | Useful? |
+| --- | -------------------------------------------------------------------------------------------------- | ---------------------------------- | ------------------------------------------ | ------- |
+| 1   | `mdcontext search "memory"`                                                                        | Find memory content                | 10 results, found key files and references | Yes     |
+| 2   | `mdcontext search "event memory"`                                                                  | Find event memory specifics        | 10 results with detailed sections          | Yes     |
+| 3   | `mdcontext search "semantic memory"`                                                               | Find semantic memory specifics     | 10 results covering definition and usage   | Yes     |
+| 4   | `mdcontext search "status memory"`                                                                 | Find status memory specifics       | 10 results with operational details        | Yes     |
+| 5   | `mdcontext context docs/05-MEMORY_MODEL.md "## 2."`                                                | Try positional context (failed)    | ENOENT error - wrong syntax                | No      |
+| 6   | `mdcontext context docs/05-MEMORY_MODEL.md --section "The Three-Layer Architecture"`               | Get architecture overview          | Clean section output                       | Yes     |
+| 7   | `mdcontext context docs/05-MEMORY_MODEL.md --section "Layer 1: Event Memory"`                      | Get event memory details           | No match found                             | No      |
+| 8   | `mdcontext context --sections docs/05-MEMORY_MODEL.md`                                             | List available sections            | Full section tree (17 top-level)           | Yes     |
+| 9   | `mdcontext context docs/05-MEMORY_MODEL.md --section "3. Layer 1: Event / Fact Memory"`            | Get event memory with correct name | Full section with all subsections          | Yes     |
+| 10  | `mdcontext context docs/05-MEMORY_MODEL.md --section "4. Layer 2: Status Memory"`                  | Get status memory details          | Complete operational truth section         | Yes     |
+| 11  | `mdcontext context docs/05-MEMORY_MODEL.md --section "5. Layer 3: Semantic Memory"`                | Get semantic memory details        | Full knowledge graph layer info            | Yes     |
+| 12  | `mdcontext context docs/05-MEMORY_MODEL.md --section "8. Time Travel and Branching"`               | Get time travel features           | Branching and replay mechanics             | Yes     |
+| 13  | `mdcontext context docs/05-MEMORY_MODEL.md --section "7. Memory and Execution Context Resumption"` | Get resumption pattern             | Critical 5-step resumption flow            | Yes     |
+| 14  | `mdcontext context docs/05-MEMORY_MODEL.md --section "1. Memory Philosophy"`                       | Get design rationale               | Core philosophy defined                    | Yes     |
+| 15  | `mdcontext search "immutable"`                                                                     | Find immutability references       | 10 cross-doc references                    | Yes     |
+| 16  | `mdcontext context docs/05-MEMORY_MODEL.md --section "13. Memory Guarantees"`                      | Get guarantees                     | 5 guarantee categories                     | Yes     |
+| 17  | `mdcontext context docs/05-MEMORY_MODEL.md --section "14. Anti-Patterns (Explicitly Forbidden)"`   | Get anti-patterns                  | 7 forbidden patterns                       | Yes     |
+| 18  | `mdcontext context docs/01-ARCHITECTURE.md --section "Workspace Memory"`                           | Get architecture view              | Concise 3-layer summary                    | Yes     |
+| 19  | `mdcontext context docs/05-MEMORY_MODEL.md --section "17. Summary"`                                | Get summary                        | Concluding philosophy                      | Yes     |
+| 20  | `mdcontext search "replay"`                                                                        | Find replay capability             | 7 replay references                        | Yes     |
+| 21  | `mdcontext search "derived"`                                                                       | Find derived state refs            | 10 references showing derivation chain     | Yes     |
+| 22  | `mdcontext context docs/05-MEMORY_MODEL.md --section "6. Memory Composition"`                      | Get composition details            | Layer relationships and consumers          | Yes     |
+| 23  | `mdcontext context docs/05-MEMORY_MODEL.md --section "9. Org-Level Memory"`                        | Get org memory                     | Workspace-to-org flow                      | Yes     |
+| 24  | `mdcontext search "knowledge graph"`                                                               | Find knowledge graph refs          | 7 results covering semantic layer          | Yes     |
+| 25  | `mdcontext context docs/05-MEMORY_MODEL.md --section "16. Why This Model Works"`                   | Get rationale                      | Benefits and scaling                       | Yes     |
+| 26  | `mdcontext context docs/05-MEMORY_MODEL.md --section "15. Implementation Guidance"`                | Get implementation tech            | Tech stack recommendations                 | Yes     |
+| 27  | `mdcontext context docs/04-EXECUTION_MODEL.md --section "What Agents Receive"`                     | Get agent context details          | 4 memory sources for agents                | Yes     |
 
 ## Findings
 
@@ -120,9 +120,9 @@ The model explicitly forbids anti-patterns like treating Status Memory as author
 
 ### What Worked Well
 
-- `mdtldr search` quickly found all relevant documents and sections
-- `mdtldr context --section` returned clean, well-formatted output with full section content
-- `mdtldr context --sections` listing was invaluable for finding exact section names
+- `mdcontext search` quickly found all relevant documents and sections
+- `mdcontext context --section` returned clean, well-formatted output with full section content
+- `mdcontext context --sections` listing was invaluable for finding exact section names
 - Keyword search with compound terms ("event memory", "status memory") worked well
 - Token counts in section listings help estimate content size
 

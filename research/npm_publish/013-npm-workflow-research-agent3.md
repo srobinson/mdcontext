@@ -12,7 +12,7 @@ A comprehensive research document covering developer experience, automated chang
 4. [Package Quality Checks](#4-package-quality-checks)
 5. [Error Handling and Rollback](#5-error-handling-and-rollback)
 6. [Bun Migration Analysis](#6-bun-migration-analysis)
-7. [Recommendations for md-tldr](#7-recommendations-for-md-tldr)
+7. [Recommendations for mdcontext](#7-recommendations-for-mdcontext)
 
 ---
 
@@ -277,9 +277,9 @@ integration:
     - name: Pack and test installation
       run: |
         pnpm pack
-        npm install -g ./md-tldr-*.tgz
-        mdtldr --help
-        mdtldr analyze ./README.md
+        npm install -g ./mdcontext-*.tgz
+        mdcontext --help
+        mdcontext analyze ./README.md
 ```
 
 ---
@@ -509,9 +509,9 @@ According to [2026 production assessments](https://dev.to/last9/is-bun-productio
 | Native addons           | Some issues                 | Full support           |
 | Ecosystem maturity      | Growing                     | Mature                 |
 
-### md-tldr Specific Analysis
+### mdcontext Specific Analysis
 
-Looking at the md-tldr `package.json`:
+Looking at the mdcontext `package.json`:
 
 **Dependencies that may have Bun issues:**
 
@@ -542,7 +542,7 @@ bun run build
 
 ---
 
-## 7. Recommendations for md-tldr
+## 7. Recommendations for mdcontext
 
 ### Publishing Workflow Recommendation
 
@@ -643,7 +643,7 @@ Add to `package.json`:
 **Reasons to wait:**
 
 1. `hnswlib-node` and `tiktoken` are native addons - potential compatibility issues
-2. md-tldr is a CLI tool users install globally - Node.js compatibility is safer
+2. mdcontext is a CLI tool users install globally - Node.js compatibility is safer
 3. pnpm + tsup workflow is working well
 4. 34% compatibility challenge rate is still significant
 
@@ -719,4 +719,4 @@ Add to `package.json`:
 ---
 
 _Last updated: January 2026_
-_Research conducted for md-tldr CLI tool publishing workflow optimization_
+_Research conducted for mdcontext CLI tool publishing workflow optimization_

@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-Three parallel agents analyzed the HumanWork specification across three documentation folders, discovering a comprehensive multi-agent orchestration system with 20 formal primitives, three-layer memory architecture, and preemptive human control. The analysis surfaced consistent tool feedback: mdtldr excels at targeted extraction via `tree`, `context`, and `search` commands but lacks directory-scoped search and semantic search by default. Agents collectively processed approximately 207K tokens of documentation while reading only ~25-30% of raw content.
+Three parallel agents analyzed the HumanWork specification across three documentation folders, discovering a comprehensive multi-agent orchestration system with 20 formal primitives, three-layer memory architecture, and preemptive human control. The analysis surfaced consistent tool feedback: mdcontext excels at targeted extraction via `tree`, `context`, and `search` commands but lacks directory-scoped search and semantic search by default. Agents collectively processed approximately 207K tokens of documentation while reading only ~25-30% of raw content.
 
 ## Cross-Agent Patterns
 
@@ -93,7 +93,7 @@ Notable Discovery: "Enterprise adoption of autonomous agents has stalled due to 
 
 ### High Priority
 
-- [ ] **Add directory-scoped search capability** (all 3 agents) - `mdtldr search "term" docs/` currently fails with "No index found" even when index exists
+- [ ] **Add directory-scoped search capability** (all 3 agents) - `mdcontext search "term" docs/` currently fails with "No index found" even when index exists
 - [ ] **Enable semantic search without requiring OPENAI_API_KEY by default** (A1, A3) - Consider local embedding options or better fallback messaging
 - [ ] **Increase search result limit beyond 10** (A2, A3) - Add pagination or configurable limit
 - [ ] **Document the Authority Gradient model from docs.amorphic** (A2) - This concept enriches the spec's human control philosophy
@@ -102,7 +102,7 @@ Notable Discovery: "Enterprise adoption of autonomous agents has stalled due to 
 ### Medium Priority
 
 - [ ] **Add cross-reference navigation** (A1) - "Find all sections that reference this concept"
-- [ ] **Multi-file context extraction** (A2) - `mdtldr context docs/*.md -t 10000`
+- [ ] **Multi-file context extraction** (A2) - `mdcontext context docs/*.md -t 10000`
 - [ ] **Relevance ranking for search results** (A3) - Results come in document order, not relevance order
 - [ ] **Section exclusion in context** (A3) - "Give me everything EXCEPT this section"
 - [ ] **Stemmed/fuzzy search** (A2) - Searching "suggest" should find "suggestion"
@@ -128,7 +128,7 @@ Notable Discovery: "Enterprise adoption of autonomous agents has stalled due to 
 
 ### Common Frustrations
 
-- **Directory-scoped search broken**: All 3 agents reported `mdtldr search "..." docs/` fails with "No index found" even with existing index
+- **Directory-scoped search broken**: All 3 agents reported `mdcontext search "..." docs/` fails with "No index found" even with existing index
 - **10 result limit with no pagination**: Hard to know if important results are being missed
 - **Semantic search requires external API key**: Keyword search adequate but limited without embeddings
 - **Context truncation unpredictable**: A2 saw 100% reduction on small files; A3 felt 16% was limiting
@@ -181,4 +181,4 @@ Notable Discovery: "Enterprise adoption of autonomous agents has stalled due to 
 _Synthesis completed by A-Synth_
 _Input: 3 Phase 1 reports (A1, A2, A3)_
 _Total tokens processed by agents: ~207K tokens of documentation_
-_Total tokens actually read: ~25-30% via mdtldr context extraction_
+_Total tokens actually read: ~25-30% via mdcontext context extraction_

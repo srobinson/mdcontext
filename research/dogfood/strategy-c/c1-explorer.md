@@ -6,45 +6,45 @@ Map the documentation landscape and identify themes for deep-dive.
 
 ## Command Log
 
-| #   | Command                                             | Purpose                    | Result                                       | Useful? |
-| --- | --------------------------------------------------- | -------------------------- | -------------------------------------------- | ------- |
-| 1   | `mdtldr --help`                                     | Learn tool                 | Full help with commands, examples, workflows | Yes     |
-| 2   | `mdtldr index --force`                              | Force reindex              | Ran in background                            | N/A     |
-| 3   | `mdtldr index`                                      | Index files                | Ran in background                            | N/A     |
-| 4   | `mdtldr stats`                                      | Understand scope           | 23 docs, 179K tokens, 924 sections           | Yes     |
-| 5   | `mdtldr tree docs/`                                 | See docs structure         | 10 files listed                              | Yes     |
-| 6   | `mdtldr tree docs.amorphic/`                        | See amorphic structure     | 9 files listed                               | Yes     |
-| 7   | `mdtldr tree docs.llm/`                             | See llm structure          | 3 files (one massive 56K)                    | Yes     |
-| 8   | `mdtldr tree docs/00-README.md`                     | Outline of README          | Clear structure                              | Yes     |
-| 9   | `mdtldr tree docs/01-ARCHITECTURE.md`               | Outline of arch            | 17 major sections                            | Yes     |
-| 10  | `mdtldr tree docs/02-PRIMITIVES.md`                 | Outline of primitives      | 20 primitives defined                        | Yes     |
-| 11  | `mdtldr tree docs/05-MEMORY_MODEL.md`               | Outline of memory          | 17 sections, deep                            | Yes     |
-| 12  | `mdtldr tree docs.amorphic/01-EXECUTIVE_SUMMARY.md` | Outline exec summary       | Vision/market focus                          | Yes     |
-| 13  | `mdtldr tree docs.amorphic/02-THE_FAILURE...md`     | Outline failure doc        | 6 failure modes                              | Yes     |
-| 14  | `mdtldr tree docs.amorphic/04-THE_HUMAN-AGENT...md` | Outline collab model       | Trust architecture                           | Yes     |
-| 15  | `mdtldr tree docs.llm/spec.md`                      | Outline combined spec      | 56K tokens - full spec combined              | Yes     |
-| 16  | `mdtldr tree docs.llm/amorphic.md`                  | Outline amorphic combined  | 21K tokens                                   | Yes     |
-| 17  | `mdtldr tree docs.llm/feedback.md`                  | Outline feedback           | 11K tokens - landing pages, BDI              | Yes     |
-| 18  | `mdtldr search "human"`                             | Find human-centric content | 10 hits, core principle                      | Yes     |
-| 19  | `mdtldr search "memory"`                            | Find memory content        | 10 hits, three-layer arch                    | Yes     |
-| 20  | `mdtldr search "workflow"`                          | Find workflow content      | 10 hits, guidance model                      | Yes     |
-| 21  | `mdtldr search "agent"`                             | Find agent content         | 10 hits, replaceable agents                  | Yes     |
-| 22  | `mdtldr search "control"`                           | Find control content       | 10 hits, Control Plane key                   | Yes     |
-| 23  | `mdtldr search "org OR workspace"`                  | Find org model             | 10 hits, multi-layer                         | Yes     |
-| 24  | `mdtldr search "failure OR problem..."`             | Find problems              | 10 hits                                      | Yes     |
-| 25  | `mdtldr search "collaboration"`                     | Find collaboration         | 10 hits, multi-human                         | Yes     |
-| 26  | `mdtldr search "transparency OR observability"`     | Find observability         | 10 hits, core principle                      | Yes     |
-| 27  | `mdtldr search "Letta"`                             | Find Letta integration     | 10 hits, integration plan                    | Yes     |
-| 28  | `mdtldr search "event"`                             | Find event-driven content  | 10 hits, Event Memory                        | Yes     |
-| 29  | `mdtldr search "immutable"`                         | Find immutability          | 10 hits, core principle                      | Yes     |
-| 30  | `mdtldr search "cost"`                              | Find cost management       | 10 hits, workspace-level                     | Yes     |
-| 31  | `mdtldr search "automation OR autonomous"`          | Find automation critique   | 10 hits, failure theme                       | Yes     |
-| 32  | `mdtldr tree docs/HumanWork-Evolution.md`           | Check evolution doc        | 7500 tokens, no sections                     | Partly  |
-| 33  | `mdtldr tree docs.amorphic/05-TECHNICAL...md`       | Check tech patterns        | 5 key patterns                               | Yes     |
-| 34  | `mdtldr tree docs.amorphic/06-ORGANIZATIONAL...md`  | Check org transformation   | 13 sections                                  | Yes     |
-| 35  | `mdtldr tree docs.amorphic/08-FUTURE...md`          | Check future directions    | Research agenda                              | Yes     |
-| 36  | `mdtldr search "time travel OR branching"`          | Find temporal features     | 10 hits, core feature                        | Yes     |
-| 37  | `mdtldr search "semantic"`                          | Find semantic layer        | 10 hits, knowledge graph                     | Yes     |
+| #   | Command                                                | Purpose                    | Result                                       | Useful? |
+| --- | ------------------------------------------------------ | -------------------------- | -------------------------------------------- | ------- |
+| 1   | `mdcontext --help`                                     | Learn tool                 | Full help with commands, examples, workflows | Yes     |
+| 2   | `mdcontext index --force`                              | Force reindex              | Ran in background                            | N/A     |
+| 3   | `mdcontext index`                                      | Index files                | Ran in background                            | N/A     |
+| 4   | `mdcontext stats`                                      | Understand scope           | 23 docs, 179K tokens, 924 sections           | Yes     |
+| 5   | `mdcontext tree docs/`                                 | See docs structure         | 10 files listed                              | Yes     |
+| 6   | `mdcontext tree docs.amorphic/`                        | See amorphic structure     | 9 files listed                               | Yes     |
+| 7   | `mdcontext tree docs.llm/`                             | See llm structure          | 3 files (one massive 56K)                    | Yes     |
+| 8   | `mdcontext tree docs/00-README.md`                     | Outline of README          | Clear structure                              | Yes     |
+| 9   | `mdcontext tree docs/01-ARCHITECTURE.md`               | Outline of arch            | 17 major sections                            | Yes     |
+| 10  | `mdcontext tree docs/02-PRIMITIVES.md`                 | Outline of primitives      | 20 primitives defined                        | Yes     |
+| 11  | `mdcontext tree docs/05-MEMORY_MODEL.md`               | Outline of memory          | 17 sections, deep                            | Yes     |
+| 12  | `mdcontext tree docs.amorphic/01-EXECUTIVE_SUMMARY.md` | Outline exec summary       | Vision/market focus                          | Yes     |
+| 13  | `mdcontext tree docs.amorphic/02-THE_FAILURE...md`     | Outline failure doc        | 6 failure modes                              | Yes     |
+| 14  | `mdcontext tree docs.amorphic/04-THE_HUMAN-AGENT...md` | Outline collab model       | Trust architecture                           | Yes     |
+| 15  | `mdcontext tree docs.llm/spec.md`                      | Outline combined spec      | 56K tokens - full spec combined              | Yes     |
+| 16  | `mdcontext tree docs.llm/amorphic.md`                  | Outline amorphic combined  | 21K tokens                                   | Yes     |
+| 17  | `mdcontext tree docs.llm/feedback.md`                  | Outline feedback           | 11K tokens - landing pages, BDI              | Yes     |
+| 18  | `mdcontext search "human"`                             | Find human-centric content | 10 hits, core principle                      | Yes     |
+| 19  | `mdcontext search "memory"`                            | Find memory content        | 10 hits, three-layer arch                    | Yes     |
+| 20  | `mdcontext search "workflow"`                          | Find workflow content      | 10 hits, guidance model                      | Yes     |
+| 21  | `mdcontext search "agent"`                             | Find agent content         | 10 hits, replaceable agents                  | Yes     |
+| 22  | `mdcontext search "control"`                           | Find control content       | 10 hits, Control Plane key                   | Yes     |
+| 23  | `mdcontext search "org OR workspace"`                  | Find org model             | 10 hits, multi-layer                         | Yes     |
+| 24  | `mdcontext search "failure OR problem..."`             | Find problems              | 10 hits                                      | Yes     |
+| 25  | `mdcontext search "collaboration"`                     | Find collaboration         | 10 hits, multi-human                         | Yes     |
+| 26  | `mdcontext search "transparency OR observability"`     | Find observability         | 10 hits, core principle                      | Yes     |
+| 27  | `mdcontext search "Letta"`                             | Find Letta integration     | 10 hits, integration plan                    | Yes     |
+| 28  | `mdcontext search "event"`                             | Find event-driven content  | 10 hits, Event Memory                        | Yes     |
+| 29  | `mdcontext search "immutable"`                         | Find immutability          | 10 hits, core principle                      | Yes     |
+| 30  | `mdcontext search "cost"`                              | Find cost management       | 10 hits, workspace-level                     | Yes     |
+| 31  | `mdcontext search "automation OR autonomous"`          | Find automation critique   | 10 hits, failure theme                       | Yes     |
+| 32  | `mdcontext tree docs/HumanWork-Evolution.md`           | Check evolution doc        | 7500 tokens, no sections                     | Partly  |
+| 33  | `mdcontext tree docs.amorphic/05-TECHNICAL...md`       | Check tech patterns        | 5 key patterns                               | Yes     |
+| 34  | `mdcontext tree docs.amorphic/06-ORGANIZATIONAL...md`  | Check org transformation   | 13 sections                                  | Yes     |
+| 35  | `mdcontext tree docs.amorphic/08-FUTURE...md`          | Check future directions    | Research agenda                              | Yes     |
+| 36  | `mdcontext search "time travel OR branching"`          | Find temporal features     | 10 hits, core feature                        | Yes     |
+| 37  | `mdcontext search "semantic"`                          | Find semantic layer        | 10 hits, knowledge graph                     | Yes     |
 
 ## Landscape Overview
 
@@ -131,9 +131,9 @@ Philosophy and vision documents (more prose, less formal):
 
 ### What Worked Well
 
-- `mdtldr stats` gave instant overview of scope (23 docs, 179K tokens, 924 sections)
-- `mdtldr tree [file]` showing document outlines with token counts was extremely valuable for prioritization
-- `mdtldr tree [folder]` listing all files was quick way to understand structure
+- `mdcontext stats` gave instant overview of scope (23 docs, 179K tokens, 924 sections)
+- `mdcontext tree [file]` showing document outlines with token counts was extremely valuable for prioritization
+- `mdcontext tree [folder]` listing all files was quick way to understand structure
 - Boolean search operators (OR, AND) worked well when used
 - Keyword search results showed context (lines before/after) which helped understand relevance
 - Search results included section headers with token counts - useful for prioritization
@@ -143,7 +143,7 @@ Philosophy and vision documents (more prose, less formal):
 - Keyword search requires exact terms - multi-word phrases like "human control authority" returned 0 results
 - Search limited to 10 results max (or at least only showed 10) - no pagination visible
 - No way to increase result limit in search output
-- `mdtldr index` commands ran in background unexpectedly, making it unclear when indexing completed
+- `mdcontext index` commands ran in background unexpectedly, making it unclear when indexing completed
 - No embeddings by default - would need `--embed` for semantic search
 - docs.llm/ contains mostly duplicated content (aggregated files) - no way to detect this automatically
 
@@ -169,7 +169,7 @@ Philosophy and vision documents (more prose, less formal):
 ## Time & Efficiency
 
 - Commands run: 37
-- Compared to reading all files: **Much less** - 179K tokens would be impossible to read directly; mdtldr enabled mapping in ~10 minutes
+- Compared to reading all files: **Much less** - 179K tokens would be impossible to read directly; mdcontext enabled mapping in ~10 minutes
 - Key efficiency: `tree [file]` with token counts let me prioritize which areas need deep investigation
 
 ## Summary for Divers

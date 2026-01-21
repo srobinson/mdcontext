@@ -10,46 +10,46 @@ What architecture and design criticisms exist?
 
 ## Command Log
 
-| #   | Command                                                                                                    | Purpose                         | Result                                | Useful? |
-| --- | ---------------------------------------------------------------------------------------------------------- | ------------------------------- | ------------------------------------- | ------- |
-| 1   | `mdtldr --help`                                                                                            | Learn tool                      | Got full usage guide                  | Yes     |
-| 2   | `mdtldr index --embed --force`                                                                             | Index all files with embeddings | 23 docs, 922 sections, 904 embeddings | Yes     |
-| 3   | `mdtldr search "architecture criticism problems design flaws limitations"`                                 | Semantic search for criticisms  | 1 result (ARCHITECTURAL_FOUNDATIONS)  | Partial |
-| 4   | `mdtldr search "design trade-offs weaknesses concerns issues"`                                             | Semantic search                 | 0 results                             | No      |
-| 5   | `mdtldr search "failure problems complexity challenges"`                                                   | Semantic search                 | 0 results                             | No      |
-| 6   | `mdtldr search "failure" --mode keyword`                                                                   | Keyword search                  | 10 results                            | Yes     |
-| 7   | `mdtldr context docs.amorphic/02-THE_FAILURE_OF_PURE_AUTOMATION.md -t 3000`                                | Get full failure analysis       | Full document                         | Yes     |
-| 8   | `mdtldr search "limitations" --mode keyword`                                                               | Keyword search                  | 1 result                              | Yes     |
-| 9   | `mdtldr search "problem" --mode keyword`                                                                   | Keyword search                  | 10 results                            | Yes     |
-| 10  | `mdtldr search "risk" --mode keyword`                                                                      | Keyword search                  | 10 results                            | Yes     |
-| 11  | `mdtldr search "anti-pattern" --mode keyword`                                                              | Keyword search                  | 4 results                             | Yes     |
-| 12  | `mdtldr context docs/05-MEMORY_MODEL.md --section "Anti-Patterns"`                                         | Get memory anti-patterns        | 7 forbidden patterns                  | Yes     |
-| 13  | `mdtldr context docs/06-WORKFLOWS.md --section "Anti-Patterns"`                                            | Get workflow anti-patterns      | 8 forbidden patterns                  | Yes     |
-| 14  | `mdtldr search "concern" --mode keyword`                                                                   | Keyword search                  | 10 results                            | Yes     |
-| 15  | `mdtldr search "brittle" --mode keyword`                                                                   | Keyword search                  | 10 results                            | Yes     |
-| 16  | `mdtldr search "complexity" --mode keyword`                                                                | Keyword search                  | 9 results                             | Yes     |
-| 17  | `mdtldr search "overhead" --mode keyword`                                                                  | Keyword search                  | 7 results                             | Yes     |
-| 18  | `mdtldr search "design patterns architecture decision"`                                                    | Semantic search                 | 10 results                            | Yes     |
-| 19  | `mdtldr context docs.amorphic/03-ARCHITECTURAL_FOUNDATIONS.md -t 2000`                                     | Get architectural foundations   | Full document                         | Yes     |
-| 20  | `mdtldr context docs.amorphic/05-TECHNICAL_IMPLEMENTATION_PATTERNS.md -t 2500`                             | Get implementation patterns     | Full document                         | Yes     |
-| 21  | `mdtldr search "gap" --mode keyword`                                                                       | Keyword search                  | 8 results                             | Yes     |
-| 22  | `mdtldr context docs.amorphic/02-THE_FAILURE_OF_PURE_AUTOMATION.md --section "Judgment Gap"`               | Get judgment gap section        | Detailed section                      | Yes     |
-| 23  | `mdtldr search "forbidden" --mode keyword`                                                                 | Keyword search                  | 5 results                             | Yes     |
-| 24  | `mdtldr search "corrupt" --mode keyword`                                                                   | Keyword search                  | 5 results                             | Yes     |
-| 25  | `mdtldr tree docs/01-ARCHITECTURE.md`                                                                      | Get document outline            | 47 sections                           | Yes     |
-| 26  | `mdtldr context docs/01-ARCHITECTURE.md --section "Why This Architecture Works"`                           | Get rationale                   | Brief justification                   | Yes     |
-| 27  | `mdtldr context docs/01-ARCHITECTURE.md --section "Architectural Invariants"`                              | Get invariants                  | 8 invariants                          | Yes     |
-| 28  | `mdtldr search "fail" --mode keyword`                                                                      | Keyword search                  | 10 results                            | Yes     |
-| 29  | `mdtldr context docs/00-README.md --section "What Problem"`                                                | Get problem statement           | Core problem                          | Yes     |
-| 30  | `mdtldr search "cost" --mode keyword`                                                                      | Keyword search                  | 10 results                            | Yes     |
-| 31  | `mdtldr context docs.llm/feedback.md -t 3000`                                                              | Get feedback document           | Chat feedback analysis                | Yes     |
-| 32  | `mdtldr search "traditional" --mode keyword`                                                               | Keyword search                  | 10 results                            | Yes     |
-| 33  | `mdtldr tree docs.llm/amorphic.md`                                                                         | Get amorphic outline            | Full outline                          | Yes     |
-| 34  | `mdtldr context docs.llm/amorphic.md --section "Open Questions"`                                           | Get open questions              | 3 open questions                      | Yes     |
-| 35  | `mdtldr context docs.llm/amorphic.md --section "Paradox of Automation"`                                    | Get paradox section             | Detailed section                      | Yes     |
-| 36  | `mdtldr search "wrong" --mode keyword`                                                                     | Keyword search                  | 6 results                             | Yes     |
-| 37  | `mdtldr context docs.amorphic/04-THE_HUMAN-AGENT_COLLABORATION_MODEL.md --section "Observability Problem"` | Get observability problem       | Key issue identified                  | Yes     |
-| 38  | `mdtldr search "scale" --mode keyword`                                                                     | Keyword search                  | 10 results                            | Yes     |
+| #   | Command                                                                                                       | Purpose                         | Result                                | Useful? |
+| --- | ------------------------------------------------------------------------------------------------------------- | ------------------------------- | ------------------------------------- | ------- |
+| 1   | `mdcontext --help`                                                                                            | Learn tool                      | Got full usage guide                  | Yes     |
+| 2   | `mdcontext index --embed --force`                                                                             | Index all files with embeddings | 23 docs, 922 sections, 904 embeddings | Yes     |
+| 3   | `mdcontext search "architecture criticism problems design flaws limitations"`                                 | Semantic search for criticisms  | 1 result (ARCHITECTURAL_FOUNDATIONS)  | Partial |
+| 4   | `mdcontext search "design trade-offs weaknesses concerns issues"`                                             | Semantic search                 | 0 results                             | No      |
+| 5   | `mdcontext search "failure problems complexity challenges"`                                                   | Semantic search                 | 0 results                             | No      |
+| 6   | `mdcontext search "failure" --mode keyword`                                                                   | Keyword search                  | 10 results                            | Yes     |
+| 7   | `mdcontext context docs.amorphic/02-THE_FAILURE_OF_PURE_AUTOMATION.md -t 3000`                                | Get full failure analysis       | Full document                         | Yes     |
+| 8   | `mdcontext search "limitations" --mode keyword`                                                               | Keyword search                  | 1 result                              | Yes     |
+| 9   | `mdcontext search "problem" --mode keyword`                                                                   | Keyword search                  | 10 results                            | Yes     |
+| 10  | `mdcontext search "risk" --mode keyword`                                                                      | Keyword search                  | 10 results                            | Yes     |
+| 11  | `mdcontext search "anti-pattern" --mode keyword`                                                              | Keyword search                  | 4 results                             | Yes     |
+| 12  | `mdcontext context docs/05-MEMORY_MODEL.md --section "Anti-Patterns"`                                         | Get memory anti-patterns        | 7 forbidden patterns                  | Yes     |
+| 13  | `mdcontext context docs/06-WORKFLOWS.md --section "Anti-Patterns"`                                            | Get workflow anti-patterns      | 8 forbidden patterns                  | Yes     |
+| 14  | `mdcontext search "concern" --mode keyword`                                                                   | Keyword search                  | 10 results                            | Yes     |
+| 15  | `mdcontext search "brittle" --mode keyword`                                                                   | Keyword search                  | 10 results                            | Yes     |
+| 16  | `mdcontext search "complexity" --mode keyword`                                                                | Keyword search                  | 9 results                             | Yes     |
+| 17  | `mdcontext search "overhead" --mode keyword`                                                                  | Keyword search                  | 7 results                             | Yes     |
+| 18  | `mdcontext search "design patterns architecture decision"`                                                    | Semantic search                 | 10 results                            | Yes     |
+| 19  | `mdcontext context docs.amorphic/03-ARCHITECTURAL_FOUNDATIONS.md -t 2000`                                     | Get architectural foundations   | Full document                         | Yes     |
+| 20  | `mdcontext context docs.amorphic/05-TECHNICAL_IMPLEMENTATION_PATTERNS.md -t 2500`                             | Get implementation patterns     | Full document                         | Yes     |
+| 21  | `mdcontext search "gap" --mode keyword`                                                                       | Keyword search                  | 8 results                             | Yes     |
+| 22  | `mdcontext context docs.amorphic/02-THE_FAILURE_OF_PURE_AUTOMATION.md --section "Judgment Gap"`               | Get judgment gap section        | Detailed section                      | Yes     |
+| 23  | `mdcontext search "forbidden" --mode keyword`                                                                 | Keyword search                  | 5 results                             | Yes     |
+| 24  | `mdcontext search "corrupt" --mode keyword`                                                                   | Keyword search                  | 5 results                             | Yes     |
+| 25  | `mdcontext tree docs/01-ARCHITECTURE.md`                                                                      | Get document outline            | 47 sections                           | Yes     |
+| 26  | `mdcontext context docs/01-ARCHITECTURE.md --section "Why This Architecture Works"`                           | Get rationale                   | Brief justification                   | Yes     |
+| 27  | `mdcontext context docs/01-ARCHITECTURE.md --section "Architectural Invariants"`                              | Get invariants                  | 8 invariants                          | Yes     |
+| 28  | `mdcontext search "fail" --mode keyword`                                                                      | Keyword search                  | 10 results                            | Yes     |
+| 29  | `mdcontext context docs/00-README.md --section "What Problem"`                                                | Get problem statement           | Core problem                          | Yes     |
+| 30  | `mdcontext search "cost" --mode keyword`                                                                      | Keyword search                  | 10 results                            | Yes     |
+| 31  | `mdcontext context docs.llm/feedback.md -t 3000`                                                              | Get feedback document           | Chat feedback analysis                | Yes     |
+| 32  | `mdcontext search "traditional" --mode keyword`                                                               | Keyword search                  | 10 results                            | Yes     |
+| 33  | `mdcontext tree docs.llm/amorphic.md`                                                                         | Get amorphic outline            | Full outline                          | Yes     |
+| 34  | `mdcontext context docs.llm/amorphic.md --section "Open Questions"`                                           | Get open questions              | 3 open questions                      | Yes     |
+| 35  | `mdcontext context docs.llm/amorphic.md --section "Paradox of Automation"`                                    | Get paradox section             | Detailed section                      | Yes     |
+| 36  | `mdcontext search "wrong" --mode keyword`                                                                     | Keyword search                  | 6 results                             | Yes     |
+| 37  | `mdcontext context docs.amorphic/04-THE_HUMAN-AGENT_COLLABORATION_MODEL.md --section "Observability Problem"` | Get observability problem       | Key issue identified                  | Yes     |
+| 38  | `mdcontext search "scale" --mode keyword`                                                                     | Keyword search                  | 10 results                            | Yes     |
 
 ## Findings
 

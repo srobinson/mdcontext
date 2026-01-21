@@ -521,7 +521,7 @@ File-based task management is not a step backward -- it's a strategic choice for
 
 The trend in 2026 is toward treating specifications and task definitions as primary artifacts, with code as their expression. File-based systems align perfectly with this shift.
 
-**For our use case (md-tldr project)**: A simple markdown-based approach with SPEC.md/TODO.md files, combined with CLAUDE.md for agent instructions, provides the best balance of simplicity and capability. Consider adopting Beads if multi-agent coordination becomes important.
+**For our use case (mdcontext project)**: A simple markdown-based approach with SPEC.md/TODO.md files, combined with CLAUDE.md for agent instructions, provides the best balance of simplicity and capability. Consider adopting Beads if multi-agent coordination becomes important.
 
 ---
 

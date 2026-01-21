@@ -1,6 +1,6 @@
 # RAG Alternatives Research: Improving Semantic Search Quality
 
-This document explores alternatives to traditional RAG patterns for improving semantic search quality in md-tldr. Since md-tldr is a pure retrieval system (no LLM generation), we focus on techniques that enhance retrieval precision and recall without adding generation complexity.
+This document explores alternatives to traditional RAG patterns for improving semantic search quality in mdcontext. Since mdcontext is a pure retrieval system (no LLM generation), we focus on techniques that enhance retrieval precision and recall without adding generation complexity.
 
 ## Table of Contents
 
@@ -54,7 +54,7 @@ For documentation search specifically:
 | Code examples         | Depends         | Usually               |
 | API reference         | No              | Yes                   |
 
-md-tldr's use case (finding relevant documentation sections) is best served by optimizing retrieval directly.
+mdcontext's use case (finding relevant documentation sections) is best served by optimizing retrieval directly.
 
 ---
 
@@ -176,7 +176,7 @@ Cross-encoders process query and document together, enabling deeper semantic mat
 - Memory-mapped storage reduces RAM by 90%
 - Sub-millisecond query latency achievable
 
-**Limitations for md-tldr**:
+**Limitations for mdcontext**:
 
 - No mature JavaScript implementation
 - Would require Python service
@@ -278,7 +278,7 @@ Cross-encoders process query and document together, enabling deeper semantic mat
 - Nomic nomic-embed-text-v1
 - Alibaba gte-multilingual-base
 
-**Application for md-tldr**:
+**Application for mdcontext**:
 
 - Already using text-embedding-3-small (supports dimensions parameter)
 - Could use lower dimensions for initial shortlist
@@ -507,7 +507,7 @@ Cache queries that return poor results:
 
 ## Summary
 
-For md-tldr's semantic search use case, the recommended approach is:
+For mdcontext's semantic search use case, the recommended approach is:
 
 1. **Hybrid search** for best baseline improvement
 2. **Cross-encoder re-ranking** for precision when needed

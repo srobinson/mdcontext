@@ -6,40 +6,40 @@ Deep-dive into: Execution Model (Jobs, Contexts, Workflows)
 
 ## Command Log
 
-| #   | Command                                                                                    | Purpose                            | Result                                  | Useful?     |
-| --- | ------------------------------------------------------------------------------------------ | ---------------------------------- | --------------------------------------- | ----------- |
-| 1   | `mdtldr --help`                                                                            | Understand available commands      | Full command listing with examples      | Yes         |
-| 2   | `mdtldr tree`                                                                              | List all markdown files            | 23 files found, identified key docs     | Yes         |
-| 3   | `mdtldr tree docs/04-EXECUTION_MODEL.md`                                                   | Show document outline              | 38 sections, 7418 tokens total          | Very useful |
-| 4   | `mdtldr context docs/04-EXECUTION_MODEL.md -t 4000`                                        | Get overview of execution model    | Truncated to 36%, got main sections     | Useful      |
-| 5   | `mdtldr search "job" --json`                                                               | Find job-related content           | 10 results across multiple files        | Useful      |
-| 6   | `mdtldr search "execution context"`                                                        | Find execution context content     | 10 results with context lines           | Useful      |
-| 7   | `mdtldr context docs/04-EXECUTION_MODEL.md --section "2. Jobs"`                            | Deep dive on Jobs                  | Full Jobs section extracted             | Very useful |
-| 8   | `mdtldr context docs/04-EXECUTION_MODEL.md --section "3. Execution Contexts"`              | Deep dive on Contexts              | Full Execution Contexts section         | Very useful |
-| 9   | `mdtldr context docs/04-EXECUTION_MODEL.md --section "4. Workflows in Execution"`          | Workflows in execution             | Full workflows section                  | Very useful |
-| 10  | `mdtldr tree docs/06-WORKFLOWS.md`                                                         | Outline of dedicated Workflows doc | 37 sections, 8541 tokens                | Useful      |
-| 11  | `mdtldr context docs/06-WORKFLOWS.md --section "1. Workflow Philosophy"`                   | Workflow philosophy                | Core principles extracted               | Very useful |
-| 12  | `mdtldr context docs/06-WORKFLOWS.md --section "2. What Problem Workflows Solve"`          | Problem statement                  | Clear value proposition                 | Useful      |
-| 13  | `mdtldr search "parallel execution"`                                                       | Find parallel patterns             | 10 results, multiple examples           | Useful      |
-| 14  | `mdtldr context docs/04-EXECUTION_MODEL.md --section "5. Execution Coordination Patterns"` | Coordination patterns              | Pipeline, Fan-out, Background patterns  | Very useful |
-| 15  | `mdtldr search "context resumption"`                                                       | Find resumption info               | 6 results across docs                   | Useful      |
-| 16  | `mdtldr context docs/04-EXECUTION_MODEL.md --section "6. Context Creation and Resumption"` | Resumption mechanics               | Critical resumption model explained     | Very useful |
-| 17  | `mdtldr context docs/04-EXECUTION_MODEL.md --section "7. Scope and Mutual Exclusion"`      | Concurrency rules                  | Hard invariant explained                | Very useful |
-| 18  | `mdtldr search "scope"`                                                                    | Find scope usage                   | 10 results showing scope patterns       | Useful      |
-| 19  | `mdtldr context docs/04-EXECUTION_MODEL.md --section "16. Guarantees"`                     | System guarantees                  | 7 key guarantees listed                 | Very useful |
-| 20  | `mdtldr context docs/04-EXECUTION_MODEL.md --section "18. Summary"`                        | Executive summary                  | Clean separation of concerns            | Very useful |
-| 21  | `mdtldr tree docs/07-EXAMPLE_WORKFLOWS.md`                                                 | Example workflows outline          | 5 detailed examples, 14423 tokens       | Useful      |
-| 22  | `mdtldr context docs/07-EXAMPLE_WORKFLOWS.md --section "Summary Across All Examples"`      | Examples summary                   | Common patterns across use cases        | Very useful |
-| 23  | `mdtldr context docs/04-EXECUTION_MODEL.md --section "8. Steps and Agents"`                | Steps and Agents                   | Atomic execution units                  | Very useful |
-| 24  | `mdtldr context docs/04-EXECUTION_MODEL.md --section "17. Why This Model Scales"`          | Scalability                        | Scale dimensions explained              | Very useful |
-| 25  | `mdtldr search "disposable"`                                                               | Find disposable concept            | 10 results showing ephemeral nature     | Useful      |
-| 26  | `mdtldr context docs/04-EXECUTION_MODEL.md --section "10. External Workflow Integration"`  | External framework integration     | BMAD, RD-Agent integration pattern      | Very useful |
-| 27  | `mdtldr context docs/04-EXECUTION_MODEL.md --section "11. Key Execution Patterns"`         | Execution patterns                 | Ad-hoc, guided, background, parallel    | Very useful |
-| 28  | `mdtldr context docs/04-EXECUTION_MODEL.md --section "12. Control Plane Integration"`      | Control plane                      | Intervention capabilities               | Very useful |
-| 29  | `mdtldr search "checkpoint"`                                                               | Find checkpoint content            | 10 results showing checkpoint usage     | Useful      |
-| 30  | `mdtldr context docs/06-WORKFLOWS.md --section "12. Checkpoints in Depth"`                 | Checkpoint mechanics               | 6 checkpoint types, enforcement rules   | Very useful |
-| 31  | `mdtldr search "immutable"`                                                                | Find immutability patterns         | 10 results confirming append-only model | Useful      |
-| 32  | `mdtldr stats`                                                                             | Index statistics                   | 23 docs, 924 sections, no embeddings    | Useful      |
+| #   | Command                                                                                       | Purpose                            | Result                                  | Useful?     |
+| --- | --------------------------------------------------------------------------------------------- | ---------------------------------- | --------------------------------------- | ----------- |
+| 1   | `mdcontext --help`                                                                            | Understand available commands      | Full command listing with examples      | Yes         |
+| 2   | `mdcontext tree`                                                                              | List all markdown files            | 23 files found, identified key docs     | Yes         |
+| 3   | `mdcontext tree docs/04-EXECUTION_MODEL.md`                                                   | Show document outline              | 38 sections, 7418 tokens total          | Very useful |
+| 4   | `mdcontext context docs/04-EXECUTION_MODEL.md -t 4000`                                        | Get overview of execution model    | Truncated to 36%, got main sections     | Useful      |
+| 5   | `mdcontext search "job" --json`                                                               | Find job-related content           | 10 results across multiple files        | Useful      |
+| 6   | `mdcontext search "execution context"`                                                        | Find execution context content     | 10 results with context lines           | Useful      |
+| 7   | `mdcontext context docs/04-EXECUTION_MODEL.md --section "2. Jobs"`                            | Deep dive on Jobs                  | Full Jobs section extracted             | Very useful |
+| 8   | `mdcontext context docs/04-EXECUTION_MODEL.md --section "3. Execution Contexts"`              | Deep dive on Contexts              | Full Execution Contexts section         | Very useful |
+| 9   | `mdcontext context docs/04-EXECUTION_MODEL.md --section "4. Workflows in Execution"`          | Workflows in execution             | Full workflows section                  | Very useful |
+| 10  | `mdcontext tree docs/06-WORKFLOWS.md`                                                         | Outline of dedicated Workflows doc | 37 sections, 8541 tokens                | Useful      |
+| 11  | `mdcontext context docs/06-WORKFLOWS.md --section "1. Workflow Philosophy"`                   | Workflow philosophy                | Core principles extracted               | Very useful |
+| 12  | `mdcontext context docs/06-WORKFLOWS.md --section "2. What Problem Workflows Solve"`          | Problem statement                  | Clear value proposition                 | Useful      |
+| 13  | `mdcontext search "parallel execution"`                                                       | Find parallel patterns             | 10 results, multiple examples           | Useful      |
+| 14  | `mdcontext context docs/04-EXECUTION_MODEL.md --section "5. Execution Coordination Patterns"` | Coordination patterns              | Pipeline, Fan-out, Background patterns  | Very useful |
+| 15  | `mdcontext search "context resumption"`                                                       | Find resumption info               | 6 results across docs                   | Useful      |
+| 16  | `mdcontext context docs/04-EXECUTION_MODEL.md --section "6. Context Creation and Resumption"` | Resumption mechanics               | Critical resumption model explained     | Very useful |
+| 17  | `mdcontext context docs/04-EXECUTION_MODEL.md --section "7. Scope and Mutual Exclusion"`      | Concurrency rules                  | Hard invariant explained                | Very useful |
+| 18  | `mdcontext search "scope"`                                                                    | Find scope usage                   | 10 results showing scope patterns       | Useful      |
+| 19  | `mdcontext context docs/04-EXECUTION_MODEL.md --section "16. Guarantees"`                     | System guarantees                  | 7 key guarantees listed                 | Very useful |
+| 20  | `mdcontext context docs/04-EXECUTION_MODEL.md --section "18. Summary"`                        | Executive summary                  | Clean separation of concerns            | Very useful |
+| 21  | `mdcontext tree docs/07-EXAMPLE_WORKFLOWS.md`                                                 | Example workflows outline          | 5 detailed examples, 14423 tokens       | Useful      |
+| 22  | `mdcontext context docs/07-EXAMPLE_WORKFLOWS.md --section "Summary Across All Examples"`      | Examples summary                   | Common patterns across use cases        | Very useful |
+| 23  | `mdcontext context docs/04-EXECUTION_MODEL.md --section "8. Steps and Agents"`                | Steps and Agents                   | Atomic execution units                  | Very useful |
+| 24  | `mdcontext context docs/04-EXECUTION_MODEL.md --section "17. Why This Model Scales"`          | Scalability                        | Scale dimensions explained              | Very useful |
+| 25  | `mdcontext search "disposable"`                                                               | Find disposable concept            | 10 results showing ephemeral nature     | Useful      |
+| 26  | `mdcontext context docs/04-EXECUTION_MODEL.md --section "10. External Workflow Integration"`  | External framework integration     | BMAD, RD-Agent integration pattern      | Very useful |
+| 27  | `mdcontext context docs/04-EXECUTION_MODEL.md --section "11. Key Execution Patterns"`         | Execution patterns                 | Ad-hoc, guided, background, parallel    | Very useful |
+| 28  | `mdcontext context docs/04-EXECUTION_MODEL.md --section "12. Control Plane Integration"`      | Control plane                      | Intervention capabilities               | Very useful |
+| 29  | `mdcontext search "checkpoint"`                                                               | Find checkpoint content            | 10 results showing checkpoint usage     | Useful      |
+| 30  | `mdcontext context docs/06-WORKFLOWS.md --section "12. Checkpoints in Depth"`                 | Checkpoint mechanics               | 6 checkpoint types, enforcement rules   | Very useful |
+| 31  | `mdcontext search "immutable"`                                                                | Find immutability patterns         | 10 results confirming append-only model | Useful      |
+| 32  | `mdcontext stats`                                                                             | Index statistics                   | 23 docs, 924 sections, no embeddings    | Useful      |
 
 ## Findings
 

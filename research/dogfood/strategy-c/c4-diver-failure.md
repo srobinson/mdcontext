@@ -6,28 +6,28 @@ Deep-dive into: Failure of Pure Automation - Understanding why current agent fra
 
 ## Command Log
 
-| #   | Command                                                                                    | Purpose                          | Result                               | Useful? |
-| --- | ------------------------------------------------------------------------------------------ | -------------------------------- | ------------------------------------ | ------- |
-| 1   | `mdtldr search "failure automation"`                                                       | Find failure content             | 0 results (multi-word keyword issue) | No      |
-| 2   | `mdtldr search "brittleness"`                                                              | Find brittleness content         | 6 results across docs                | Yes     |
-| 3   | `mdtldr search "coordination trap"`                                                        | Find coordination trap           | 2 results                            | Yes     |
-| 4   | `mdtldr context --help`                                                                    | Learn context command syntax     | Showed section filtering options     | Yes     |
-| 5   | `mdtldr context --sections docs.amorphic/02-THE_FAILURE_OF_PURE_AUTOMATION.md`             | List all sections                | Found 6 failure modes                | Yes     |
-| 6   | `mdtldr context --full --section "1.1" docs.amorphic/02-THE_FAILURE_OF_PURE_AUTOMATION.md` | Get Brittleness section          | Full content retrieved               | Yes     |
-| 7   | `mdtldr context --full --section "1.2" docs.amorphic/02-THE_FAILURE_OF_PURE_AUTOMATION.md` | Get Coordination Trap            | Full content retrieved               | Yes     |
-| 8   | `mdtldr context --full --section "1.3" docs.amorphic/02-THE_FAILURE_OF_PURE_AUTOMATION.md` | Get Innovation Strangulation     | Full content retrieved               | Yes     |
-| 9   | `mdtldr context --full --section "1.4" docs.amorphic/02-THE_FAILURE_OF_PURE_AUTOMATION.md` | Get Human Bottleneck Paradox     | Full content retrieved               | Yes     |
-| 10  | `mdtldr context --full --section "1.5" docs.amorphic/02-THE_FAILURE_OF_PURE_AUTOMATION.md` | Get Context Collapse             | Full content retrieved               | Yes     |
-| 11  | `mdtldr context --full --section "1.6" docs.amorphic/02-THE_FAILURE_OF_PURE_AUTOMATION.md` | Get Judgment Gap                 | Full content retrieved               | Yes     |
-| 12  | `mdtldr search "autonomous agent"`                                                         | Find autonomous agent content    | 3 results                            | Yes     |
-| 13  | `mdtldr search "judgment"`                                                                 | Find judgment content            | 10 results showing solution approach | Yes     |
-| 14  | `mdtldr context --full --section "1" docs.amorphic/02-THE_FAILURE_OF_PURE_AUTOMATION.md`   | Get full document                | Complete failure analysis            | Yes     |
-| 15  | `mdtldr search "human-agent"`                                                              | Find collaboration model         | 10 results                           | Yes     |
-| 16  | `mdtldr search "symbiosis"`                                                                | Find symbiosis concept           | 2 results                            | Yes     |
-| 17  | `mdtldr context --sections docs.amorphic/01-EXECUTIVE_SUMMARY.md`                          | List exec summary sections       | 4 sections found                     | Yes     |
-| 18  | `mdtldr context --full --section "1.1" docs.amorphic/01-EXECUTIVE_SUMMARY.md`              | Get Core Innovation              | Solution overview                    | Yes     |
-| 19  | `mdtldr search "enterprise adoption"`                                                      | Find enterprise context          | 1 result in feedback.md              | Yes     |
-| 20  | `mdtldr context --full --section "The Core Thesis" docs.llm/feedback.md`                   | Get enterprise adoption analysis | Core thesis on opacity/risk          | Yes     |
+| #   | Command                                                                                       | Purpose                          | Result                               | Useful? |
+| --- | --------------------------------------------------------------------------------------------- | -------------------------------- | ------------------------------------ | ------- |
+| 1   | `mdcontext search "failure automation"`                                                       | Find failure content             | 0 results (multi-word keyword issue) | No      |
+| 2   | `mdcontext search "brittleness"`                                                              | Find brittleness content         | 6 results across docs                | Yes     |
+| 3   | `mdcontext search "coordination trap"`                                                        | Find coordination trap           | 2 results                            | Yes     |
+| 4   | `mdcontext context --help`                                                                    | Learn context command syntax     | Showed section filtering options     | Yes     |
+| 5   | `mdcontext context --sections docs.amorphic/02-THE_FAILURE_OF_PURE_AUTOMATION.md`             | List all sections                | Found 6 failure modes                | Yes     |
+| 6   | `mdcontext context --full --section "1.1" docs.amorphic/02-THE_FAILURE_OF_PURE_AUTOMATION.md` | Get Brittleness section          | Full content retrieved               | Yes     |
+| 7   | `mdcontext context --full --section "1.2" docs.amorphic/02-THE_FAILURE_OF_PURE_AUTOMATION.md` | Get Coordination Trap            | Full content retrieved               | Yes     |
+| 8   | `mdcontext context --full --section "1.3" docs.amorphic/02-THE_FAILURE_OF_PURE_AUTOMATION.md` | Get Innovation Strangulation     | Full content retrieved               | Yes     |
+| 9   | `mdcontext context --full --section "1.4" docs.amorphic/02-THE_FAILURE_OF_PURE_AUTOMATION.md` | Get Human Bottleneck Paradox     | Full content retrieved               | Yes     |
+| 10  | `mdcontext context --full --section "1.5" docs.amorphic/02-THE_FAILURE_OF_PURE_AUTOMATION.md` | Get Context Collapse             | Full content retrieved               | Yes     |
+| 11  | `mdcontext context --full --section "1.6" docs.amorphic/02-THE_FAILURE_OF_PURE_AUTOMATION.md` | Get Judgment Gap                 | Full content retrieved               | Yes     |
+| 12  | `mdcontext search "autonomous agent"`                                                         | Find autonomous agent content    | 3 results                            | Yes     |
+| 13  | `mdcontext search "judgment"`                                                                 | Find judgment content            | 10 results showing solution approach | Yes     |
+| 14  | `mdcontext context --full --section "1" docs.amorphic/02-THE_FAILURE_OF_PURE_AUTOMATION.md`   | Get full document                | Complete failure analysis            | Yes     |
+| 15  | `mdcontext search "human-agent"`                                                              | Find collaboration model         | 10 results                           | Yes     |
+| 16  | `mdcontext search "symbiosis"`                                                                | Find symbiosis concept           | 2 results                            | Yes     |
+| 17  | `mdcontext context --sections docs.amorphic/01-EXECUTIVE_SUMMARY.md`                          | List exec summary sections       | 4 sections found                     | Yes     |
+| 18  | `mdcontext context --full --section "1.1" docs.amorphic/01-EXECUTIVE_SUMMARY.md`              | Get Core Innovation              | Solution overview                    | Yes     |
+| 19  | `mdcontext search "enterprise adoption"`                                                      | Find enterprise context          | 1 result in feedback.md              | Yes     |
+| 20  | `mdcontext context --full --section "The Core Thesis" docs.llm/feedback.md`                   | Get enterprise adoption analysis | Core thesis on opacity/risk          | Yes     |
 
 ## Findings
 
@@ -128,8 +128,8 @@ The solution is not better automation, but **Human-AI Symbiosis** - cognitive pa
 
 ### What Worked Well
 
-- `mdtldr context --sections` is excellent for discovering document structure
-- `mdtldr context --full --section` retrieved complete sections cleanly
+- `mdcontext context --sections` is excellent for discovering document structure
+- `mdcontext context --full --section` retrieved complete sections cleanly
 - Section numbering system (1.1, 1.2, etc.) is intuitive
 - Search results show context lines around matches
 - Token counts on sections help understand document scope
