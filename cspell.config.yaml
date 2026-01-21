@@ -3,6 +3,11 @@ ignorePaths: []
 dictionaryDefinitions: []
 dictionaries: []
 words:
+  - attw
   - backlinks
+  - hnswlib
+  - mdcontext
+  - modelcontextprotocol
+  - tiktoken
 ignoreWords: []
 import: []

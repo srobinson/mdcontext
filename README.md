@@ -2,7 +2,7 @@
 
 **Give LLMs exactly the markdown they need. Nothing more.**
 
-```
+```bash
 QUICK REFERENCE
   mdcontext index [path]           Index markdown files (add --embed for semantic search)
   mdcontext search <query> [path]  Search by meaning or structure
