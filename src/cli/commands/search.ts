@@ -14,6 +14,7 @@ import {
   estimateEmbeddingCost,
   semanticSearch,
 } from '../../embeddings/semantic-search.js'
+import { isAdvancedQuery } from '../../search/query-parser.js'
 import { search, searchContent } from '../../search/searcher.js'
 import { jsonOption, prettyOption } from '../options.js'
 import { formatJson, getIndexInfo, isRegexPattern } from '../utils.js'
@@ -66,7 +67,7 @@ export const searchCommand = Command.make(
     ),
     threshold: Options.float('threshold').pipe(
       Options.withDescription('Similarity threshold for semantic search (0-1)'),
-      Options.withDefault(0.3),
+      Options.withDefault(0.45),
     ),
     context: Options.integer('context').pipe(
       Options.withAlias('C'),
@@ -158,6 +159,10 @@ export const searchCommand = Command.make(
       } else if (keyword) {
         useKeyword = true
         modeReason = '--keyword flag'
+      } else if (isAdvancedQuery(query)) {
+        // Detect quoted phrases and boolean operators (AND, OR, NOT)
+        useKeyword = true
+        modeReason = 'boolean/phrase pattern detected'
       } else if (isRegexPattern(query)) {
         useKeyword = true
         modeReason = 'regex pattern detected'
@@ -233,8 +238,11 @@ export const searchCommand = Command.make(
           yield* Console.log(formatJson(output, pretty))
         } else {
           const searchType = headingOnly ? 'Heading' : 'Content'
+          // Show mode with explanation for auto-detected modes
+          const showReason = modeReason !== '--mode keyword' && modeReason !== '--keyword flag'
+          const modeStr = showReason ? `${modeIndicator} (${modeReason})` : modeIndicator
           yield* Console.log(
-            `${modeIndicator} ${searchType} search: "${query}"`,
+            `${modeStr} ${searchType} search: "${query}"`,
           )
           yield* Console.log(`Results: ${results.length}`)
           yield* Console.log('')
@@ -318,7 +326,10 @@ export const searchCommand = Command.make(
           }
           yield* Console.log(formatJson(output, pretty))
         } else {
-          yield* Console.log(`${modeIndicator} Semantic search: "${query}"`)
+          // Show mode with explanation for auto-detected modes
+          const showSemanticReason = modeReason !== '--mode semantic'
+          const semanticModeStr = showSemanticReason ? `${modeIndicator} (${modeReason})` : modeIndicator
+          yield* Console.log(`${semanticModeStr} Semantic search: "${query}"`)
           yield* Console.log(`Results: ${results.length}`)
           yield* Console.log('')
 
