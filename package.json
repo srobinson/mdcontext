@@ -10,6 +10,7 @@
     "mdcontext-mcp": "./dist/mcp/server.js"
   },
   "scripts": {
+    "postinstall": "node scripts/rebuild-hnswlib.js",
     "build": "tsup src/cli/main.ts src/mcp/server.ts src/index.ts --format esm --dts",
     "dev": "tsc --watch",
     "test": "vitest run",

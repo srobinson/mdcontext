@@ -26,6 +26,10 @@ jobs:
           node-version: '22'
           cache: 'pnpm'
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm typecheck
@@ -56,6 +60,10 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: 'pnpm'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
       - run: pnpm install --frozen-lockfile
 
