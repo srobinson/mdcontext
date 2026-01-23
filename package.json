@@ -3,6 +3,14 @@
   "version": "0.1.0",
   "description": "Token-efficient markdown analysis tool for LLM consumption",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mdcontext/mdcontext.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {

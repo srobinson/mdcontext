@@ -92,6 +92,9 @@ jobs:
           cache: 'pnpm'
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Upgrade npm for OIDC support
+        run: npm install -g npm@latest
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
