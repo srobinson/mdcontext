@@ -1,0 +1,79 @@
+{
+  "full-ci-matrix": {
+    "description": "For projects with quality + multi-platform test matrix (Node 20/22, ubuntu/macos/windows)",
+    "required_status_checks": {
+      "strict": true,
+      "contexts": [
+        "quality",
+        "test (ubuntu-latest, 20)",
+        "test (ubuntu-latest, 22)",
+        "test (macos-latest, 20)",
+        "test (macos-latest, 22)",
+        "test (windows-latest, 20)",
+        "test (windows-latest, 22)"
+      ]
+    },
+    "enforce_admins": false,
+    "required_pull_request_reviews": {
+      "required_approving_review_count": 1,
+      "dismiss_stale_reviews": true,
+      "require_code_owner_reviews": false
+    },
+    "restrictions": null,
+    "required_linear_history": true,
+    "allow_force_pushes": false,
+    "allow_deletions": false
+  },
+
+  "simple": {
+    "description": "For simple projects with build + test jobs",
+    "required_status_checks": {
+      "strict": true,
+      "contexts": ["build", "test"]
+    },
+    "enforce_admins": false,
+    "required_pull_request_reviews": {
+      "required_approving_review_count": 1,
+      "dismiss_stale_reviews": true,
+      "require_code_owner_reviews": false
+    },
+    "restrictions": null,
+    "required_linear_history": true,
+    "allow_force_pushes": false,
+    "allow_deletions": false
+  },
+
+  "minimal": {
+    "description": "Minimal protection - just require PR reviews",
+    "required_status_checks": null,
+    "enforce_admins": false,
+    "required_pull_request_reviews": {
+      "required_approving_review_count": 1,
+      "dismiss_stale_reviews": true,
+      "require_code_owner_reviews": false
+    },
+    "restrictions": null,
+    "required_linear_history": false,
+    "allow_force_pushes": false,
+    "allow_deletions": false
+  },
+
+  "strict": {
+    "description": "Strict protection with admin enforcement and code owners",
+    "required_status_checks": {
+      "strict": true,
+      "contexts": ["ci"]
+    },
+    "enforce_admins": true,
+    "required_pull_request_reviews": {
+      "required_approving_review_count": 2,
+      "dismiss_stale_reviews": true,
+      "require_code_owner_reviews": true,
+      "require_last_push_approval": true
+    },
+    "restrictions": null,
+    "required_linear_history": true,
+    "allow_force_pushes": false,
+    "allow_deletions": false
+  }
+}
