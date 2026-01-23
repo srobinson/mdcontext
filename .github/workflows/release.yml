@@ -65,10 +65,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - name: Run tests
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: pnpm test
+      - run: pnpm test
 
       - name: Test CLI execution
         run: node dist/cli/main.js --help

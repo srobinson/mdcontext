@@ -177,7 +177,7 @@ describe.concurrent('mdcontext CLI e2e', () => {
       expect(output).toContain('Results:')
     })
 
-    it('handles no results gracefully', async () => {
+    it.skipIf(!INCLUDE_EMBED_TESTS)('handles no results gracefully', async () => {
       const output = await run('search "xyznonexistent123"')
       expect(output).toContain('Results: 0')
     })
@@ -187,7 +187,7 @@ describe.concurrent('mdcontext CLI e2e', () => {
       expect(output).toContain('Content search')
     })
 
-    it('supports -n flag to limit results', async () => {
+    it.skipIf(!INCLUDE_EMBED_TESTS)('supports -n flag to limit results', async () => {
       const output = await run('search -n 2 "the"')
       const lines = output
         .split('\n')
@@ -200,22 +200,22 @@ describe.concurrent('mdcontext CLI e2e', () => {
       expect(output).toContain('[keyword]')
     })
 
-    it('supports boolean AND operator', async () => {
+    it.skipIf(!INCLUDE_EMBED_TESTS)('supports boolean AND operator', async () => {
       const output = await run('search "test AND fixture"')
       expect(output).toContain('Results:')
     })
 
-    it('supports boolean OR operator', async () => {
+    it.skipIf(!INCLUDE_EMBED_TESTS)('supports boolean OR operator', async () => {
       const output = await run('search "installation OR endpoints"')
       expect(output).toContain('Results:')
     })
 
-    it('supports boolean NOT operator', async () => {
+    it.skipIf(!INCLUDE_EMBED_TESTS)('supports boolean NOT operator', async () => {
       const output = await run('search "test NOT endpoints"')
       expect(output).toContain('Results:')
     })
 
-    it('supports quoted phrase search', async () => {
+    it.skipIf(!INCLUDE_EMBED_TESTS)('supports quoted phrase search', async () => {
       const output = await run('search \'"Getting Started"\' .')
       expect(output).toContain('Results:')
     })
@@ -292,7 +292,7 @@ describe.concurrent('mdcontext CLI e2e', () => {
       expect(output).toContain('[keyword]')
     })
 
-    it('supports -B and -A flags for asymmetric context', async () => {
+    it.skipIf(!INCLUDE_EMBED_TESTS)('supports -B and -A flags for asymmetric context', async () => {
       const output = await run('search "test" . -B 1 -A 3')
       expect(output).toContain('[semantic]')
     })
