@@ -64,8 +64,8 @@ jobs:
           python-version: '3.12'
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test
       - run: pnpm build
+      - run: pnpm test
 
       - name: Test CLI execution
         run: node dist/cli/main.js --help

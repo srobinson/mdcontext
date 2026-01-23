@@ -66,6 +66,7 @@ jobs:
           python-version: '3.12'
 
       - run: pnpm install --frozen-lockfile
+      - run: pnpm build
 
       - name: Run tests (default - no embeddings)
         if: ${{ !inputs.include_embed_tests }}
@@ -77,8 +78,6 @@ jobs:
           INCLUDE_EMBED_TESTS: true
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: pnpm test
-
-      - run: pnpm build
 
       - name: Test CLI execution
         run: node dist/cli/main.js --help
