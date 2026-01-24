@@ -5,6 +5,7 @@
  */
 
 export { backlinksCommand } from './backlinks.js'
+export { configCommand } from './config-cmd.js'
 export { contextCommand } from './context.js'
 export { indexCommand } from './index-cmd.js'
 export { linksCommand } from './links.js'

@@ -243,6 +243,37 @@ export const helpContent: Record<string, CommandHelp> = {
     ],
     notes: ['Shows embedding count, dimensions, and cost if embeddings exist.'],
   },
+  config: {
+    description: 'Configuration management',
+    usage: 'mdcontext config <command> [options]',
+    examples: [
+      'mdcontext config init              # Create a starter config file',
+      'mdcontext config init --format json  # Create JSON config instead of JS',
+      'mdcontext config show              # Show config file location',
+      'mdcontext config check             # Validate and show effective config',
+      'mdcontext config check --json      # Output config as JSON',
+    ],
+    options: [
+      { name: 'init', description: 'Create a starter config file' },
+      { name: 'show', description: 'Display config file location' },
+      {
+        name: 'check',
+        description: 'Validate and show effective configuration',
+      },
+      {
+        name: '-f, --format <format>',
+        description: 'Config format: js or json (init only)',
+      },
+      { name: '--force', description: 'Overwrite existing config (init only)' },
+      { name: '--json', description: 'Output as JSON' },
+      { name: '--pretty', description: 'Pretty-print JSON output' },
+    ],
+    notes: [
+      'Config files set persistent defaults for all commands.',
+      'Precedence: CLI flags > environment > config file > defaults.',
+      'See docs/CONFIG.md for full configuration reference.',
+    ],
+  },
 }
 
 // ============================================================================
@@ -304,6 +335,7 @@ export const showMainHelp = (): void => {
   search <query> [path]     Search by meaning or structure
   context <files>...        Get LLM-ready summary
   tree [path]               Show files or document outline
+  config <command>          Configuration management
   links <file>              Show outgoing links
   backlinks <file>          Show incoming links
   stats [path]              Index statistics
@@ -337,11 +369,15 @@ export const showMainHelp = (): void => {
   \x1b[2m# Build semantic search\x1b[0m
   mdcontext index --embed && mdcontext search "authentication flow"
 
+  \x1b[2m# Set up project configuration\x1b[0m
+  mdcontext config init && mdcontext config check
+
 \x1b[33mGLOBAL OPTIONS\x1b[0m
-  --json          Output as JSON
-  --pretty        Pretty-print JSON
-  --help, -h      Show help
-  --version, -v   Show version
+  -c, --config <file>  Use specified config file
+  --json               Output as JSON
+  --pretty             Pretty-print JSON
+  --help, -h           Show help
+  --version, -v        Show version
 
 Run \x1b[36mmdcontext <command> --help\x1b[0m for command-specific options.
 `
@@ -364,6 +400,29 @@ export const checkSubcommandHelp = (): boolean => {
   const hasHelpFlag = args.includes('--help') || args.includes('-h')
 
   if (hasHelpFlag && command && helpContent[command]) {
+    showSubcommandHelp(command)
+    process.exit(0)
+  }
+
+  return false
+}
+
+/**
+ * Check for bare subcommand that has nested subcommands (e.g., "config").
+ * Shows custom help when running "mdcontext config" without arguments.
+ * This prevents the ugly Effect CLI default output.
+ */
+export const checkBareSubcommandHelp = (): boolean => {
+  const args = process.argv.slice(2)
+
+  // Look for: exactly one arg that is a command with subcommands in helpContent
+  if (args.length !== 1) return false
+
+  const command = args[0]
+
+  // Only handle commands that have subcommands and custom help
+  // Currently only "config" has subcommands
+  if (command === 'config' && helpContent[command]) {
     showSubcommandHelp(command)
     process.exit(0)
   }

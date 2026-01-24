@@ -8,8 +8,12 @@ import * as path from 'node:path'
 import * as readline from 'node:readline'
 import { Args, Command, Options } from '@effect/cli'
 import { Console, Effect, Option } from 'effect'
+import { ConfigService, defaultConfig } from '../../config/index.js'
+import type {
+  BuildEmbeddingsResult,
+  EmbeddingEstimate,
+} from '../../embeddings/semantic-search.js'
 import {
-  type BuildEmbeddingsResult,
   buildEmbeddings,
   estimateEmbeddingCost,
   semanticSearch,
@@ -17,10 +21,13 @@ import {
 import { isAdvancedQuery } from '../../search/query-parser.js'
 import { search, searchContent } from '../../search/searcher.js'
 import { jsonOption, prettyOption } from '../options.js'
+import {
+  createCostEstimateErrorHandler,
+  createEmbeddingErrorHandler,
+} from '../shared-error-handling.js'
 import { formatJson, getIndexInfo, isRegexPattern } from '../utils.js'
 
-// Auto-index threshold in seconds
-const AUTO_INDEX_THRESHOLD_SECONDS = 10
+// Auto-index threshold is now configurable via search.autoIndexThreshold
 
 const promptUser = (message: string): Promise<string> => {
   return new Promise((resolve) => {
@@ -88,7 +95,7 @@ export const searchCommand = Command.make(
       Options.withDescription(
         'Auto-create semantic index if estimated time is under this threshold (seconds)',
       ),
-      Options.withDefault(AUTO_INDEX_THRESHOLD_SECONDS),
+      Options.optional,
     ),
     json: jsonOption,
     pretty: prettyOption,
@@ -109,7 +116,23 @@ export const searchCommand = Command.make(
     pretty,
   }) =>
     Effect.gen(function* () {
+      // Get configuration (with fallback to defaults if not available)
+      const config = yield* Effect.serviceOption(ConfigService).pipe(
+        Effect.map(Option.getOrElse(() => defaultConfig)),
+      )
+      const searchConfig = config.search
+
       const resolvedDir = path.resolve(dirPath)
+
+      // Apply config-based defaults when CLI options use their static defaults
+      // Note: CLI options have static defaults for help text; config overrides those defaults
+      const effectiveLimit = limit === 10 ? searchConfig.defaultLimit : limit
+      const effectiveThreshold =
+        threshold === 0.45 ? searchConfig.minSimilarity : threshold
+      const effectiveAutoIndexThreshold = Option.getOrElse(
+        autoIndexThreshold,
+        () => searchConfig.autoIndexThreshold,
+      )
 
       // Get index info for display
       const indexInfo = yield* Effect.promise(() => getIndexInfo(resolvedDir))
@@ -139,7 +162,7 @@ export const searchCommand = Command.make(
           // Try to auto-create index
           embedsExist = yield* handleMissingEmbeddings(
             resolvedDir,
-            autoIndexThreshold,
+            effectiveAutoIndexThreshold,
             json,
           )
           if (!embedsExist) {
@@ -205,10 +228,13 @@ export const searchCommand = Command.make(
       if (useKeyword) {
         // Keyword search - content by default, heading-only if flag set
         const results = headingOnly
-          ? yield* search(resolvedDir, { heading: query, limit })
+          ? yield* search(resolvedDir, {
+              heading: query,
+              limit: effectiveLimit,
+            })
           : yield* searchContent(resolvedDir, {
               content: query,
-              limit,
+              limit: effectiveLimit,
               contextBefore,
               contextAfter,
             })
@@ -297,8 +323,8 @@ export const searchCommand = Command.make(
       } else {
         // Semantic search - errors will propagate to CLI boundary
         const results = yield* semanticSearch(resolvedDir, query, {
-          limit,
-          threshold,
+          limit: effectiveLimit,
+          threshold: effectiveThreshold,
         })
 
         if (json) {
@@ -347,27 +373,8 @@ const handleMissingEmbeddings = (
     // Note: We gracefully handle errors since this is an optional auto-index feature.
     // IndexNotFoundError is expected if index doesn't exist.
     const estimate = yield* estimateEmbeddingCost(resolvedDir).pipe(
-      Effect.catchTags({
-        IndexNotFoundError: () => Effect.succeed(null),
-        FileReadError: (e) => {
-          // Log file read errors for debugging
-          Effect.runSync(
-            Effect.logWarning(
-              `Could not read index files: ${e.message}`,
-            ),
-          )
-          return Effect.succeed(null)
-        },
-        IndexCorruptedError: (e) => {
-          // Log corruption errors for debugging
-          Effect.runSync(
-            Effect.logWarning(
-              `Index is corrupted: ${e.details ?? e.reason}`,
-            ),
-          )
-          return Effect.succeed(null)
-        },
-      }),
+      Effect.map((r): EmbeddingEstimate | null => r),
+      Effect.catchTags(createCostEstimateErrorHandler()),
     )
 
     if (!estimate) {
@@ -398,46 +405,7 @@ const handleMissingEmbeddings = (
         },
       }).pipe(
         Effect.map((r): BuildEmbeddingsResult | null => r),
-        Effect.catchTags({
-          ApiKeyMissingError: (e) => {
-            if (!json) {
-              Effect.runSync(Console.error(`\n${e.message}`))
-            }
-            return Effect.succeed(null as BuildEmbeddingsResult | null)
-          },
-          ApiKeyInvalidError: (e) => {
-            if (!json) {
-              Effect.runSync(Console.error(`\n${e.message}`))
-            }
-            return Effect.succeed(null as BuildEmbeddingsResult | null)
-          },
-          IndexNotFoundError: () =>
-            Effect.succeed(null as BuildEmbeddingsResult | null),
-          FileReadError: (e) => {
-            if (!json) {
-              Effect.runSync(Console.error(`\nCannot read index files: ${e.message}`))
-            }
-            return Effect.succeed(null as BuildEmbeddingsResult | null)
-          },
-          IndexCorruptedError: (e) => {
-            if (!json) {
-              Effect.runSync(Console.error(`\nIndex is corrupted: ${e.details ?? e.reason}`))
-            }
-            return Effect.succeed(null as BuildEmbeddingsResult | null)
-          },
-          EmbeddingError: (e) => {
-            if (!json) {
-              Effect.runSync(Console.error(`\nEmbedding failed: ${e.message}`))
-            }
-            return Effect.succeed(null as BuildEmbeddingsResult | null)
-          },
-          VectorStoreError: (e) => {
-            if (!json) {
-              Effect.runSync(Console.error(`\nVector store error: ${e.message}`))
-            }
-            return Effect.succeed(null as BuildEmbeddingsResult | null)
-          },
-        }),
+        Effect.catchTags(createEmbeddingErrorHandler({ silent: json })),
       )
 
       if (!result) {
@@ -489,46 +457,7 @@ const handleMissingEmbeddings = (
         },
       }).pipe(
         Effect.map((r): BuildEmbeddingsResult | null => r),
-        Effect.catchTags({
-          ApiKeyMissingError: (e) => {
-            if (!json) {
-              Effect.runSync(Console.error(`\n${e.message}`))
-            }
-            return Effect.succeed(null as BuildEmbeddingsResult | null)
-          },
-          ApiKeyInvalidError: (e) => {
-            if (!json) {
-              Effect.runSync(Console.error(`\n${e.message}`))
-            }
-            return Effect.succeed(null as BuildEmbeddingsResult | null)
-          },
-          IndexNotFoundError: () =>
-            Effect.succeed(null as BuildEmbeddingsResult | null),
-          FileReadError: (e) => {
-            if (!json) {
-              Effect.runSync(Console.error(`\nCannot read index files: ${e.message}`))
-            }
-            return Effect.succeed(null as BuildEmbeddingsResult | null)
-          },
-          IndexCorruptedError: (e) => {
-            if (!json) {
-              Effect.runSync(Console.error(`\nIndex is corrupted: ${e.details ?? e.reason}`))
-            }
-            return Effect.succeed(null as BuildEmbeddingsResult | null)
-          },
-          EmbeddingError: (e) => {
-            if (!json) {
-              Effect.runSync(Console.error(`\nEmbedding failed: ${e.message}`))
-            }
-            return Effect.succeed(null as BuildEmbeddingsResult | null)
-          },
-          VectorStoreError: (e) => {
-            if (!json) {
-              Effect.runSync(Console.error(`\nVector store error: ${e.message}`))
-            }
-            return Effect.succeed(null as BuildEmbeddingsResult | null)
-          },
-        }),
+        Effect.catchTags(createEmbeddingErrorHandler({ silent: json })),
       )
 
       if (!result) {

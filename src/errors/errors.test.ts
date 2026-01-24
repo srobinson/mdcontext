@@ -12,6 +12,7 @@
 
 import { Effect } from 'effect'
 import { describe, expect, it } from 'vitest'
+import { EXIT_CODE, formatError } from '../cli/error-handler.js'
 import {
   ApiKeyInvalidError,
   ApiKeyMissingError,
@@ -464,6 +465,100 @@ describe('Error Types', () => {
       const error = new ConfigError({ message: 'error' })
       expect(error.field).toBeUndefined()
     })
+
+    it('supports sourceFile field', () => {
+      const error = new ConfigError({
+        message: 'Invalid value',
+        field: 'index.maxDepth',
+        sourceFile: '/path/to/mdcontext.config.json',
+      })
+      expect(error.sourceFile).toBe('/path/to/mdcontext.config.json')
+    })
+
+    it('supports expectedType field', () => {
+      const error = new ConfigError({
+        message: 'Invalid type',
+        field: 'index.maxDepth',
+        expectedType: 'number',
+      })
+      expect(error.expectedType).toBe('number')
+    })
+
+    it('supports actualValue field with string value', () => {
+      const error = new ConfigError({
+        message: 'Invalid value',
+        field: 'index.maxDepth',
+        actualValue: 'ten',
+      })
+      expect(error.actualValue).toBe('ten')
+    })
+
+    it('supports actualValue field with number value', () => {
+      const error = new ConfigError({
+        message: 'Invalid value',
+        field: 'index.maxDepth',
+        actualValue: -5,
+      })
+      expect(error.actualValue).toBe(-5)
+    })
+
+    it('supports validValues field', () => {
+      const error = new ConfigError({
+        message: 'Invalid provider',
+        field: 'embeddingProvider',
+        validValues: ['openai', 'cohere', 'local'],
+      })
+      expect(error.validValues).toEqual(['openai', 'cohere', 'local'])
+    })
+
+    it('supports all enhanced fields together', () => {
+      const error = new ConfigError({
+        field: 'index.maxDepth',
+        message: 'Value must be a positive integer',
+        sourceFile: '/path/to/config.json',
+        expectedType: 'number',
+        actualValue: 'ten',
+        validValues: ['Any positive integer'],
+        cause: new Error('underlying error'),
+      })
+      expect(error.field).toBe('index.maxDepth')
+      expect(error.message).toBe('Value must be a positive integer')
+      expect(error.sourceFile).toBe('/path/to/config.json')
+      expect(error.expectedType).toBe('number')
+      expect(error.actualValue).toBe('ten')
+      expect(error.validValues).toEqual(['Any positive integer'])
+      expect(error.cause).toBeInstanceOf(Error)
+    })
+
+    it('handles all optional fields being undefined', () => {
+      const error = new ConfigError({ message: 'error' })
+      expect(error.field).toBeUndefined()
+      expect(error.sourceFile).toBeUndefined()
+      expect(error.expectedType).toBeUndefined()
+      expect(error.actualValue).toBeUndefined()
+      expect(error.validValues).toBeUndefined()
+    })
+
+    it('can be caught with catchTag', async () => {
+      const effect = Effect.fail(
+        new ConfigError({
+          field: 'test.field',
+          message: 'test error',
+          sourceFile: '/test/config.json',
+        }),
+      )
+      const result = await Effect.runPromise(
+        effect.pipe(
+          Effect.catchTag('ConfigError', (e) =>
+            Effect.succeed({ field: e.field, sourceFile: e.sourceFile }),
+          ),
+        ),
+      )
+      expect(result).toEqual({
+        field: 'test.field',
+        sourceFile: '/test/config.json',
+      })
+    })
   })
 
   // ==========================================================================
@@ -606,5 +701,145 @@ describe('Error Types', () => {
       // CLI E9xx
       expect(ErrorCode.CLI_VALIDATION).toMatch(/^E9\d{2}$/)
     })
+  })
+})
+
+// ============================================================================
+// ConfigError Formatting Tests
+// ============================================================================
+
+describe('ConfigError Formatting', () => {
+  it('formats basic config error with field', () => {
+    const error = new ConfigError({
+      field: 'index.maxDepth',
+      message: 'Value must be a positive integer',
+    })
+    const formatted = formatError(error)
+
+    expect(formatted.code).toBe('E700')
+    expect(formatted.message).toBe('Invalid configuration: index.maxDepth')
+    expect(formatted.exitCode).toBe(EXIT_CODE.USER_ERROR)
+    expect(formatted.suggestions).toContain('Check your config file syntax')
+    expect(formatted.suggestions).toContain(
+      "Run 'mdcontext config check' to validate configuration",
+    )
+  })
+
+  it('formats config error without field', () => {
+    const error = new ConfigError({
+      message: 'Invalid configuration format',
+    })
+    const formatted = formatError(error)
+
+    expect(formatted.message).toBe('Configuration error')
+    expect(formatted.details).toContain('Invalid configuration format')
+  })
+
+  it('formats config error with sourceFile', () => {
+    const error = new ConfigError({
+      field: 'index.maxDepth',
+      message: 'Invalid value',
+      sourceFile: '/path/to/mdcontext.config.json',
+    })
+    const formatted = formatError(error)
+
+    expect(formatted.details).toContain(
+      'Source: /path/to/mdcontext.config.json',
+    )
+  })
+
+  it('formats config error with expectedType and actualValue', () => {
+    const error = new ConfigError({
+      field: 'index.maxDepth',
+      message: 'Type mismatch',
+      expectedType: 'number',
+      actualValue: 'ten',
+    })
+    const formatted = formatError(error)
+
+    expect(formatted.details).toContain('Expected: number')
+    expect(formatted.details).toContain('Got: "ten"')
+  })
+
+  it('formats config error with number actualValue', () => {
+    const error = new ConfigError({
+      field: 'index.maxDepth',
+      message: 'Value out of range',
+      expectedType: 'positive integer',
+      actualValue: -5,
+    })
+    const formatted = formatError(error)
+
+    expect(formatted.details).toContain('Expected: positive integer')
+    expect(formatted.details).toContain('Got: -5')
+  })
+
+  it('formats config error with validValues', () => {
+    const error = new ConfigError({
+      field: 'embeddingProvider',
+      message: 'Invalid provider',
+      validValues: ['openai', 'cohere', 'local'],
+    })
+    const formatted = formatError(error)
+
+    expect(formatted.details).toContain('Valid values: openai, cohere, local')
+  })
+
+  it('formats config error with all enhanced fields', () => {
+    const error = new ConfigError({
+      field: 'index.maxDepth',
+      message: 'Value must be a positive integer',
+      sourceFile: '/path/to/mdcontext.config.json',
+      expectedType: 'number',
+      actualValue: 'ten',
+      validValues: ['Any positive integer'],
+    })
+    const formatted = formatError(error)
+
+    expect(formatted.code).toBe('E700')
+    expect(formatted.message).toBe('Invalid configuration: index.maxDepth')
+    expect(formatted.details).toContain(
+      'Source: /path/to/mdcontext.config.json',
+    )
+    expect(formatted.details).toContain('Expected: number')
+    expect(formatted.details).toContain('Got: "ten"')
+    expect(formatted.details).toContain('Valid values: Any positive integer')
+    expect(formatted.exitCode).toBe(EXIT_CODE.USER_ERROR)
+  })
+
+  it('includes message in details when other fields present', () => {
+    const error = new ConfigError({
+      field: 'test.field',
+      message: 'Technical error details',
+      sourceFile: '/config.json',
+    })
+    const formatted = formatError(error)
+
+    expect(formatted.details).toContain('Technical error details')
+    expect(formatted.details).toContain('Source: /config.json')
+  })
+
+  it('uses only message as details when no enhanced fields', () => {
+    const error = new ConfigError({
+      field: 'test.field',
+      message: 'Simple error message',
+    })
+    const formatted = formatError(error)
+
+    expect(formatted.details).toBe('Simple error message')
+  })
+
+  it('always includes standard suggestions', () => {
+    const error = new ConfigError({
+      message: 'Any error',
+    })
+    const formatted = formatError(error)
+
+    expect(formatted.suggestions).toBeDefined()
+    expect(formatted.suggestions).toHaveLength(2)
+    expect(formatted.suggestions).toContain('Check your config file syntax')
+    expect(formatted.suggestions).toContain(
+      "Run 'mdcontext config check' to validate configuration",
+    )
   })
 })

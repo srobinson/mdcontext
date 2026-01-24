@@ -64,6 +64,61 @@ export interface FormattedError {
 }
 
 // ============================================================================
+// Config Error Formatter
+// ============================================================================
+
+/**
+ * Format a ConfigError with enhanced context information.
+ * Builds a detailed error message including source file, type expectations,
+ * and valid values when available.
+ */
+const formatConfigError = (e: ConfigError): FormattedError => {
+  const message = e.field
+    ? `Invalid configuration: ${e.field}`
+    : 'Configuration error'
+
+  const detailParts: string[] = []
+
+  if (e.sourceFile) {
+    detailParts.push(`Source: ${e.sourceFile}`)
+  }
+
+  if (e.expectedType) {
+    detailParts.push(`Expected: ${e.expectedType}`)
+  }
+
+  if (e.actualValue !== undefined) {
+    const actualStr =
+      typeof e.actualValue === 'string'
+        ? `"${e.actualValue}"`
+        : String(e.actualValue)
+    detailParts.push(`Got: ${actualStr}`)
+  }
+
+  if (e.validValues && e.validValues.length > 0) {
+    detailParts.push(`Valid values: ${e.validValues.join(', ')}`)
+  }
+
+  if (e.message && detailParts.length === 0) {
+    detailParts.push(e.message)
+  } else if (e.message && !detailParts.some((p) => p.includes(e.message))) {
+    detailParts.unshift(e.message)
+  }
+
+  const suggestions: string[] = []
+  suggestions.push('Check your config file syntax')
+  suggestions.push("Run 'mdcontext config check' to validate configuration")
+
+  return {
+    code: e.code,
+    message,
+    details: detailParts.length > 0 ? detailParts.join('\n  ') : undefined,
+    suggestions,
+    exitCode: EXIT_CODE.USER_ERROR,
+  }
+}
+
+// ============================================================================
 // Error Formatter
 // ============================================================================
 
@@ -249,14 +304,7 @@ export const formatError = (error: MdContextError): FormattedError =>
     })),
 
     // Config errors
-    Match.tag('ConfigError', (e) => ({
-      code: e.code,
-      message: e.field
-        ? `Configuration error: ${e.field}`
-        : 'Configuration error',
-      details: e.message,
-      exitCode: EXIT_CODE.USER_ERROR,
-    })),
+    Match.tag('ConfigError', (e) => formatConfigError(e)),
 
     // Watch errors
     Match.tag('WatchError', (e) => ({

@@ -1,4 +1,5 @@
-.ralph/
+.nancy/
+worktrees/
 
 # Dependencies
 node_modules/

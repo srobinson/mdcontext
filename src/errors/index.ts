@@ -356,12 +356,24 @@ export class DocumentNotFoundError extends Data.TaggedError(
 // ============================================================================
 
 /**
- * Configuration error
+ * Configuration error with rich context for user-friendly formatting.
+ *
+ * Fields:
+ * - `field`: The config field name (e.g., "index.maxDepth")
+ * - `message`: Technical error message
+ * - `sourceFile`: Path to the config file where the error occurred
+ * - `expectedType`: Expected type (e.g., "number", "boolean")
+ * - `actualValue`: The actual invalid value
+ * - `validValues`: List of valid values for enum-like fields
  */
 export class ConfigError extends Data.TaggedError('ConfigError')<{
   readonly field?: string
   readonly message: string
   readonly cause?: unknown
+  readonly sourceFile?: string
+  readonly expectedType?: string
+  readonly actualValue?: unknown
+  readonly validValues?: readonly string[]
 }> {
   get code(): typeof ErrorCode.CONFIG {
     return ErrorCode.CONFIG

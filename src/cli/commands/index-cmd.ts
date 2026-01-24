@@ -7,15 +7,23 @@
 import * as path from 'node:path'
 import * as readline from 'node:readline'
 import { Args, Command, Options } from '@effect/cli'
-import { Console, Effect } from 'effect'
+import { Console, Effect, Option } from 'effect'
+import { ConfigService, defaultConfig } from '../../config/index.js'
+import type {
+  BuildEmbeddingsResult,
+  EmbeddingEstimate,
+} from '../../embeddings/semantic-search.js'
 import {
-  type BuildEmbeddingsResult,
   buildEmbeddings,
   estimateEmbeddingCost,
 } from '../../embeddings/semantic-search.js'
 import { buildIndex } from '../../index/indexer.js'
 import { watchDirectory } from '../../index/watcher.js'
 import { forceOption, jsonOption, prettyOption } from '../options.js'
+import {
+  createCostEstimateErrorHandler,
+  createEmbeddingErrorHandler,
+} from '../shared-error-handling.js'
 import { formatJson, hasEmbeddings } from '../utils.js'
 
 const promptUser = (message: string): Promise<string> => {
@@ -74,13 +82,19 @@ export const indexCommand = Command.make(
     pretty,
   }) =>
     Effect.gen(function* () {
+      // Get configuration (with fallback to defaults if not available)
+      const config = yield* Effect.serviceOption(ConfigService).pipe(
+        Effect.map(Option.getOrElse(() => defaultConfig)),
+      )
+      const indexConfig = config.index
+
       const resolvedDir = path.resolve(dirPath)
 
-      // Parse exclude patterns
+      // Parse exclude patterns - CLI overrides config defaults
       const excludePatterns =
         exclude._tag === 'Some'
           ? exclude.value.split(',').map((p) => p.trim())
-          : undefined
+          : [...indexConfig.excludePatterns]
 
       if (watchMode) {
         yield* Console.log(`Watching ${resolvedDir} for changes...`)
@@ -247,27 +261,8 @@ export const indexCommand = Command.make(
           // Note: We gracefully handle errors here since this is optional information
           // for the user prompt. IndexNotFoundError is expected if index doesn't exist.
           const estimate = yield* estimateEmbeddingCost(resolvedDir).pipe(
-            Effect.catchTags({
-              IndexNotFoundError: () => Effect.succeed(null),
-              FileReadError: (e) => {
-                // Log file read errors for debugging
-                Effect.runSync(
-                  Effect.logWarning(
-                    `Could not read index files: ${e.message}`,
-                  ),
-                )
-                return Effect.succeed(null)
-              },
-              IndexCorruptedError: (e) => {
-                // Log corruption errors for debugging
-                Effect.runSync(
-                  Effect.logWarning(
-                    `Index is corrupted: ${e.details ?? e.reason}`,
-                  ),
-                )
-                return Effect.succeed(null)
-              },
-            }),
+            Effect.map((r): EmbeddingEstimate | null => r),
+            Effect.catchTags(createCostEstimateErrorHandler()),
           )
 
           if (estimate) {
@@ -309,47 +304,7 @@ export const indexCommand = Command.make(
                 },
               }).pipe(
                 Effect.map((r): BuildEmbeddingsResult | null => r),
-                Effect.catchTags({
-                  // API key errors - user needs to set up API key
-                  ApiKeyMissingError: (e) => {
-                    Effect.runSync(Console.error(`\n${e.message}`))
-                    return Effect.succeed(null as BuildEmbeddingsResult | null)
-                  },
-                  ApiKeyInvalidError: (e) => {
-                    Effect.runSync(Console.error(`\n${e.message}`))
-                    return Effect.succeed(null as BuildEmbeddingsResult | null)
-                  },
-                  // Index not found - shouldn't happen after buildIndex but handle gracefully
-                  IndexNotFoundError: () =>
-                    Effect.succeed(null as BuildEmbeddingsResult | null),
-                  // File system errors
-                  FileReadError: (e) => {
-                    Effect.runSync(
-                      Console.error(`\nCannot read index files: ${e.message}`),
-                    )
-                    return Effect.succeed(null as BuildEmbeddingsResult | null)
-                  },
-                  IndexCorruptedError: (e) => {
-                    Effect.runSync(
-                      Console.error(`\nIndex is corrupted: ${e.details ?? e.reason}`),
-                    )
-                    return Effect.succeed(null as BuildEmbeddingsResult | null)
-                  },
-                  // Embedding errors - network, rate limit, etc
-                  EmbeddingError: (e) => {
-                    Effect.runSync(
-                      Console.error(`\nEmbedding failed: ${e.message}`),
-                    )
-                    return Effect.succeed(null as BuildEmbeddingsResult | null)
-                  },
-                  // Vector store errors
-                  VectorStoreError: (e) => {
-                    Effect.runSync(
-                      Console.error(`\nVector store error: ${e.message}`),
-                    )
-                    return Effect.succeed(null as BuildEmbeddingsResult | null)
-                  },
-                }),
+                Effect.catchTags(createEmbeddingErrorHandler()),
               )
 
               if (embedResult) {

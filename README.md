@@ -8,6 +8,7 @@ QUICK REFERENCE
   mdcontext search <query> [path]  Search by meaning or structure
   mdcontext context <files...>     Get LLM-ready summary
   mdcontext tree [path|file]       Show files or document outline
+  mdcontext config <command>       Configuration management (init, show, check)
   mdcontext links <file>           Outgoing links
   mdcontext backlinks <file>       Incoming links
   mdcontext stats [path]           Index statistics
@@ -203,6 +204,35 @@ For Claude Code, add to `.claude/settings.json`:
 
 ## Configuration
 
+mdcontext supports a layered configuration system for persistent settings:
+
+```bash
+# Create a config file
+mdcontext config init
+
+# Check your configuration
+mdcontext config check
+
+# Customize settings in mdcontext.config.js
+```
+
+```javascript
+// mdcontext.config.js
+/** @type {import('mdcontext').PartialMdContextConfig} */
+export default {
+  index: {
+    excludePatterns: ['node_modules', '.git', 'dist', 'vendor']
+  },
+  search: {
+    defaultLimit: 20
+  }
+}
+```
+
+Configuration precedence: CLI flags > Environment variables > Config file > Defaults
+
+**See [docs/CONFIG.md](./docs/CONFIG.md) for the complete configuration reference.**
+
 ### Index Location
 
 Indexes are stored in `.mdcontext/` in your project root:
@@ -221,6 +251,7 @@ Indexes are stored in `.mdcontext/` in your project root:
 | Variable | Description |
 |----------|-------------|
 | `OPENAI_API_KEY` | Required for semantic search |
+| `MDCONTEXT_*` | Configuration overrides (see [CONFIG.md](./docs/CONFIG.md)) |
 
 ---
 

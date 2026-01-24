@@ -480,7 +480,10 @@ export const assembleContext = (
             Effect.map((s): DocumentSummary | null => s),
             // Log error for observability before gracefully degrading
             Effect.tapError((error) =>
-              Effect.logError(`Failed to create brief summary for ${sourcePath}`, error),
+              Effect.logError(
+                `Failed to create brief summary for ${sourcePath}`,
+                error,
+              ),
             ),
             Effect.catchAll(() =>
               Effect.succeed(null as DocumentSummary | null),

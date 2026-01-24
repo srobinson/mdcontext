@@ -527,6 +527,20 @@ mdcontext context -t 1000 a.md b.md c.md
 
 ## Configuration
 
+mdcontext supports a layered configuration system with files, environment variables, and CLI flags.
+
+**Quick start:**
+
+```bash
+# Create a config file
+mdcontext config init
+
+# Check current configuration
+mdcontext config check
+```
+
+**For full configuration documentation, see [CONFIG.md](./CONFIG.md).**
+
 ### Index Directory
 
 By default, indexes are stored in `.mdcontext/` in your project root:
@@ -547,6 +561,8 @@ By default, indexes are stored in `.mdcontext/` in your project root:
 | Variable         | Required            | Description    |
 | ---------------- | ------------------- | -------------- |
 | `OPENAI_API_KEY` | For semantic search | OpenAI API key |
+
+All configuration options can also be set via `MDCONTEXT_*` environment variables. See [CONFIG.md](./CONFIG.md#environment-variables) for the complete reference.
 
 ### Supported File Types
 

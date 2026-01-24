@@ -448,4 +448,180 @@ describe.concurrent('mdcontext CLI e2e', () => {
       expect(output).toContain('Content search')
     })
   })
+
+  describe('config loading error handling', () => {
+    it('shows error for non-existent config file', async () => {
+      const output = await run('--config /nonexistent/path.json --help', {
+        expectError: true,
+      })
+      expect(output).toContain('Error: Config file not found')
+      expect(output).toContain('path.json')
+    })
+
+    it('shows error for invalid JSON config file', async () => {
+      // Create a temp file with invalid JSON
+      const fs = await import('node:fs')
+      const os = await import('node:os')
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdcontext-test-'))
+      const invalidConfigPath = path.join(tempDir, 'invalid.json')
+      fs.writeFileSync(invalidConfigPath, 'not valid json { broken')
+
+      try {
+        const output = await run(`--config ${invalidConfigPath} --help`, {
+          expectError: true,
+        })
+        expect(output).toContain('Error: Invalid JSON in config file')
+        expect(output).toContain(invalidConfigPath)
+      } finally {
+        fs.rmSync(tempDir, { recursive: true, force: true })
+      }
+    })
+
+    it('shows error for JS config that exports non-object', async () => {
+      const fs = await import('node:fs')
+      const os = await import('node:os')
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdcontext-test-'))
+      const badConfigPath = path.join(tempDir, 'bad.config.mjs')
+      fs.writeFileSync(badConfigPath, 'export default "not an object"')
+
+      try {
+        const output = await run(`--config ${badConfigPath} --help`, {
+          expectError: true,
+        })
+        expect(output).toContain(
+          'Error: Config file must export a default object',
+        )
+        expect(output).toContain(badConfigPath)
+      } finally {
+        fs.rmSync(tempDir, { recursive: true, force: true })
+      }
+    })
+
+    it('shows error for JS config that exports null', async () => {
+      const fs = await import('node:fs')
+      const os = await import('node:os')
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdcontext-test-'))
+      const nullConfigPath = path.join(tempDir, 'null.config.mjs')
+      fs.writeFileSync(nullConfigPath, 'export default null')
+
+      try {
+        const output = await run(`--config ${nullConfigPath} --help`, {
+          expectError: true,
+        })
+        expect(output).toContain(
+          'Error: Config file must export a default object',
+        )
+        expect(output).toContain(nullConfigPath)
+      } finally {
+        fs.rmSync(tempDir, { recursive: true, force: true })
+      }
+    })
+
+    it('shows error for JS config that exports array', async () => {
+      const fs = await import('node:fs')
+      const os = await import('node:os')
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdcontext-test-'))
+      const arrayConfigPath = path.join(tempDir, 'array.config.mjs')
+      fs.writeFileSync(
+        arrayConfigPath,
+        'export default [{ index: { maxDepth: 5 } }]',
+      )
+
+      try {
+        const output = await run(`--config ${arrayConfigPath} --help`, {
+          expectError: true,
+        })
+        expect(output).toContain(
+          'Error: Config file must export a default object',
+        )
+        expect(output).toContain(arrayConfigPath)
+      } finally {
+        fs.rmSync(tempDir, { recursive: true, force: true })
+      }
+    })
+
+    it('shows error for JS config with syntax error', async () => {
+      const fs = await import('node:fs')
+      const os = await import('node:os')
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdcontext-test-'))
+      const syntaxErrorPath = path.join(tempDir, 'syntax-error.config.mjs')
+      fs.writeFileSync(
+        syntaxErrorPath,
+        'export default { invalid syntax here >>>',
+      )
+
+      try {
+        const output = await run(`--config ${syntaxErrorPath} --help`, {
+          expectError: true,
+        })
+        expect(output).toContain('Error')
+      } finally {
+        fs.rmSync(tempDir, { recursive: true, force: true })
+      }
+    })
+
+    it('shows error for JS config with no exports', async () => {
+      const fs = await import('node:fs')
+      const os = await import('node:os')
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdcontext-test-'))
+      const noExportPath = path.join(tempDir, 'no-export.config.mjs')
+      fs.writeFileSync(
+        noExportPath,
+        'const config = { index: { maxDepth: 5 } }; // no export',
+      )
+
+      try {
+        const output = await run(`--config ${noExportPath} --help`, {
+          expectError: true,
+        })
+        expect(output).toContain(
+          'Error: Config file must export a default object',
+        )
+      } finally {
+        fs.rmSync(tempDir, { recursive: true, force: true })
+      }
+    })
+
+    it('loads valid JSON config file successfully', async () => {
+      const fs = await import('node:fs')
+      const os = await import('node:os')
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdcontext-test-'))
+      const validConfigPath = path.join(tempDir, 'valid.json')
+      fs.writeFileSync(
+        validConfigPath,
+        JSON.stringify({ index: { maxDepth: 5 } }),
+      )
+
+      try {
+        const output = await run(`--config ${validConfigPath} --help`)
+        // Should show help without errors
+        expect(output).toContain('index')
+        expect(output).toContain('search')
+        expect(output).not.toContain('Error')
+      } finally {
+        fs.rmSync(tempDir, { recursive: true, force: true })
+      }
+    })
+
+    it('loads valid MJS config file successfully', async () => {
+      const fs = await import('node:fs')
+      const os = await import('node:os')
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdcontext-test-'))
+      const validConfigPath = path.join(tempDir, 'valid.config.mjs')
+      fs.writeFileSync(
+        validConfigPath,
+        'export default { index: { maxDepth: 5 } }',
+      )
+
+      try {
+        const output = await run(`--config ${validConfigPath} --help`)
+        // Should show help without errors
+        expect(output).toContain('index')
+        expect(output).toContain('search')
+        expect(output).not.toContain('Error')
+      } finally {
+        fs.rmSync(tempDir, { recursive: true, force: true })
+      }
+    })
+  })
 })
