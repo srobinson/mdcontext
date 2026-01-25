@@ -15,12 +15,54 @@ import type { EmbeddingProvider, EmbeddingResult } from './types.js'
 // Cost Constants
 // ============================================================================
 
-// Prices per 1M tokens (as of 2024)
-const PRICING: Record<string, number> = {
-  'text-embedding-3-small': 0.02,
-  'text-embedding-3-large': 0.13,
-  'text-embedding-ada-002': 0.1,
+/**
+ * OpenAI embedding model pricing data.
+ *
+ * Prices per 1M tokens. Updated manually - see maintenance process below.
+ *
+ * Maintenance: Check https://platform.openai.com/docs/pricing quarterly
+ * and update lastUpdated + prices if needed.
+ */
+export const PRICING_DATA = {
+  /** Last update date in YYYY-MM format */
+  lastUpdated: '2024-09',
+  /** Source URL for verification */
+  source: 'https://platform.openai.com/docs/pricing',
+  /** Prices per 1M tokens by model */
+  prices: {
+    'text-embedding-3-small': 0.02,
+    'text-embedding-3-large': 0.13,
+    'text-embedding-ada-002': 0.1,
+  } as Record<string, number>,
 }
+
+/**
+ * Check if pricing data is stale (>90 days old).
+ *
+ * @returns Warning message if stale, null otherwise
+ */
+export const checkPricingFreshness = (): string | null => {
+  const [year, month] = PRICING_DATA.lastUpdated.split('-').map(Number)
+  if (!year || !month) return null
+
+  const lastUpdated = new Date(year, month - 1, 1) // Month is 0-indexed
+  const now = new Date()
+  const daysSince = Math.floor(
+    (now.getTime() - lastUpdated.getTime()) / (1000 * 60 * 60 * 24),
+  )
+
+  if (daysSince > 90) {
+    return `Pricing data is ${daysSince} days old. May not reflect current rates.`
+  }
+  return null
+}
+
+/**
+ * Get the pricing date for display.
+ *
+ * @returns Formatted string like "2024-09"
+ */
+export const getPricingDate = (): string => PRICING_DATA.lastUpdated
 
 // ============================================================================
 // OpenAI Provider
@@ -104,7 +146,7 @@ export class OpenAIProvider implements EmbeddingProvider {
     }
 
     // Calculate cost
-    const pricePerMillion = PRICING[this.model] ?? 0.02
+    const pricePerMillion = PRICING_DATA.prices[this.model] ?? 0.02
     const cost = (totalTokens / 1_000_000) * pricePerMillion
 
     return {

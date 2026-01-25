@@ -21,7 +21,13 @@ import {
   loadSectionIndex,
 } from '../index/storage.js'
 import type { SectionEntry } from '../index/types.js'
-import { createOpenAIProvider, wrapEmbedding } from './openai-provider.js'
+import {
+  checkPricingFreshness,
+  createOpenAIProvider,
+  getPricingDate,
+  PRICING_DATA,
+  wrapEmbedding,
+} from './openai-provider.js'
 import type {
   EmbeddingProvider,
   SemanticSearchOptions,
@@ -57,8 +63,12 @@ const generateEmbeddingText = (
 // Cost Estimation
 // ============================================================================
 
-// Price per 1M tokens for text-embedding-3-small
-const EMBEDDING_PRICE_PER_MILLION = 0.02
+// Price per 1M tokens for text-embedding-3-small (from PRICING_DATA)
+const EMBEDDING_PRICE_PER_MILLION =
+  PRICING_DATA.prices['text-embedding-3-small'] ?? 0.02
+
+// Re-export pricing utilities for CLI use
+export { checkPricingFreshness, getPricingDate }
 
 export interface DirectoryEstimate {
   readonly directory: string

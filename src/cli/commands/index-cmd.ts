@@ -7,15 +7,16 @@
 import * as path from 'node:path'
 import * as readline from 'node:readline'
 import { Args, Command, Options } from '@effect/cli'
-import { Console, Effect, Option } from 'effect'
-import { ConfigService, defaultConfig } from '../../config/index.js'
+import { Console, Effect } from 'effect'
 import type {
   BuildEmbeddingsResult,
   EmbeddingEstimate,
 } from '../../embeddings/semantic-search.js'
 import {
   buildEmbeddings,
+  checkPricingFreshness,
   estimateEmbeddingCost,
+  getPricingDate,
 } from '../../embeddings/semantic-search.js'
 import { buildIndex } from '../../index/indexer.js'
 import { watchDirectory } from '../../index/watcher.js'
@@ -58,9 +59,13 @@ export const indexCommand = Command.make(
     exclude: Options.text('exclude').pipe(
       Options.withAlias('x'),
       Options.withDescription(
-        'Exclude files matching patterns (comma-separated globs)',
+        'Additional patterns to exclude (comma-separated). Patterns from .gitignore and .mdcontextignore are honored automatically.',
       ),
       Options.optional,
+    ),
+    noGitignore: Options.boolean('no-gitignore').pipe(
+      Options.withDescription('Ignore .gitignore file'),
+      Options.withDefault(false),
     ),
     watch: Options.boolean('watch').pipe(
       Options.withAlias('w'),
@@ -76,25 +81,21 @@ export const indexCommand = Command.make(
     embed,
     noEmbed,
     exclude,
+    noGitignore,
     watch: watchMode,
     force,
     json,
     pretty,
   }) =>
     Effect.gen(function* () {
-      // Get configuration (with fallback to defaults if not available)
-      const config = yield* Effect.serviceOption(ConfigService).pipe(
-        Effect.map(Option.getOrElse(() => defaultConfig)),
-      )
-      const indexConfig = config.index
-
       const resolvedDir = path.resolve(dirPath)
 
-      // Parse exclude patterns - CLI overrides config defaults
-      const excludePatterns =
+      // Parse exclude patterns - CLI adds to ignore files
+      // Note: buildIndex now honors .gitignore and .mdcontextignore by default
+      const cliExcludePatterns =
         exclude._tag === 'Some'
           ? exclude.value.split(',').map((p) => p.trim())
-          : [...indexConfig.excludePatterns]
+          : undefined
 
       if (watchMode) {
         yield* Console.log(`Watching ${resolvedDir} for changes...`)
@@ -103,6 +104,8 @@ export const indexCommand = Command.make(
 
         const watcher = yield* watchDirectory(resolvedDir, {
           force,
+          exclude: cliExcludePatterns,
+          honorGitignore: !noGitignore,
           onIndex: (result) => {
             if (json) {
               console.log(formatJson(result, pretty))
@@ -127,7 +130,11 @@ export const indexCommand = Command.make(
       } else {
         yield* Console.log(`Indexing ${resolvedDir}...`)
 
-        const result = yield* buildIndex(resolvedDir, { force })
+        const result = yield* buildIndex(resolvedDir, {
+          force,
+          exclude: cliExcludePatterns,
+          honorGitignore: !noGitignore,
+        })
 
         if (!json) {
           yield* Console.log('')
@@ -178,7 +185,7 @@ export const indexCommand = Command.make(
 
           // Show cost estimate first - errors propagate to CLI boundary
           const estimate = yield* estimateEmbeddingCost(resolvedDir, {
-            excludePatterns,
+            excludePatterns: cliExcludePatterns,
           })
 
           if (!json) {
@@ -194,8 +201,14 @@ export const indexCommand = Command.make(
             }
             yield* Console.log('')
             yield* Console.log(
-              `Total: ~${estimate.totalTokens.toLocaleString()} tokens, ~$${estimate.totalCost.toFixed(4)}, ~${estimate.estimatedTimeSeconds}s`,
+              `Total: ~${estimate.totalTokens.toLocaleString()} tokens, ~$${estimate.totalCost.toFixed(4)} (pricing as of ${getPricingDate()}), ~${estimate.estimatedTimeSeconds}s`,
             )
+
+            // Check for stale pricing data
+            const stalenessWarning = checkPricingFreshness()
+            if (stalenessWarning) {
+              yield* Console.log(`  Warning: ${stalenessWarning}`)
+            }
             yield* Console.log('')
           }
 
@@ -208,7 +221,7 @@ export const indexCommand = Command.make(
           // Build embeddings - errors propagate to CLI boundary
           const embedResult = yield* buildEmbeddings(resolvedDir, {
             force,
-            excludePatterns,
+            excludePatterns: cliExcludePatterns,
             onFileProgress: (progress) => {
               if (!json) {
                 process.stdout.write(

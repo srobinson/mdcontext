@@ -5,6 +5,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { Effect } from 'effect'
+import type { Ignore } from 'ignore'
 import type { MdSection } from '../core/types.js'
 import {
   type DirectoryCreateError,
@@ -15,6 +16,7 @@ import {
   ParseError,
 } from '../errors/index.js'
 import { parse } from '../parser/parser.js'
+import { createIgnoreFilter, shouldIgnore } from './ignore-patterns.js'
 import {
   computeHash,
   createEmptyDocumentIndex,
@@ -45,25 +47,6 @@ import type {
 const isMarkdownFile = (filename: string): boolean =>
   filename.endsWith('.md') || filename.endsWith('.mdx')
 
-const shouldExclude = (
-  filePath: string,
-  exclude: readonly string[],
-): boolean => {
-  const normalized = filePath.toLowerCase()
-  for (const pattern of exclude) {
-    if (
-      pattern.includes('node_modules') &&
-      normalized.includes('node_modules')
-    ) {
-      return true
-    }
-    if (pattern.startsWith('**/.*') && normalized.includes('/.')) {
-      return true
-    }
-  }
-  return false
-}
-
 /**
  * Result of directory walk including tracked skip counts
  */
@@ -75,9 +58,18 @@ interface WalkResult {
   }
 }
 
+/**
+ * Walk directory using ignore filter for pattern matching.
+ *
+ * @param dir - Directory to walk
+ * @param rootPath - Root path for computing relative paths
+ * @param filter - Ignore filter instance
+ * @returns Walk result with files and skip counts
+ */
 const walkDirectory = async (
   dir: string,
-  exclude: readonly string[],
+  rootPath: string,
+  filter: Ignore,
 ): Promise<WalkResult> => {
   const files: string[] = []
   let hiddenCount = 0
@@ -86,21 +78,28 @@ const walkDirectory = async (
 
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name)
+    const relativePath = path.relative(rootPath, fullPath)
 
-    if (entry.name.startsWith('.') || entry.name === 'node_modules') {
+    // Skip hidden files/directories (starting with .)
+    if (entry.name.startsWith('.')) {
       if (entry.isDirectory()) {
         hiddenCount++
       }
       continue
     }
 
-    if (shouldExclude(fullPath, exclude)) {
-      excludedCount++
+    // Check ignore filter for both files and directories
+    if (shouldIgnore(relativePath, filter)) {
+      if (entry.isDirectory()) {
+        excludedCount++
+      } else {
+        excludedCount++
+      }
       continue
     }
 
     if (entry.isDirectory()) {
-      const subResult = await walkDirectory(fullPath, exclude)
+      const subResult = await walkDirectory(fullPath, rootPath, filter)
       files.push(...subResult.files)
       hiddenCount += subResult.skipped.hidden
       excludedCount += subResult.skipped.excluded
@@ -185,8 +184,13 @@ const resolveInternalLink = (
 // ============================================================================
 
 export interface IndexOptions {
-  readonly force?: boolean
-  readonly exclude?: readonly string[]
+  readonly force?: boolean | undefined
+  /** CLI/config exclude patterns (overrides ignore files) */
+  readonly exclude?: readonly string[] | undefined
+  /** Whether to honor .gitignore (default: true) */
+  readonly honorGitignore?: boolean | undefined
+  /** Whether to honor .mdcontextignore (default: true) */
+  readonly honorMdcontextignore?: boolean | undefined
 }
 
 export const buildIndex = (
@@ -221,10 +225,19 @@ export const buildIndex = (
     const sectionIndex = existingSectionIndex ?? createEmptySectionIndex()
     const linkIndex = existingLinkIndex ?? createEmptyLinkIndex()
 
-    // Discover files
-    const exclude = options.exclude ?? ['**/node_modules/**', '**/.*/**']
+    // Build ignore filter with proper precedence:
+    // CLI/config patterns > .mdcontextignore > .gitignore > defaults
+    const ignoreResult = yield* createIgnoreFilter({
+      rootPath: storage.rootPath,
+      cliPatterns: options.exclude,
+      honorGitignore: options.honorGitignore ?? true,
+      honorMdcontextignore: options.honorMdcontextignore ?? true,
+    })
+
+    // Discover files using the ignore filter
     const walkResult = yield* Effect.tryPromise({
-      try: () => walkDirectory(storage.rootPath, exclude),
+      try: () =>
+        walkDirectory(storage.rootPath, storage.rootPath, ignoreResult.filter),
       catch: (e) =>
         new DirectoryWalkError({
           path: storage.rootPath,
@@ -510,4 +523,131 @@ export const getBrokenLinks = (
     }
 
     return linkIndex.broken
+  })
+
+// ============================================================================
+// BM25 Index Building
+// ============================================================================
+
+import { type BM25Document, createBM25Store } from '../search/bm25-store.js'
+
+export interface BuildBM25Options {
+  readonly force?: boolean
+  readonly onProgress?: (progress: { current: number; total: number }) => void
+}
+
+export interface BuildBM25Result {
+  readonly sectionsIndexed: number
+  readonly duration: number
+}
+
+/**
+ * Build BM25 keyword index for all sections.
+ *
+ * @param rootPath - Root directory containing indexed markdown files
+ * @param options - Build options (force rebuild, progress callback)
+ * @returns Result with section count and timing
+ */
+export const buildBM25Index = (
+  rootPath: string,
+  options: BuildBM25Options = {},
+): Effect.Effect<
+  BuildBM25Result,
+  FileReadError | IndexCorruptedError | FileWriteError
+> =>
+  Effect.gen(function* () {
+    const startTime = Date.now()
+    const storage = createStorage(rootPath)
+
+    // Load section index
+    const docIndex = yield* loadDocumentIndex(storage)
+    const sectionIndex = yield* loadSectionIndex(storage)
+
+    if (!docIndex || !sectionIndex) {
+      return { sectionsIndexed: 0, duration: 0 }
+    }
+
+    // Create BM25 store
+    const bm25Store = createBM25Store(storage.rootPath)
+
+    // Check if we can skip
+    if (!options.force) {
+      const loaded = yield* bm25Store.load()
+      if (loaded) {
+        const stats = bm25Store.getStats()
+        if (stats.count > 0) {
+          return { sectionsIndexed: 0, duration: Date.now() - startTime }
+        }
+      }
+    }
+
+    // Clear and rebuild
+    bm25Store.clear()
+
+    // Group sections by document for efficient file reading
+    const sectionsByDoc: Map<string, SectionEntry[]> = new Map()
+    for (const section of Object.values(sectionIndex.sections)) {
+      if (section.tokenCount < 10) continue
+      const existing = sectionsByDoc.get(section.documentPath)
+      if (existing) {
+        existing.push(section)
+      } else {
+        sectionsByDoc.set(section.documentPath, [section])
+      }
+    }
+
+    const totalDocs = sectionsByDoc.size
+    let processedDocs = 0
+    let sectionsIndexed = 0
+
+    // Process each document
+    for (const [docPath, sections] of sectionsByDoc) {
+      const filePath = path.join(storage.rootPath, docPath)
+
+      // Read file content
+      const fileContentResult = yield* Effect.promise(() =>
+        fs.readFile(filePath, 'utf-8'),
+      ).pipe(
+        Effect.map((content) => ({ ok: true as const, content })),
+        Effect.catchAll(() =>
+          Effect.succeed({ ok: false as const, content: '' }),
+        ),
+      )
+
+      if (!fileContentResult.ok) continue
+
+      const lines = fileContentResult.content.split('\n')
+      const docs: BM25Document[] = []
+
+      for (const section of sections) {
+        const content = lines
+          .slice(section.startLine - 1, section.endLine)
+          .join('\n')
+
+        docs.push({
+          id: section.id,
+          sectionId: section.id,
+          documentPath: section.documentPath,
+          heading: section.heading,
+          content,
+        })
+        sectionsIndexed++
+      }
+
+      yield* bm25Store.add(docs)
+
+      processedDocs++
+      if (options.onProgress) {
+        options.onProgress({ current: processedDocs, total: totalDocs })
+      }
+    }
+
+    // Consolidate and save
+    yield* bm25Store.consolidate()
+    yield* bm25Store.save()
+
+    return {
+      sectionsIndexed,
+      duration: Date.now() - startTime,
+    }
   })

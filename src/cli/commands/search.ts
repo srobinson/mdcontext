@@ -18,6 +18,11 @@ import {
   estimateEmbeddingCost,
   semanticSearch,
 } from '../../embeddings/semantic-search.js'
+import {
+  detectSearchModes,
+  hybridSearch,
+  type SearchMode,
+} from '../../search/hybrid-search.js'
 import { isAdvancedQuery } from '../../search/query-parser.js'
 import { search, searchContent } from '../../search/searcher.js'
 import { jsonOption, prettyOption } from '../options.js'
@@ -62,9 +67,11 @@ export const searchCommand = Command.make(
       Options.withDescription('Search headings only (not content)'),
       Options.withDefault(false),
     ),
-    mode: Options.choice('mode', ['semantic', 'keyword']).pipe(
+    mode: Options.choice('mode', ['hybrid', 'semantic', 'keyword']).pipe(
       Options.withAlias('m'),
-      Options.withDescription('Force search mode: semantic or keyword'),
+      Options.withDescription(
+        'Search mode: hybrid (BM25+semantic), semantic, or keyword',
+      ),
       Options.optional,
     ),
     limit: Options.integer('limit').pipe(
@@ -146,54 +153,58 @@ export const searchCommand = Command.make(
         return
       }
 
-      // Check for embeddings
-      let embedsExist = indexInfo.embeddingsExist
+      // Check available search modes
+      const searchModes = yield* detectSearchModes(resolvedDir)
+      let embedsExist = searchModes.hasEmbeddings
 
       // Determine search mode
-      // Priority: --mode flag > --keyword flag > regex pattern > embeddings availability
-      let useKeyword: boolean
+      // Priority: --mode flag > --keyword flag > advanced query > auto-detect
+      let effectiveMode: SearchMode
       let modeReason: string
 
       const modeValue = Option.getOrUndefined(mode)
 
-      if (modeValue === 'semantic') {
-        // User explicitly requested semantic search
+      if (modeValue === 'hybrid') {
+        effectiveMode = 'hybrid'
+        modeReason = '--mode hybrid'
+      } else if (modeValue === 'semantic') {
         if (!embedsExist) {
-          // Try to auto-create index
           embedsExist = yield* handleMissingEmbeddings(
             resolvedDir,
             effectiveAutoIndexThreshold,
             json,
           )
           if (!embedsExist) {
-            // User declined or error
             return
           }
         }
-        useKeyword = false
+        effectiveMode = 'semantic'
         modeReason = '--mode semantic'
       } else if (modeValue === 'keyword') {
-        useKeyword = true
+        effectiveMode = 'keyword'
         modeReason = '--mode keyword'
       } else if (keyword) {
-        useKeyword = true
+        effectiveMode = 'keyword'
         modeReason = '--keyword flag'
       } else if (isAdvancedQuery(query)) {
-        // Detect quoted phrases and boolean operators (AND, OR, NOT)
-        useKeyword = true
+        effectiveMode = 'keyword'
         modeReason = 'boolean/phrase pattern detected'
       } else if (isRegexPattern(query)) {
-        useKeyword = true
+        effectiveMode = 'keyword'
         modeReason = 'regex pattern detected'
-      } else if (!embedsExist) {
-        useKeyword = true
-        modeReason = 'no embeddings'
       } else {
-        useKeyword = false
-        modeReason = 'embeddings available'
+        // Auto-detect best mode based on available indexes
+        effectiveMode = searchModes.recommendedMode
+        if (effectiveMode === 'hybrid') {
+          modeReason = 'both indexes available'
+        } else if (effectiveMode === 'semantic') {
+          modeReason = 'embeddings available'
+        } else {
+          modeReason = 'no embeddings'
+        }
       }
 
-      const modeIndicator = useKeyword ? '[keyword]' : '[semantic]'
+      const modeIndicator = `[${effectiveMode}]`
 
       // Show index info (non-JSON mode)
       if (!json && indexInfo.lastUpdated) {
@@ -225,7 +236,50 @@ export const searchCommand = Command.make(
       const contextBefore = beforeValue ?? contextValue ?? 1
       const contextAfter = afterValue ?? contextValue ?? 1
 
-      if (useKeyword) {
+      if (effectiveMode === 'hybrid') {
+        // Hybrid search - combines BM25 and semantic with RRF
+        const { results, stats } = yield* hybridSearch(resolvedDir, query, {
+          limit: effectiveLimit,
+          threshold: effectiveThreshold,
+          mode: 'hybrid',
+        })
+
+        if (json) {
+          const output = {
+            mode: 'hybrid',
+            modeReason,
+            query,
+            stats,
+            results: results.map((r) => ({
+              path: r.documentPath,
+              heading: r.heading,
+              score: r.score,
+              similarity: r.similarity,
+              bm25Score: r.bm25Score,
+              sources: r.sources,
+            })),
+          }
+          yield* Console.log(formatJson(output, pretty))
+        } else {
+          const showReason = !modeReason.startsWith('--mode')
+          const modeStr = showReason
+            ? `${modeIndicator} (${modeReason})`
+            : modeIndicator
+          yield* Console.log(`${modeStr} Searching: "${query}"`)
+          yield* Console.log(`Results: ${results.length}`)
+          yield* Console.log('')
+
+          for (const result of results) {
+            const sources = result.sources.join('+')
+            const score = (result.score * 100).toFixed(1)
+            yield* Console.log(`  ${result.documentPath}`)
+            yield* Console.log(
+              `    ${result.heading} (${score} RRF, ${sources})`,
+            )
+            yield* Console.log('')
+          }
+        }
+      } else if (effectiveMode === 'keyword') {
         // Keyword search - content by default, heading-only if flag set
         const results = headingOnly
           ? yield* search(resolvedDir, {
@@ -262,7 +316,6 @@ export const searchCommand = Command.make(
           yield* Console.log(formatJson(output, pretty))
         } else {
           const searchType = headingOnly ? 'Heading' : 'Content'
-          // Show mode with explanation for auto-detected modes
           const showReason =
             modeReason !== '--mode keyword' && modeReason !== '--keyword flag'
           const modeStr = showReason
@@ -281,12 +334,9 @@ export const searchCommand = Command.make(
               `    ${levelMarker} ${result.section.heading} (${result.section.tokenCount} tokens)`,
             )
 
-            // Show match snippets with line numbers
             if (result.matches && result.matches.length > 0) {
               yield* Console.log('')
               for (const match of result.matches.slice(0, 3)) {
-                // Show first 3 matches per section
-                // Use contextLines for formatted output with line numbers
                 if (match.contextLines && match.contextLines.length > 0) {
                   for (const ctxLine of match.contextLines) {
                     const marker = ctxLine.isMatch ? '>' : ' '
@@ -295,7 +345,6 @@ export const searchCommand = Command.make(
                     )
                   }
                 } else {
-                  // Fallback to simple snippet display
                   yield* Console.log(`    Line ${match.lineNumber}:`)
                   const snippetLines = match.snippet.split('\n')
                   for (const line of snippetLines) {
@@ -313,7 +362,6 @@ export const searchCommand = Command.make(
             yield* Console.log('')
           }
 
-          // Show tip for enabling semantic search if no embeddings
           if (!indexInfo.embeddingsExist) {
             yield* Console.log(
               "Tip: Run 'mdcontext index --embed' to enable semantic search",
@@ -321,7 +369,7 @@ export const searchCommand = Command.make(
           }
         }
       } else {
-        // Semantic search - errors will propagate to CLI boundary
+        // Semantic search
         const results = yield* semanticSearch(resolvedDir, query, {
           limit: effectiveLimit,
           threshold: effectiveThreshold,
@@ -336,7 +384,6 @@ export const searchCommand = Command.make(
           }
           yield* Console.log(formatJson(output, pretty))
         } else {
-          // Show mode with explanation for auto-detected modes
           const showSemanticReason = modeReason !== '--mode semantic'
           const semanticModeStr = showSemanticReason
             ? `${modeIndicator} (${modeReason})`
@@ -352,7 +399,6 @@ export const searchCommand = Command.make(
             yield* Console.log('')
           }
 
-          // Show tip for keyword search alternative
           yield* Console.log('Tip: Use --mode keyword for exact text matching')
         }
       }

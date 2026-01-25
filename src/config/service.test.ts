@@ -1,7 +1,34 @@
 /**
  * ConfigService Unit Tests
  *
- * Tests for the Effect ConfigService layer and utilities.
+ * Comprehensive tests for the Effect-based ConfigService layer and related
+ * utilities. This suite verifies how configuration is loaded, merged, and
+ * accessed across different Effect layers.
+ *
+ * Patterns under test:
+ * - Default configuration via `ConfigServiceDefault`
+ * - Live configuration via `ConfigServiceLive` combined with `ConfigProvider`
+ * - Creating ad-hoc layers with `makeConfigLayer` and `makeConfigLayerPartial`
+ * - Merging user-provided values with `defaultConfig` using `mergeWithDefaults`
+ * - Reading configuration through the `ConfigService` tag and helpers
+ *   (`getConfig`, `getConfigSection`, `getConfigValue`)
+ *
+ * Key scenarios:
+ * - Ensuring all top-level sections (index, search, embeddings, output, paths)
+ *   receive correct default values when no overrides are provided
+ * - Overriding selected values via `ConfigProvider.fromMap` while preserving
+ *   defaults for unspecified keys
+ * - Providing fully-specified configs and partially-specified configs and
+ *   verifying correct fallback/merge behavior
+ * - Validating lookup helpers return the expected values and handle missing
+ *   keys using Effect/Option semantics
+ *
+ * Test organization and setup:
+ * - Uses Vitest (`describe`/`it`) with Effect programs composed via
+ *   `Effect.gen` and executed through `Effect.runPromise`
+ * - Layers and config providers are attached on a per-test basis using
+ *   `Effect.provide` and `Effect.withConfigProvider`, so tests are isolated
+ *   and do not share state between runs
  */
 
 import { ConfigProvider, Effect, Option } from 'effect'

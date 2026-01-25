@@ -33,6 +33,7 @@ import {
   type IndexCorruptedError,
   WatchError,
 } from '../errors/index.js'
+import { getChokidarIgnorePatterns } from './ignore-patterns.js'
 import { buildIndex, type IndexOptions } from './indexer.js'
 import { createStorage, indexExists } from './storage.js'
 
@@ -58,6 +59,10 @@ export interface WatcherOptions extends IndexOptions {
     duration: number
   }) => void
   readonly onError?: (error: WatchError) => void
+  /** Whether to honor .gitignore for file watching (default: true) */
+  readonly honorGitignore?: boolean
+  /** Whether to honor .mdcontextignore for file watching (default: true) */
+  readonly honorMdcontextignore?: boolean
 }
 
 export interface Watcher {
@@ -126,12 +131,17 @@ export const watchDirectory = (
       }, debounceMs)
     }
 
-    // Set up chokidar watcher
+    // Build ignore patterns for chokidar
+    const ignorePatterns = yield* getChokidarIgnorePatterns({
+      rootPath: resolvedRoot,
+      cliPatterns: options.exclude,
+      honorGitignore: options.honorGitignore ?? true,
+      honorMdcontextignore: options.honorMdcontextignore ?? true,
+    })
+
+    // Set up chokidar watcher with dynamic ignore patterns
     const watcher = watch(resolvedRoot, {
-      ignored: [
-        /(^|[/\\])\../, // Ignore dotfiles
-        '**/node_modules/**',
-      ],
+      ignored: ignorePatterns,
       persistent: true,
       ignoreInitial: true,
     })

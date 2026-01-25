@@ -222,9 +222,13 @@ type _MissingMappings = Exclude<
   ConfigSchemaKey,
   (typeof ENV_KEY_MAPPING)[string]
 >
-const _completenessCheck: _MissingMappings extends never ? true : never = true
-void _completenessCheck // Prevent unused variable warning
 
+// Pure type-level assertion: will fail to compile if any mappings are missing
+type AssertTrue<T extends true> = T
+// @ts-expect-error - Type-level assertion, intentionally unused
+type _CompletenessCheck = AssertTrue<
+  _MissingMappings extends never ? true : false
+>
 /**
  * Read environment variables with the given prefix and map them to config keys.
  *

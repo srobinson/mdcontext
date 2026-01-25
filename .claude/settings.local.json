@@ -16,10 +16,6 @@
           {
             "type": "command",
             "command": "/Users/alphab/Dev/LLM/DEV/TMP/nancy/skills/check-directives/check-directives.sh"
-          },
-          {
-            "type": "command",
-            "command": "/Users/alphab/Dev/LLM/DEV/TMP/nancy/skills/check-tokens/check-tokens.sh"
           }
         ]
       }

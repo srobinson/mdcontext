@@ -200,6 +200,61 @@ export default defineConfig({
 })
 ```
 
+### Excluding Files
+
+mdcontext automatically respects standard ignore patterns.
+
+#### .gitignore (Honored by Default)
+
+Your existing `.gitignore` is automatically respected. No additional configuration needed.
+
+#### .mdcontextignore (Custom Patterns)
+
+Create `.mdcontextignore` in your project root for mdcontext-specific exclusions:
+
+```gitignore
+# Ignore research notes
+research/**/*.md
+
+# But keep summaries
+!research/**/summary.md
+
+# Ignore draft content
+drafts/
+*.draft.md
+```
+
+#### Precedence
+
+Patterns are applied in this order (later patterns override earlier):
+
+1. **Built-in defaults** - `node_modules`, `.git`, `dist`, `build`
+2. **.gitignore** - Standard git ignore patterns
+3. **.mdcontextignore** - mdcontext-specific patterns
+4. **CLI --exclude** - Highest priority, overrides all
+
+```bash
+# Add patterns via CLI (highest priority)
+mdcontext index --exclude "*.draft.md,research/**"
+
+# Disable .gitignore honoring
+mdcontext index --no-gitignore
+```
+
+#### Pattern Syntax
+
+Uses standard `.gitignore` syntax:
+
+| Pattern | Matches |
+| ------- | ------- |
+| `*.log` | All .log files |
+| `temp/` | Directory named temp |
+| `**/node_modules/**` | node_modules anywhere |
+| `!important.md` | Negation - include this file |
+| `#comment` | Comments are ignored |
+
+---
+
 ### Search Configuration
 
 Controls search behavior and defaults.
@@ -809,3 +864,97 @@ export default defineConfig({
 ---
 
 _For CLI command reference, see [USAGE.md](./019-USAGE.md)_
+
+## Hybrid Search
+
+mdcontext supports hybrid search combining BM25 keyword matching with semantic vector search for improved recall (15-30% improvement over single-method retrieval).
+
+### How It Works
+
+Hybrid mode uses Reciprocal Rank Fusion (RRF) to merge results from:
+- **BM25 keyword search**: Exact term matching (great for API names, error codes, identifiers)
+- **Semantic search**: Meaning-based matching (great for concepts and related terms)
+
+### Usage
+
+```bash
+# Auto-detect (uses hybrid if both indexes available)
+mdcontext search "authentication"
+
+# Force hybrid mode
+mdcontext search --mode hybrid "authentication"
+
+# Force keyword-only (BM25)
+mdcontext search --mode keyword "authentication"
+
+# Force semantic-only
+mdcontext search --mode semantic "authentication"
+```
+
+### Building Indexes
+
+Both indexes are built automatically:
+
+```bash
+# Build document index and BM25 index
+mdcontext index
+
+# Build semantic embeddings (also updates BM25)
+mdcontext index --embed
+```
+
+### Configuration
+
+Default weights (no configuration needed):
+- BM25 weight: 1.0
+- Semantic weight: 1.0
+- RRF smoothing constant (k): 60
+
+### When Hybrid is Used
+
+- **--mode hybrid**: Always uses hybrid (fails if indexes missing)
+- **Auto-detect**: Uses hybrid when both BM25 and semantic indexes exist
+- **Fallback**: Degrades gracefully to semantic-only or keyword-only if one index is missing
+
+## Pricing Data Maintenance
+
+mdcontext uses hardcoded OpenAI pricing for embedding cost estimates. Prices change rarely for embedding models.
+
+### Current Pricing
+
+View current pricing data in `src/embeddings/openai-provider.ts`:
+
+```typescript
+export const PRICING_DATA = {
+  lastUpdated: '2024-09',  // YYYY-MM format
+  source: 'https://platform.openai.com/docs/pricing',
+  prices: {
+    'text-embedding-3-small': 0.02,  // per 1M tokens
+    'text-embedding-3-large': 0.13,
+    'text-embedding-ada-002': 0.10,
+  }
+}
+```
+
+### Staleness Warnings
+
+Cost estimates show warning if pricing data is >90 days old:
+
+```
+Estimated cost: ~$0.0200 (pricing as of 2024-09)
+⚠ Pricing data is 147 days old. May not reflect current rates.
+```
+
+Warnings are non-blocking - operations proceed normally.
+
+### Updating Pricing (Maintainers)
+
+**Quarterly check process:**
+
+1. Visit https://platform.openai.com/docs/pricing
+2. Update `PRICING_DATA.lastUpdated` to current YYYY-MM
+3. Update `PRICING_DATA.prices` if prices changed
+4. Commit: `git commit -m "chore: update OpenAI pricing data"`
+5. Release new version
+
+**Why manual:** Embedding API pricing changes infrequently (checked quarterly is sufficient). No reliable free API exists for automated updates.
