@@ -17,6 +17,12 @@
  */
 
 import { Console, Effect, Match } from 'effect'
+import type { EmbeddingProvider } from '../config/schema.js'
+import {
+  detectProviderError,
+  getProviderErrorTitle,
+  getProviderSuggestions,
+} from '../embeddings/provider-errors.js'
 import type {
   ApiKeyInvalidError,
   ApiKeyMissingError,
@@ -204,9 +210,30 @@ export const formatError = (error: MdContextError): FormattedError =>
       exitCode: EXIT_CODE.API_ERROR,
     })),
 
-    // Embedding errors
-    Match.tag('EmbeddingError', (e) =>
-      Match.value(e.reason).pipe(
+    // Embedding errors - enhanced with provider-specific detection
+    Match.tag('EmbeddingError', (e) => {
+      // Try to detect provider-specific error for better messaging
+      const provider = (e.provider ?? 'openai') as EmbeddingProvider
+      const providerError = detectProviderError(provider, e.cause)
+
+      if (providerError) {
+        // Use provider-specific error formatting
+        return {
+          code: e.code,
+          message: getProviderErrorTitle(providerError),
+          details: e.message,
+          suggestions: getProviderSuggestions(providerError),
+          exitCode:
+            providerError.type === 'daemon-not-running' ||
+            providerError.type === 'gui-not-running' ||
+            providerError.type === 'connection-refused'
+              ? EXIT_CODE.SYSTEM_ERROR
+              : EXIT_CODE.API_ERROR,
+        }
+      }
+
+      // Fall back to reason-based handling
+      return Match.value(e.reason).pipe(
         Match.when('RateLimit', () => ({
           code: e.code,
           message: 'Rate limit exceeded',
@@ -227,15 +254,56 @@ export const formatError = (error: MdContextError): FormattedError =>
           ] as const,
           exitCode: EXIT_CODE.API_ERROR,
         })),
-        Match.when('Network', () => ({
+        Match.when('Network', () => {
+          // Check for provider-specific network errors
+          const networkSuggestions =
+            provider === 'ollama'
+              ? [
+                  'Start the Ollama daemon: ollama serve',
+                  'Install Ollama: https://ollama.com/download',
+                ]
+              : provider === 'lm-studio'
+                ? [
+                    'Open LM Studio application',
+                    'Start the local server in Developer tab',
+                  ]
+                : ['Check your internet connection', 'Try again later']
+
+          return {
+            code: e.code,
+            message:
+              provider === 'ollama'
+                ? 'Cannot connect to Ollama'
+                : provider === 'lm-studio'
+                  ? 'Cannot connect to LM Studio'
+                  : 'Network error during embedding',
+            details: e.message,
+            suggestions: networkSuggestions,
+            exitCode: EXIT_CODE.SYSTEM_ERROR,
+          }
+        }),
+        Match.when('ModelError', () => ({
           code: e.code,
-          message: 'Network error during embedding',
+          message:
+            provider === 'ollama'
+              ? 'Ollama model not found'
+              : provider === 'lm-studio'
+                ? 'LM Studio model not loaded'
+                : 'Model error',
           details: e.message,
-          suggestions: [
-            'Check your internet connection',
-            'Try again later',
-          ] as const,
-          exitCode: EXIT_CODE.SYSTEM_ERROR,
+          suggestions:
+            provider === 'ollama'
+              ? [
+                  'Download an embedding model: ollama pull nomic-embed-text',
+                  'List available models: ollama list',
+                ]
+              : provider === 'lm-studio'
+                ? [
+                    'Load an embedding model in LM Studio',
+                    'Go to Models tab and download an embedding model',
+                  ]
+                : ['Check that the model name is correct'],
+          exitCode: EXIT_CODE.USER_ERROR,
         })),
         Match.orElse(() => ({
           code: e.code,
@@ -243,8 +311,8 @@ export const formatError = (error: MdContextError): FormattedError =>
           details: e.message,
           exitCode: EXIT_CODE.API_ERROR,
         })),
-      ),
-    ),
+      )
+    }),
 
     // Index errors
     Match.tag('IndexNotFoundError', (e) => ({

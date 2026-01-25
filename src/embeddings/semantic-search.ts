@@ -23,11 +23,14 @@ import {
 import type { SectionEntry } from '../index/types.js'
 import {
   checkPricingFreshness,
-  createOpenAIProvider,
   getPricingDate,
   PRICING_DATA,
   wrapEmbedding,
 } from './openai-provider.js'
+import {
+  createEmbeddingProviderDirect,
+  type ProviderFactoryConfig,
+} from './provider-factory.js'
 import type {
   EmbeddingProvider,
   SemanticSearchOptions,
@@ -195,6 +198,7 @@ export interface FileProgress {
 export interface BuildEmbeddingsOptions {
   readonly force?: boolean | undefined
   readonly provider?: EmbeddingProvider | undefined
+  readonly providerConfig?: ProviderFactoryConfig | undefined
   readonly excludePatterns?: readonly string[] | undefined
   readonly onFileProgress?: ((progress: FileProgress) => void) | undefined
 }
@@ -251,8 +255,12 @@ export const buildEmbeddings = (
       return yield* Effect.fail(new IndexNotFoundError({ path: resolvedRoot }))
     }
 
-    // Get or create provider
-    const provider = options.provider ?? (yield* createOpenAIProvider())
+    // Get or create provider - use factory for config-driven provider selection
+    // Priority: explicit provider > providerConfig > default (openai)
+    const providerConfig = options.providerConfig ?? { provider: 'openai' }
+    const provider =
+      options.provider ??
+      (yield* createEmbeddingProviderDirect(providerConfig))
     const dimensions = provider.dimensions
 
     // Create vector store
@@ -260,7 +268,14 @@ export const buildEmbeddings = (
       resolvedRoot,
       dimensions,
     ) as HnswVectorStore
-    vectorStore.setProvider(provider.name)
+    // Use provider properties if available (e.g. OpenAIProvider), otherwise fall back to name.
+    // Safely read optional metadata without assuming it exists on all providers.
+    const providerMeta = provider as { model?: unknown; baseURL?: unknown }
+    const model =
+      typeof providerMeta.model === 'string' ? providerMeta.model : undefined
+    const baseURL =
+      typeof providerMeta.baseURL === 'string' ? providerMeta.baseURL : undefined
+    vectorStore.setProvider(provider.name, model, baseURL)
 
     // Load existing if not forcing
     if (!options.force) {
@@ -489,8 +504,10 @@ export const semanticSearch = (
   Effect.gen(function* () {
     const resolvedRoot = path.resolve(rootPath)
 
-    // Get provider for query embedding
-    const provider = yield* createOpenAIProvider()
+    // Get provider for query embedding - use factory for config-driven selection
+    const provider = yield* createEmbeddingProviderDirect(
+      options.providerConfig ?? { provider: 'openai' },
+    )
     const dimensions = provider.dimensions
 
     // Load vector store
@@ -501,6 +518,41 @@ export const semanticSearch = (
       return yield* Effect.fail(
         new EmbeddingsNotFoundError({ path: resolvedRoot }),
       )
+    }
+
+    // Check for provider mismatch
+    const stats = vectorStore.getStats()
+    const currentProviderModel = options.providerConfig?.model ?? 'text-embedding-3-small'
+    const currentProvider = options.providerConfig?.provider ?? 'openai'
+
+    // Warn if index provider/model differs from query provider/model
+    if (stats.providerModel && stats.providerModel !== currentProviderModel) {
+      console.warn(
+        `⚠️  Index was created with ${stats.provider}/${stats.providerModel}`,
+      )
+      console.warn(
+        `   but querying with ${currentProvider}/${currentProviderModel}`,
+      )
+      console.warn(
+        '   Results may be inconsistent. Consider re-indexing.',
+      )
+    } else if (!stats.providerModel) {
+      // Legacy index without model info - extract from provider name if possible
+      const indexProviderParts = stats.provider.split(':')
+      if (
+        indexProviderParts.length === 2 &&
+        indexProviderParts[1] !== currentProviderModel
+      ) {
+        console.warn(
+          `⚠️  Index was created with ${indexProviderParts[0]}/${indexProviderParts[1]}`,
+        )
+        console.warn(
+          `   but querying with ${currentProvider}/${currentProviderModel}`,
+        )
+        console.warn(
+          '   Results may be inconsistent. Consider re-indexing.',
+        )
+      }
     }
 
     // Embed the query

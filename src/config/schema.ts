@@ -138,8 +138,13 @@ export type SearchConfig = Config.Config.Success<typeof SearchConfig>
 
 /**
  * Supported embedding providers
+ *
+ * - openai: OpenAI's text-embedding-3 models (default)
+ * - ollama: Local Ollama server with nomic-embed-text or similar
+ * - lm-studio: LM Studio's local embedding server
+ * - openrouter: OpenRouter API gateway for multiple providers
  */
-export type EmbeddingProvider = 'openai'
+export type EmbeddingProvider = 'openai' | 'ollama' | 'lm-studio' | 'openrouter'
 
 /**
  * Supported OpenAI embedding models
@@ -157,9 +162,22 @@ export const EmbeddingsConfig = Config.all({
    * Embedding provider to use
    * Default: 'openai'
    */
-  provider: Config.literal('openai')('provider').pipe(
-    Config.withDefault('openai' as const),
-  ),
+  provider: Config.literal(
+    'openai',
+    'ollama',
+    'lm-studio',
+    'openrouter',
+  )('provider').pipe(Config.withDefault('openai' as const)),
+
+  /**
+   * Custom base URL for the embedding API
+   * If not specified, provider-specific defaults are used:
+   * - openai: https://api.openai.com/v1
+   * - ollama: http://localhost:11434/v1
+   * - lm-studio: http://localhost:1234/v1
+   * - openrouter: https://openrouter.ai/api/v1
+   */
+  baseURL: Config.option(Config.string('baseURL')),
 
   /**
    * OpenAI embedding model to use
@@ -408,6 +426,7 @@ export const defaultConfig: MdContextConfig = {
   },
   embeddings: {
     provider: 'openai',
+    baseURL: Option.none(),
     model: 'text-embedding-3-small',
     dimensions: 512,
     batchSize: 100,

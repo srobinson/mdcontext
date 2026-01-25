@@ -326,6 +326,74 @@ export default defineConfig({
 })
 ```
 
+---
+
+## Embedding Providers
+
+mdcontext supports multiple embedding providers:
+
+| Provider | Best For | Cost | Privacy | Production Ready |
+|----------|----------|------|---------|------------------|
+| **OpenAI** | Production, high quality | $0.02/1M tokens | Cloud | ✓ |
+| **Ollama** | Zero cost, privacy | Free | Local | ✓ |
+| **LM Studio** | Interactive testing | Free | Local | Development only |
+| **OpenRouter** | Multi-model access | ~$0.021/1M tokens | Cloud | ✓ |
+
+### Provider Setup
+
+**OpenAI (Default):** `export OPENAI_API_KEY=sk-...`
+
+**Ollama:** `ollama serve && ollama pull nomic-embed-text`
+
+**LM Studio:** Open GUI, load model, start local server
+
+**OpenRouter:** `export OPENROUTER_API_KEY=sk-or-v1-...`
+
+### Security Considerations
+
+**Custom Base URLs**: When using `--provider-base-url` or setting a custom `baseURL` in configuration:
+
+⚠️ **Only use trusted sources** - Your API keys and markdown content will be sent to this endpoint.
+
+- For Ollama/LM Studio: Only use `localhost` or servers you control
+- For remote Ollama instances: Use encrypted connections (https://) and trusted networks
+- Never point to unknown or untrusted servers
+
+**Example safe configurations:**
+```bash
+# Safe: Local Ollama
+mdcontext index --embed --provider-base-url http://localhost:11434/v1
+
+# Safe: Trusted internal server with encryption
+mdcontext index --embed --provider-base-url https://ollama.internal.company.com/v1
+
+# Unsafe: Unknown external server
+mdcontext index --embed --provider-base-url http://random-server.example.com/v1  # ❌ DON'T DO THIS
+```
+
+### CLI Usage
+
+```bash
+mdcontext index --embed --provider ollama --provider-model nomic-embed-text
+mdcontext index --embed --provider openrouter
+mdcontext index --embed --provider lm-studio
+```
+
+### Configuration
+
+```javascript
+export default {
+  embeddings: {
+    provider: 'ollama',
+    model: 'nomic-embed-text',
+  },
+}
+```
+
+**Note:** Re-indexing required when switching providers.
+
+---
+
 ### Summarization Configuration
 
 Controls context assembly and summarization behavior.

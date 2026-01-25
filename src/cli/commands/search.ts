@@ -104,6 +104,17 @@ export const searchCommand = Command.make(
       ),
       Options.optional,
     ),
+    provider: Options.choice('provider', [
+      'openai',
+      'ollama',
+      'lm-studio',
+      'openrouter',
+    ]).pipe(
+      Options.withDescription(
+        'Embedding provider for semantic search: openai, ollama, lm-studio, or openrouter',
+      ),
+      Options.optional,
+    ),
     json: jsonOption,
     pretty: prettyOption,
   },
@@ -119,6 +130,7 @@ export const searchCommand = Command.make(
     beforeContext,
     afterContext,
     autoIndexThreshold,
+    provider,
     json,
     pretty,
   }) =>
@@ -369,10 +381,22 @@ export const searchCommand = Command.make(
           }
         }
       } else {
+        // Build provider config from CLI flag if specified
+        const providerConfig = Option.isSome(provider)
+          ? {
+              provider: provider.value as
+                | 'openai'
+                | 'ollama'
+                | 'lm-studio'
+                | 'openrouter',
+            }
+          : undefined
+
         // Semantic search
         const results = yield* semanticSearch(resolvedDir, query, {
           limit: effectiveLimit,
           threshold: effectiveThreshold,
+          providerConfig,
         })
 
         if (json) {

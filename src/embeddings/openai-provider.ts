@@ -72,22 +72,51 @@ export interface OpenAIProviderOptions {
   readonly apiKey?: string | undefined
   readonly model?: string | undefined
   readonly batchSize?: number | undefined
+  readonly baseURL?: string | undefined
+  /**
+   * Provider name for error context (e.g., 'ollama', 'lm-studio')
+   * Defaults to 'openai' if baseURL is not set
+   */
+  readonly providerName?: string | undefined
 }
 
 export class OpenAIProvider implements EmbeddingProvider {
   readonly name: string
   readonly dimensions: number
+  /** Provider name for error context */
+  readonly providerName: string
+  /** Model name */
+  readonly model: string
+  /** Base URL for API requests */
+  readonly baseURL: string | undefined
 
   private readonly client: OpenAI
-  private readonly model: string
   private readonly batchSize: number
 
   private constructor(apiKey: string, options: OpenAIProviderOptions = {}) {
-    this.client = new OpenAI({ apiKey })
+    this.baseURL = options.baseURL
+    this.client = new OpenAI({
+      apiKey,
+      baseURL: options.baseURL, // If undefined, SDK uses default https://api.openai.com/v1
+    })
     this.model = options.model ?? 'text-embedding-3-small'
     this.batchSize = options.batchSize ?? 100
-    this.name = `openai:${this.model}`
+    // Infer provider name from baseURL if not explicitly provided
+    this.providerName =
+      options.providerName ?? this.inferProviderName(options.baseURL)
+    this.name = `${this.providerName}:${this.model}`
     this.dimensions = 512
+  }
+
+  /**
+   * Infer the provider name from the baseURL
+   */
+  private inferProviderName(baseURL: string | undefined): string {
+    if (!baseURL) return 'openai'
+    if (baseURL.includes('11434')) return 'ollama'
+    if (baseURL.includes('1234')) return 'lm-studio'
+    if (baseURL.includes('openrouter')) return 'openrouter'
+    return 'openai'
   }
 
   /**
@@ -97,16 +126,37 @@ export class OpenAIProvider implements EmbeddingProvider {
   static create(
     options: OpenAIProviderOptions = {},
   ): Effect.Effect<OpenAIProvider, ApiKeyMissingError> {
-    const apiKey = options.apiKey ?? process.env.OPENAI_API_KEY
+    // For OpenRouter provider, check OPENROUTER_API_KEY first, then fall back to OPENAI_API_KEY
+    const isOpenRouter =
+      options.baseURL?.includes('openrouter') ||
+      options.providerName === 'openrouter'
+    const apiKey =
+      options.apiKey ??
+      (isOpenRouter ? process.env.OPENROUTER_API_KEY : undefined) ??
+      process.env.OPENAI_API_KEY
+
     if (!apiKey) {
       return Effect.fail(
         new ApiKeyMissingError({
-          provider: 'OpenAI',
-          envVar: 'OPENAI_API_KEY',
+          provider: isOpenRouter ? 'OpenRouter' : 'OpenAI',
+          envVar: isOpenRouter ? 'OPENROUTER_API_KEY' : 'OPENAI_API_KEY',
         }),
       )
     }
-    return Effect.succeed(new OpenAIProvider(apiKey, options))
+
+    // Warn if using OpenAI key format with OpenRouter
+    const shouldWarn =
+      isOpenRouter && apiKey.startsWith('sk-') && !apiKey.startsWith('sk-or-')
+
+    return Effect.succeed(new OpenAIProvider(apiKey, options)).pipe(
+      shouldWarn
+        ? Effect.tap(() =>
+            Effect.logWarning(
+              '⚠️  Using OpenAI key format with OpenRouter. Consider setting OPENROUTER_API_KEY with a key starting with "sk-or-"',
+            ),
+          )
+        : (self) => self,
+    )
   }
 
   async embed(texts: string[]): Promise<EmbeddingResult> {
@@ -138,15 +188,24 @@ export class OpenAIProvider implements EmbeddingProvider {
       // Check for authentication errors (401 Unauthorized, invalid API key)
       if (error instanceof OpenAI.AuthenticationError) {
         throw new ApiKeyInvalidError({
-          provider: 'OpenAI',
+          provider: this.providerName,
           details: error.message,
         })
       }
-      throw error
+      // Wrap error with provider context for better error messages
+      throw new EmbeddingError({
+        reason: this.classifyError(error),
+        message: error instanceof Error ? error.message : String(error),
+        provider: this.providerName,
+        cause: error,
+      })
     }
 
-    // Calculate cost
-    const pricePerMillion = PRICING_DATA.prices[this.model] ?? 0.02
+    // Calculate cost (only for paid providers)
+    const pricePerMillion =
+      this.providerName === 'openai' || this.providerName === 'openrouter'
+        ? (PRICING_DATA.prices[this.model] ?? 0.02)
+        : 0 // Local providers are free
     const cost = (totalTokens / 1_000_000) * pricePerMillion
 
     return {
@@ -154,6 +213,57 @@ export class OpenAIProvider implements EmbeddingProvider {
       tokensUsed: totalTokens,
       cost,
     }
+  }
+
+  /**
+   * Classify an error into a known category for better error handling
+   */
+  private classifyError(
+    error: unknown,
+  ): 'RateLimit' | 'QuotaExceeded' | 'Network' | 'ModelError' | 'Unknown' {
+    if (!(error instanceof Error)) return 'Unknown'
+    const msg = error.message.toLowerCase()
+
+    // Rate limiting
+    if (
+      msg.includes('429') ||
+      msg.includes('rate limit') ||
+      msg.includes('too many requests')
+    ) {
+      return 'RateLimit'
+    }
+
+    // Quota/billing issues
+    if (
+      msg.includes('quota') ||
+      msg.includes('insufficient') ||
+      msg.includes('billing')
+    ) {
+      return 'QuotaExceeded'
+    }
+
+    // Network issues
+    if (
+      msg.includes('econnrefused') ||
+      msg.includes('timeout') ||
+      msg.includes('network') ||
+      msg.includes('enotfound') ||
+      msg.includes('connection')
+    ) {
+      return 'Network'
+    }
+
+    // Model issues
+    if (
+      msg.includes('model') &&
+      (msg.includes('not found') ||
+        msg.includes('not exist') ||
+        msg.includes('invalid'))
+    ) {
+      return 'ModelError'
+    }
+
+    return 'Unknown'
   }
 }
 

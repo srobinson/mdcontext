@@ -37,7 +37,7 @@ mdcontext context README.md           # Get LLM-ready summary
 npm install -g mdcontext
 ```
 
-Requires Node.js 18+. Semantic search requires `OPENAI_API_KEY`.
+Requires Node.js 18+. Semantic search requires an embedding provider (OpenAI, Ollama, LM Studio, or OpenRouter). See [docs/CONFIG.md](./docs/CONFIG.md#embedding-providers) for provider setup.
 
 ---
 
@@ -156,11 +156,27 @@ mdcontext search -k "Setup|Install"           # By keyword pattern
 
 ### Setting Up Semantic Search
 
+mdcontext supports multiple embedding providers for semantic search:
+
+- **OpenAI** (default) - Cloud-based, requires API key
+- **Ollama** - Free, local, daemon-based
+- **LM Studio** - Free, local, GUI-based (development only)
+- **OpenRouter** - Multi-provider gateway
+
+Quick start with OpenAI:
 ```bash
 export OPENAI_API_KEY=sk-...
 mdcontext index --embed                       # Build embeddings
 mdcontext search "how to deploy"              # Now works semantically
 ```
+
+Using Ollama (free, local):
+```bash
+ollama serve && ollama pull nomic-embed-text
+mdcontext index --embed --provider ollama --provider-model nomic-embed-text
+```
+
+See [docs/CONFIG.md](./docs/CONFIG.md#embedding-providers) for complete provider setup, comparison, and configuration options.
 
 ---
 
@@ -250,7 +266,8 @@ Indexes are stored in `.mdcontext/` in your project root:
 
 | Variable | Description |
 |----------|-------------|
-| `OPENAI_API_KEY` | Required for semantic search |
+| `OPENAI_API_KEY` | Required for OpenAI semantic search (default provider) |
+| `OPENROUTER_API_KEY` | Required for OpenRouter semantic search |
 | `MDCONTEXT_*` | Configuration overrides (see [CONFIG.md](./docs/CONFIG.md)) |
 
 ---

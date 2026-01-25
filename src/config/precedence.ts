@@ -169,6 +169,7 @@ export const CONFIG_SCHEMA_KEYS = {
   ],
   embeddings: [
     'provider',
+    'baseURL',
     'model',
     'dimensions',
     'batchSize',

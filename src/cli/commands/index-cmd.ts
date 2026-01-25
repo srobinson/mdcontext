@@ -7,7 +7,7 @@
 import * as path from 'node:path'
 import * as readline from 'node:readline'
 import { Args, Command, Options } from '@effect/cli'
-import { Console, Effect } from 'effect'
+import { Console, Effect, Option } from 'effect'
 import type {
   BuildEmbeddingsResult,
   EmbeddingEstimate,
@@ -67,6 +67,25 @@ export const indexCommand = Command.make(
       Options.withDescription('Ignore .gitignore file'),
       Options.withDefault(false),
     ),
+    provider: Options.choice('provider', [
+      'openai',
+      'ollama',
+      'lm-studio',
+      'openrouter',
+    ]).pipe(
+      Options.withDescription(
+        'Embedding provider: openai, ollama, lm-studio, or openrouter',
+      ),
+      Options.optional,
+    ),
+    providerBaseUrl: Options.text('provider-base-url').pipe(
+      Options.withDescription('Custom provider API base URL'),
+      Options.optional,
+    ),
+    providerModel: Options.text('provider-model').pipe(
+      Options.withDescription('Embedding model to use'),
+      Options.optional,
+    ),
     watch: Options.boolean('watch').pipe(
       Options.withAlias('w'),
       Options.withDescription('Watch for changes'),
@@ -82,6 +101,9 @@ export const indexCommand = Command.make(
     noEmbed,
     exclude,
     noGitignore,
+    provider,
+    providerBaseUrl,
+    providerModel,
     watch: watchMode,
     force,
     json,
@@ -218,10 +240,24 @@ export const indexCommand = Command.make(
             yield* Console.log('Rebuilding embeddings (--force specified)...')
           }
 
+          // Build provider config from CLI flags if specified
+          const providerConfig = Option.isSome(provider)
+            ? {
+                provider: provider.value as
+                  | 'openai'
+                  | 'ollama'
+                  | 'lm-studio'
+                  | 'openrouter',
+                baseURL: Option.getOrUndefined(providerBaseUrl),
+                model: Option.getOrUndefined(providerModel),
+              }
+            : undefined
+
           // Build embeddings - errors propagate to CLI boundary
           const embedResult = yield* buildEmbeddings(resolvedDir, {
             force,
             excludePatterns: cliExcludePatterns,
+            providerConfig,
             onFileProgress: (progress) => {
               if (!json) {
                 process.stdout.write(

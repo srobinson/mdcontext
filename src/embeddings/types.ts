@@ -33,6 +33,8 @@ export interface VectorEntry {
 export interface VectorIndex {
   readonly version: number
   readonly provider: string
+  readonly providerModel?: string | undefined
+  readonly providerBaseURL?: string | undefined
   readonly dimensions: number
   readonly entries: Record<string, VectorEntry>
   readonly totalCost: number
@@ -52,6 +54,14 @@ export interface SemanticSearchOptions {
   readonly threshold?: number | undefined
   /** Filter by document path pattern */
   readonly pathPattern?: string | undefined
+  /** Provider configuration override */
+  readonly providerConfig?:
+    | {
+        readonly provider: 'openai' | 'ollama' | 'lm-studio' | 'openrouter'
+        readonly baseURL?: string | undefined
+        readonly model?: string | undefined
+      }
+    | undefined
 }
 
 export interface SemanticSearchResult {

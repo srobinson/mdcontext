@@ -32,6 +32,10 @@ export const helpContent: Record<string, CommandHelp> = {
       'mdcontext index --watch            # Watch for file changes',
       'mdcontext index --embed --watch    # Full setup with live updates',
       'mdcontext index --force            # Rebuild from scratch',
+      '',
+      '# Alternative embedding providers:',
+      'mdcontext index --embed --provider ollama --provider-model nomic-embed-text',
+      'mdcontext index --embed --provider openrouter',
     ],
     options: [
       {
@@ -43,6 +47,19 @@ export const helpContent: Record<string, CommandHelp> = {
         description: 'Skip the prompt to enable semantic search',
       },
       {
+        name: '--provider <name>',
+        description:
+          'Embedding provider: openai, ollama, lm-studio, openrouter',
+      },
+      {
+        name: '--provider-model <model>',
+        description: 'Model name (e.g., nomic-embed-text for Ollama)',
+      },
+      {
+        name: '--provider-base-url <url>',
+        description: 'Custom API base URL for the provider',
+      },
+      {
         name: '-w, --watch',
         description: 'Watch for changes and re-index automatically',
       },
@@ -52,7 +69,8 @@ export const helpContent: Record<string, CommandHelp> = {
     ],
     notes: [
       'After indexing, prompts to enable semantic search (use --no-embed to skip).',
-      'Embedding requires OPENAI_API_KEY environment variable.',
+      'Providers: openai (default), ollama (free/local), lm-studio, openrouter.',
+      'Set API keys: OPENAI_API_KEY, OPENROUTER_API_KEY, or use local providers.',
       'Index is stored in .mdcontext/ directory.',
     ],
   },
@@ -88,7 +106,7 @@ export const helpContent: Record<string, CommandHelp> = {
       },
       {
         name: '-m, --mode <mode>',
-        description: 'Force search mode: semantic or keyword',
+        description: 'Force search mode: semantic, keyword, or hybrid',
       },
       {
         name: '-n, --limit <n>',
@@ -110,6 +128,10 @@ export const helpContent: Record<string, CommandHelp> = {
         name: '--threshold <n>',
         description:
           'Similarity threshold 0-1 for semantic search (default: 0.5)',
+      },
+      {
+        name: '--provider <name>',
+        description: 'Embedding provider for semantic search',
       },
       { name: '--json', description: 'Output results as JSON' },
       { name: '--pretty', description: 'Pretty-print JSON output' },

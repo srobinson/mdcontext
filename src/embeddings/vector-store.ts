@@ -48,6 +48,7 @@ export interface VectorStoreStats {
   readonly count: number
   readonly dimensions: number
   readonly provider: string
+  readonly providerModel?: string | undefined
   readonly totalCost: number
   readonly totalTokens: number
 }
@@ -65,6 +66,8 @@ class HnswVectorStore implements VectorStore {
   private idToIndex: Map<string, number> = new Map()
   private nextIndex = 0
   private provider = 'unknown'
+  private providerModel: string | undefined = undefined
+  private providerBaseURL: string | undefined = undefined
   private totalCost = 0
   private totalTokens = 0
 
@@ -218,6 +221,8 @@ class HnswVectorStore implements VectorStore {
         const meta: VectorIndex = {
           version: INDEX_VERSION,
           provider: this.provider,
+          providerModel: this.providerModel,
+          providerBaseURL: this.providerBaseURL,
           dimensions: this.dimensions,
           entries: Object.fromEntries(
             Array.from(this.entries.entries()).map(([idx, entry]) => [
@@ -282,7 +287,7 @@ class HnswVectorStore implements VectorStore {
             }),
         })
 
-        const meta = yield* Effect.try({
+        const loadedMeta = yield* Effect.try({
           try: () => JSON.parse(metaContent) as VectorIndex,
           catch: (e) =>
             new VectorStoreError({
@@ -291,6 +296,12 @@ class HnswVectorStore implements VectorStore {
               cause: e,
             }),
         })
+
+        // Apply legacy index migration: default to 'openai' if provider is missing
+        const meta: VectorIndex = {
+          ...loadedMeta,
+          provider: loadedMeta.provider || 'openai',
+        }
 
         // Verify dimensions match
         if (meta.dimensions !== this.dimensions) {
@@ -325,6 +336,8 @@ class HnswVectorStore implements VectorStore {
         }
 
         this.provider = meta.provider
+        this.providerModel = meta.providerModel
+        this.providerBaseURL = meta.providerBaseURL
         this.totalCost = meta.totalCost
         this.totalTokens = meta.totalTokens
 
@@ -338,13 +351,16 @@ class HnswVectorStore implements VectorStore {
       count: this.entries.size,
       dimensions: this.dimensions,
       provider: this.provider,
+      providerModel: this.providerModel,
       totalCost: this.totalCost,
       totalTokens: this.totalTokens,
     }
   }
 
-  setProvider(name: string): void {
+  setProvider(name: string, model?: string, baseURL?: string): void {
     this.provider = name
+    this.providerModel = model
+    this.providerBaseURL = baseURL
   }
 
   addCost(cost: number, tokens: number): void {
