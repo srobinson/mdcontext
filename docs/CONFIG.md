@@ -44,7 +44,7 @@ export default {
   },
   search: {
     defaultLimit: 10,
-    minSimilarity: 0.5,
+    minSimilarity: 0.35,
   },
 }
 ```
@@ -108,7 +108,7 @@ export default {
   search: {
     defaultLimit: 10,
     maxLimit: 100,
-    minSimilarity: 0.5,
+    minSimilarity: 0.35,
     includeSnippets: true,
     snippetLength: 200,
   },
@@ -142,7 +142,7 @@ The `@type` JSDoc annotation provides TypeScript type checking and IDE autocompl
   },
   "search": {
     "defaultLimit": 10,
-    "minSimilarity": 0.5
+    "minSimilarity": 0.35
   }
 }
 ```
@@ -263,7 +263,7 @@ Controls search behavior and defaults.
 | ------------------- | --------- | ------- | ------------------------------------------------ |
 | `defaultLimit`      | `number`  | `10`    | Default number of search results                 |
 | `maxLimit`          | `number`  | `100`   | Maximum allowed search results                   |
-| `minSimilarity`     | `number`  | `0.5`   | Minimum similarity score (0-1) for semantic search |
+| `minSimilarity`     | `number`  | `0.35`  | Minimum similarity score (0-1) for semantic search |
 | `includeSnippets`   | `boolean` | `true`  | Include content snippets in results              |
 | `snippetLength`     | `number`  | `200`   | Maximum snippet length in characters             |
 | `autoIndexThreshold`| `number`  | `10`    | Auto-create semantic index if under this many seconds |
@@ -291,22 +291,40 @@ Controls semantic search embedding generation.
 
 | Option         | Type     | Default                    | Description                              |
 | -------------- | -------- | -------------------------- | ---------------------------------------- |
-| `provider`     | `string` | `'openai'`                 | Embedding provider (currently only OpenAI) |
-| `model`        | `string` | `'text-embedding-3-small'` | OpenAI embedding model                   |
-| `dimensions`   | `number` | `512`                      | Vector dimensions (lower = faster search) |
+| `provider`     | `string` | `'openai'`                 | Embedding provider (openai, ollama, lm-studio, openrouter) |
+| `model`        | `string` | `'text-embedding-3-small'` | Embedding model name                     |
+| `dimensions`   | `number` | (auto)                     | Vector dimensions (auto-detected from model if not set) |
 | `batchSize`    | `number` | `100`                      | Batch size for API calls                 |
 | `maxRetries`   | `number` | `3`                        | Maximum retries for failed API calls     |
 | `retryDelayMs` | `number` | `1000`                     | Delay between retries in milliseconds    |
 | `timeoutMs`    | `number` | `30000`                    | Request timeout in milliseconds          |
-| `apiKey`       | `string` | (from env)                 | OpenAI API key (prefer environment variable) |
+| `apiKey`       | `string` | (from env)                 | API key (prefer environment variable) |
+
+**Model Dimensions:**
+
+Dimensions are now automatically configured based on the model. If not explicitly set:
+- **OpenAI text-embedding-3-small/large**: Uses 512 dimensions (Matryoshka reduction for speed)
+- **Ollama nomic-embed-text**: Uses 768 native dimensions
+- **Ollama mxbai-embed-large/bge-m3**: Uses 1024 native dimensions
+
+You can override dimensions for models that support Matryoshka reduction:
+```javascript
+embeddings: {
+  model: 'text-embedding-3-small',
+  dimensions: 1024  // Higher accuracy, larger index
+}
+```
 
 **Available Models:**
 
-| Model                      | Dimensions | Quality | Cost    |
-| -------------------------- | ---------- | ------- | ------- |
-| `text-embedding-3-small`   | 1536       | Good    | Lowest  |
-| `text-embedding-3-large`   | 3072       | Best    | Higher  |
-| `text-embedding-ada-002`   | 1536       | Legacy  | Medium  |
+| Model                      | Native Dims | Default Dims | Matryoshka | Notes |
+| -------------------------- | ----------- | ------------ | ---------- | ----- |
+| `text-embedding-3-small`   | 1536        | 512          | Yes        | OpenAI, recommended |
+| `text-embedding-3-large`   | 3072        | 512          | Yes        | OpenAI, highest quality |
+| `text-embedding-ada-002`   | 1536        | 1536         | No         | OpenAI, legacy |
+| `nomic-embed-text`         | 768         | 768          | No         | Ollama, recommended for local |
+| `mxbai-embed-large`        | 1024        | 1024         | No         | Ollama, higher quality |
+| `bge-m3`                   | 1024        | 1024         | No         | Ollama, multilingual |
 
 **Example:**
 
@@ -652,7 +670,7 @@ Effective configuration:
   search:
     defaultLimit: 20 (from environment)
     maxLimit: 100 (default)
-    minSimilarity: 0.5 (default)
+    minSimilarity: 0.35 (default)
     ...
 ```
 

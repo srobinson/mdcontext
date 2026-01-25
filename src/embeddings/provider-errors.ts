@@ -29,6 +29,7 @@
  */
 
 import type { EmbeddingProvider } from '../config/schema.js'
+import { PROVIDER_PORTS } from './provider-constants.js'
 
 // ============================================================================
 // Provider Error Types
@@ -71,20 +72,16 @@ export interface ProviderError {
 // Port Detection
 // ============================================================================
 
-const PROVIDER_PORTS: Record<string, number> = {
-  ollama: 11434,
-  'lm-studio': 1234,
-}
-
 /**
- * Detect which provider an error is from based on port number
+ * Detect which provider an error is from based on port number.
+ * Uses PROVIDER_PORTS from provider-constants.ts as single source of truth.
  */
 const detectProviderFromPort = (
   error: Error,
 ): EmbeddingProvider | undefined => {
   const message = error.message
   for (const [provider, port] of Object.entries(PROVIDER_PORTS)) {
-    if (message.includes(String(port))) {
+    if (port && message.includes(String(port))) {
       return provider as EmbeddingProvider
     }
   }

@@ -1,25 +1,25 @@
 {
-  "permissions": {
-    "allow": ["mcp__linear-server", "Read", "Edit", "Write", "Bash", "WebFetch"]
-  },
-  "mcpServers": {
-    "linear-server": {
-      "type": "http",
-      "url": "https://mcp.linear.app/mcp"
-    }
-  },
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "WebFetch|Read|Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/Users/alphab/Dev/LLM/DEV/TMP/nancy/skills/check-directives/check-directives.sh"
-          }
-        ]
-      }
-    ]
-  },
-  "outputStyle": "default"
+	"permissions": {
+		"allow": ["mcp__linear-server", "Read", "Edit", "Write", "Bash", "WebFetch"]
+	},
+	"mcpServers": {
+		"linear-server": {
+			"type": "http",
+			"url": "https://mcp.linear.app/mcp"
+		}
+	},
+	"hooks": {
+		"PreToolUse": [
+			{
+				"matcher": "WebFetch|Read|Write|Edit",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "/Users/alphab/Dev/LLM/DEV/TMP/nancy/skills/check-directives/check-directives.sh"
+					}
+				]
+			}
+		]
+	},
+	"outputStyle": "default"
 }

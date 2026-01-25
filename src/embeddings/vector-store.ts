@@ -6,7 +6,7 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { Effect } from 'effect'
 import HierarchicalNSW from 'hnswlib-node'
-import { VectorStoreError } from '../errors/index.js'
+import { DimensionMismatchError, VectorStoreError } from '../errors/index.js'
 import { INDEX_DIR } from '../index/types.js'
 import type { VectorEntry, VectorIndex } from './types.js'
 
@@ -31,8 +31,23 @@ export interface VectorStore {
     limit: number,
     threshold?: number,
   ): Effect.Effect<VectorSearchResult[], VectorStoreError>
+  /**
+   * Search with additional stats about below-threshold results.
+   * Used to provide feedback when 0 results pass the threshold.
+   */
+  searchWithStats(
+    vector: number[],
+    limit: number,
+    threshold?: number,
+  ): Effect.Effect<VectorSearchResultWithStats, VectorStoreError>
   save(): Effect.Effect<void, VectorStoreError>
-  load(): Effect.Effect<boolean, VectorStoreError>
+  /**
+   * Load the vector store from disk.
+   *
+   * @returns true if loaded successfully, false if no index exists
+   * @throws DimensionMismatchError if the stored dimensions don't match current provider
+   */
+  load(): Effect.Effect<boolean, VectorStoreError | DimensionMismatchError>
   getStats(): VectorStoreStats
 }
 
@@ -42,6 +57,18 @@ export interface VectorSearchResult {
   readonly documentPath: string
   readonly heading: string
   readonly similarity: number
+}
+
+/**
+ * Extended search result with metadata about below-threshold results.
+ * Used to provide user feedback when 0 results pass the threshold.
+ */
+export interface VectorSearchResultWithStats {
+  readonly results: VectorSearchResult[]
+  /** Number of results that were found but below threshold */
+  readonly belowThresholdCount: number
+  /** Highest similarity score among below-threshold results (if any) */
+  readonly belowThresholdHighest: number | null
 }
 
 export interface VectorStoreStats {
@@ -188,6 +215,80 @@ class HnswVectorStore implements VectorStore {
     })
   }
 
+  searchWithStats(
+    vector: number[],
+    limit: number,
+    threshold = 0,
+  ): Effect.Effect<VectorSearchResultWithStats, VectorStoreError> {
+    return Effect.try({
+      try: () => {
+        if (!this.index || this.entries.size === 0) {
+          return {
+            results: [],
+            belowThresholdCount: 0,
+            belowThresholdHighest: null,
+          }
+        }
+
+        const result = this.index.searchKnn(
+          vector,
+          Math.min(limit, this.entries.size),
+        )
+        const results: VectorSearchResult[] = []
+        let belowThresholdCount = 0
+        let belowThresholdHighest: number | null = null
+
+        for (let i = 0; i < result.neighbors.length; i++) {
+          const idx = result.neighbors[i]
+          const distance = result.distances[i]
+
+          if (idx === undefined || distance === undefined) {
+            continue
+          }
+
+          // Convert distance to similarity (cosine distance to cosine similarity)
+          // hnswlib returns 1 - cosine_similarity for cosine space
+          const similarity = 1 - distance
+
+          const entry = this.entries.get(idx)
+          if (!entry) continue
+
+          if (similarity < threshold) {
+            // Track below-threshold stats
+            belowThresholdCount++
+            if (
+              belowThresholdHighest === null ||
+              similarity > belowThresholdHighest
+            ) {
+              belowThresholdHighest = similarity
+            }
+            continue
+          }
+
+          results.push({
+            id: entry.id,
+            sectionId: entry.sectionId,
+            documentPath: entry.documentPath,
+            heading: entry.heading,
+            similarity,
+          })
+        }
+
+        return {
+          results,
+          belowThresholdCount,
+          belowThresholdHighest,
+        }
+      },
+      catch: (e) =>
+        new VectorStoreError({
+          operation: 'search',
+          message: e instanceof Error ? e.message : String(e),
+          cause: e,
+        }),
+    })
+  }
+
   save(): Effect.Effect<void, VectorStoreError> {
     return Effect.gen(
       function* (this: HnswVectorStore) {
@@ -250,7 +351,7 @@ class HnswVectorStore implements VectorStore {
     )
   }
 
-  load(): Effect.Effect<boolean, VectorStoreError> {
+  load(): Effect.Effect<boolean, VectorStoreError | DimensionMismatchError> {
     return Effect.gen(
       function* (this: HnswVectorStore) {
         const vectorPath = this.getVectorPath()
@@ -303,9 +404,18 @@ class HnswVectorStore implements VectorStore {
           provider: loadedMeta.provider || 'openai',
         }
 
-        // Verify dimensions match
+        // Verify dimensions match - fail with clear error if mismatch
         if (meta.dimensions !== this.dimensions) {
-          return false
+          return yield* Effect.fail(
+            new DimensionMismatchError({
+              corpusDimensions: meta.dimensions,
+              providerDimensions: this.dimensions,
+              corpusProvider: meta.providerModel
+                ? `${meta.provider}:${meta.providerModel}`
+                : meta.provider,
+              path: this.rootPath,
+            }),
+          )
         }
 
         // Load the hnswlib index

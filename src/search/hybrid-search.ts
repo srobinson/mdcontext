@@ -216,7 +216,7 @@ export const hybridSearch = (
   Effect.gen(function* () {
     const resolvedRoot = path.resolve(rootPath)
     const limit = options.limit ?? 10
-    const threshold = options.threshold ?? 0.45
+    const threshold = options.threshold ?? 0.35
     const bm25Weight = options.bm25Weight ?? 1.0
     const semanticWeight = options.semanticWeight ?? 1.0
     const rrfK = options.rrfK ?? 60

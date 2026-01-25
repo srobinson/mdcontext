@@ -9,6 +9,12 @@ import {
   ApiKeyMissingError,
   EmbeddingError,
 } from '../errors/index.js'
+import {
+  getRecommendedDimensions,
+  inferProviderFromUrl,
+  supportsMatryoshka,
+  validateModelDimensions,
+} from './provider-constants.js'
 import type { EmbeddingProvider, EmbeddingResult } from './types.js'
 
 // ============================================================================
@@ -74,6 +80,11 @@ export interface OpenAIProviderOptions {
   readonly batchSize?: number | undefined
   readonly baseURL?: string | undefined
   /**
+   * Number of embedding dimensions. If not specified, uses recommended
+   * dimensions for the model (512 for Matryoshka models, native for others).
+   */
+  readonly dimensions?: number | undefined
+  /**
    * Provider name for error context (e.g., 'ollama', 'lm-studio')
    * Defaults to 'openai' if baseURL is not set
    */
@@ -105,18 +116,18 @@ export class OpenAIProvider implements EmbeddingProvider {
     this.providerName =
       options.providerName ?? this.inferProviderName(options.baseURL)
     this.name = `${this.providerName}:${this.model}`
-    this.dimensions = 512
+
+    // Determine dimensions: use explicit config, or fall back to recommended for model
+    const recommendedDims = getRecommendedDimensions(this.model)
+    this.dimensions = options.dimensions ?? recommendedDims ?? 512
   }
 
   /**
-   * Infer the provider name from the baseURL
+   * Infer the provider name from the baseURL.
+   * Delegates to centralized inferProviderFromUrl for single source of truth.
    */
   private inferProviderName(baseURL: string | undefined): string {
-    if (!baseURL) return 'openai'
-    if (baseURL.includes('11434')) return 'ollama'
-    if (baseURL.includes('1234')) return 'lm-studio'
-    if (baseURL.includes('openrouter')) return 'openrouter'
-    return 'openai'
+    return inferProviderFromUrl(baseURL)
   }
 
   /**
@@ -145,15 +156,27 @@ export class OpenAIProvider implements EmbeddingProvider {
     }
 
     // Warn if using OpenAI key format with OpenRouter
-    const shouldWarn =
+    const shouldWarnOpenRouter =
       isOpenRouter && apiKey.startsWith('sk-') && !apiKey.startsWith('sk-or-')
 
+    // Validate dimensions if explicitly set
+    const model = options.model ?? 'text-embedding-3-small'
+    const dimensionValidation = options.dimensions
+      ? validateModelDimensions(model, options.dimensions)
+      : { isValid: true }
+
     return Effect.succeed(new OpenAIProvider(apiKey, options)).pipe(
-      shouldWarn
+      shouldWarnOpenRouter
         ? Effect.tap(() =>
             Effect.logWarning(
               '⚠️  Using OpenAI key format with OpenRouter. Consider setting OPENROUTER_API_KEY with a key starting with "sk-or-"',
             ),
+          )
+        : (self) => self,
+      // Warn about invalid dimension configuration
+      dimensionValidation.warning
+        ? Effect.tap(() =>
+            Effect.logWarning(`⚠️  ${dimensionValidation.warning}`),
           )
         : (self) => self,
     )
@@ -172,11 +195,19 @@ export class OpenAIProvider implements EmbeddingProvider {
       for (let i = 0; i < texts.length; i += this.batchSize) {
         const batch = texts.slice(i, i + this.batchSize)
 
-        const response = await this.client.embeddings.create({
+        // Only pass dimensions parameter for models that support it (Matryoshka)
+        // Non-Matryoshka models will use their native dimensions automatically
+        const embedParams: OpenAI.Embeddings.EmbeddingCreateParams = {
           model: this.model,
           input: batch,
-          dimensions: 512, // Ensure consistent dimensions
-        })
+        }
+
+        // Only add dimensions parameter for Matryoshka-compatible models
+        if (supportsMatryoshka(this.model)) {
+          embedParams.dimensions = this.dimensions
+        }
+
+        const response = await this.client.embeddings.create(embedParams)
 
         for (const item of response.data) {
           allEmbeddings.push(item.embedding)
@@ -216,11 +247,26 @@ export class OpenAIProvider implements EmbeddingProvider {
   }
 
   /**
-   * Classify an error into a known category for better error handling
+   * Classify an error into a known category for better error handling.
+   * Uses OpenAI SDK error types where available, falls back to string matching
+   * for non-OpenAI providers (Ollama, LM Studio, OpenRouter).
    */
   private classifyError(
     error: unknown,
   ): 'RateLimit' | 'QuotaExceeded' | 'Network' | 'ModelError' | 'Unknown' {
+    // Use OpenAI SDK error types when available
+    if (error instanceof OpenAI.RateLimitError) {
+      return 'RateLimit'
+    }
+    if (error instanceof OpenAI.BadRequestError) {
+      const msg = error.message.toLowerCase()
+      if (msg.includes('model')) return 'ModelError'
+    }
+    if (error instanceof OpenAI.APIConnectionError) {
+      return 'Network'
+    }
+
+    // Fallback to string matching for non-SDK errors (local providers, etc.)
     if (!(error instanceof Error)) return 'Unknown'
     const msg = error.message.toLowerCase()
 
@@ -297,6 +343,7 @@ export const createOpenAIProvider = (
  */
 export const wrapEmbedding = (
   embedPromise: Promise<EmbeddingResult>,
+  providerName = 'openai',
 ): Effect.Effect<EmbeddingResult, ApiKeyInvalidError | EmbeddingError> =>
   Effect.tryPromise({
     try: () => embedPromise,
@@ -307,7 +354,7 @@ export const wrapEmbedding = (
       return new EmbeddingError({
         reason: 'Unknown',
         message: e instanceof Error ? e.message : String(e),
-        provider: 'OpenAI',
+        provider: providerName,
         cause: e,
       })
     },

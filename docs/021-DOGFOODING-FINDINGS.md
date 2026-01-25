@@ -67,7 +67,7 @@ mdcontext search "authentication" ./docs
 
 **Impact:** Major limitation for discovery. Users searching for concepts/keywords get no results if those words aren't in headings.
 
-**Note:** Full semantic search requires OpenAI API key + `--embed` flag, but structural search should at least search content.
+**Note:** Full semantic search requires an embedding provider (OpenAI, Ollama, LM Studio, or OpenRouter) + `--embed` flag. See [CONFIG.md](./CONFIG.md) for free local options. Structural search should at least search content.
 
 ---
 

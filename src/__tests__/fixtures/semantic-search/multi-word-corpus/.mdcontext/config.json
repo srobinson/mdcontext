@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "rootPath": "/Users/alphab/Dev/LLM/DEV/mdcontext/worktrees/nancy-ALP-34/src/__tests__/fixtures/semantic-search/multi-word-corpus",
+  "include": ["**/*.md", "**/*.mdx"],
+  "exclude": ["**/node_modules/**", "**/.*/**"],
+  "createdAt": "2026-01-25T16:16:55.867Z",
+  "updatedAt": "2026-01-25T16:16:55.868Z"
+}

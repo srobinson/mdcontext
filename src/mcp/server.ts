@@ -52,8 +52,8 @@ const tools: Tool[] = [
         },
         threshold: {
           type: 'number',
-          description: 'Minimum similarity threshold 0-1 (default: 0.5)',
-          default: 0.5,
+          description: 'Minimum similarity threshold 0-1 (default: 0.35)',
+          default: 0.35,
         },
       },
       required: ['query'],
@@ -167,7 +167,7 @@ const handleMdSearch = async (
   const query = args.query as string
   const limit = (args.limit as number) ?? 5
   const pathFilter = args.path_filter as string | undefined
-  const threshold = (args.threshold as number) ?? 0.5
+  const threshold = (args.threshold as number) ?? 0.35
 
   // Note: catchAll is intentional at this MCP boundary layer.
   // MCP protocol requires JSON error responses, so we convert typed errors

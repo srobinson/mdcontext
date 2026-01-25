@@ -100,9 +100,10 @@ export const SearchConfig = Config.all({
 
   /**
    * Minimum similarity score for semantic search results (0-1)
-   * Default: 0.5
+   * Lower values return more results but may include less relevant matches.
+   * Default: 0.35 (captures single-word queries that score 30-40%)
    */
-  minSimilarity: Config.number('minSimilarity').pipe(Config.withDefault(0.5)),
+  minSimilarity: Config.number('minSimilarity').pipe(Config.withDefault(0.35)),
 
   /**
    * Whether to include content snippets in search results
@@ -419,7 +420,7 @@ export const defaultConfig: MdContextConfig = {
   search: {
     defaultLimit: 10,
     maxLimit: 100,
-    minSimilarity: 0.5,
+    minSimilarity: 0.35,
     includeSnippets: true,
     snippetLength: 200,
     autoIndexThreshold: 10,

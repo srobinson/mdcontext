@@ -361,7 +361,9 @@ describe('detectProviderError', () => {
       const result = detectProviderError('openai', 'string error')
       expect(result).toBeNull()
 
-      const result2 = detectProviderError('openai', { message: 'object error' })
+      const result2 = detectProviderError('openai', {
+        message: 'object error',
+      })
       expect(result2).toBeNull()
 
       const result3 = detectProviderError('openai', null)

@@ -104,7 +104,7 @@ interface VectorEntry {
 
 - HNSW stores cosine distance (1 - similarity)
 - Search returns `similarity = 1 - distance`
-- Results filtered by threshold (default: 0.45)
+- Results filtered by threshold (default: 0.35)
 
 ### 3. Semantic Search (`src/embeddings/semantic-search.ts`)
 
@@ -151,7 +151,7 @@ Document: {documentTitle}
   - If < 10 seconds: auto-create silently
   - Otherwise: prompt user for choice
 
-**Default Search Threshold**: 0.45 (raised from 0.3 to filter low-quality matches)
+**Default Search Threshold**: 0.35 (raised from 0.3 to filter low-quality matches)
 
 ## Data Flow
 
@@ -225,7 +225,7 @@ Document: {documentTitle}
                                ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │ 5. Post-Processing                                                       │
-│    - Filter by similarity threshold (default: 0.45)                      │
+│    - Filter by similarity threshold (default: 0.35)                      │
 │    - Filter by path pattern (if specified)                               │
 │    - Truncate to requested limit                                         │
 └──────────────────────────────┬──────────────────────────────────────────┘
@@ -249,11 +249,11 @@ Located in `.mdcontext/` directory:
 
 ## Current Limitations and Gaps
 
-### 1. Single Provider Lock-in
+### 1. ~~Single Provider Lock-in~~ RESOLVED (ALP-215)
 
-- **Issue**: Only OpenAI embeddings supported
-- **Impact**: Requires API key, incurs costs, no offline capability
-- **Code Location**: `openai-provider.ts` is the only provider implementation
+- **RESOLVED**: Multiple embedding providers now supported (OpenAI, Ollama, LM Studio, OpenRouter)
+- **Impact**: Users can choose local providers for offline capability and cost savings
+- **Code Location**: `provider-factory.ts` handles provider selection based on config
 
 ### 2. No Incremental Updates
 
@@ -347,7 +347,7 @@ efConstruction: 200                  // vector-store.ts
 
 // Search
 defaultLimit: 10                     // search.ts
-defaultThreshold: 0.45               // search.ts
+defaultThreshold: 0.35               // search.ts
 autoIndexThreshold: 10 seconds       // search.ts
 ```
 

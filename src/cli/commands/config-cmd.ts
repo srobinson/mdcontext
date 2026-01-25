@@ -37,7 +37,7 @@ const generateConfigContent = (format: 'js' | 'json'): string => {
   "search": {
     "defaultLimit": 10,
     "maxLimit": 100,
-    "minSimilarity": 0.5,
+    "minSimilarity": 0.35,
     "includeSnippets": true,
     "snippetLength": 200,
     "autoIndexThreshold": 10
@@ -106,8 +106,8 @@ export default {
     // Maximum results allowed (default: 100)
     maxLimit: 100,
 
-    // Minimum similarity score for semantic search (default: 0.5)
-    minSimilarity: 0.5,
+    // Minimum similarity score for semantic search (default: 0.35)
+    minSimilarity: 0.35,
 
     // Include content snippets in results (default: true)
     includeSnippets: true,
@@ -121,10 +121,11 @@ export default {
 
   // Embeddings settings - configure semantic search
   embeddings: {
-    // Embedding provider (currently only 'openai' supported)
+    // Embedding provider: 'openai' (default), 'ollama', 'lm-studio', or 'openrouter'
     provider: 'openai',
 
-    // OpenAI embedding model (default: 'text-embedding-3-small')
+    // Embedding model (varies by provider - default for OpenAI: 'text-embedding-3-small')
+    // Ollama: 'nomic-embed-text', LM Studio: depends on loaded model
     model: 'text-embedding-3-small',
 
     // Vector dimensions (lower = faster, higher = more accurate) (default: 512)
@@ -142,7 +143,10 @@ export default {
     // Request timeout in ms (default: 30000)
     timeoutMs: 30000,
 
-    // API key - usually set via OPENAI_API_KEY environment variable
+    // API key - set via provider-specific environment variable:
+    // - OpenAI: OPENAI_API_KEY
+    // - OpenRouter: OPENROUTER_API_KEY
+    // - Ollama/LM Studio: No API key needed (local providers)
     // apiKey: process.env.OPENAI_API_KEY,
   },
 

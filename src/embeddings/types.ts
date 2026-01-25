@@ -12,6 +12,28 @@ export interface EmbeddingProvider {
   embed(texts: string[]): Promise<EmbeddingResult>
 }
 
+/**
+ * Extended embedding provider with metadata about the underlying service.
+ * Implementations like OpenAIProvider include these additional properties.
+ */
+export interface EmbeddingProviderWithMetadata extends EmbeddingProvider {
+  readonly model: string
+  readonly baseURL: string | undefined
+}
+
+/**
+ * Type guard to check if an EmbeddingProvider has extended metadata.
+ * Use this instead of unsafe type casting when accessing model/baseURL.
+ */
+export const hasProviderMetadata = (
+  provider: EmbeddingProvider,
+): provider is EmbeddingProviderWithMetadata => {
+  return (
+    'model' in provider &&
+    typeof (provider as EmbeddingProviderWithMetadata).model === 'string'
+  )
+}
+
 export interface EmbeddingResult {
   readonly embeddings: readonly number[][]
   readonly tokensUsed: number
@@ -70,6 +92,18 @@ export interface SemanticSearchResult {
   readonly heading: string
   readonly similarity: number
   readonly content?: string | undefined
+}
+
+/**
+ * Extended semantic search result including metadata about below-threshold results.
+ * Used to provide user feedback when 0 results pass the threshold.
+ */
+export interface SemanticSearchResultWithStats {
+  readonly results: readonly SemanticSearchResult[]
+  /** Number of results found below threshold (only set when includeBelowThresholdStats is true) */
+  readonly belowThresholdCount?: number | undefined
+  /** Highest similarity among below-threshold results */
+  readonly belowThresholdHighest?: number | undefined
 }
 
 // ============================================================================

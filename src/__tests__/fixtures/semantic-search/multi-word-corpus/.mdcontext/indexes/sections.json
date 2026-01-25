@@ -1,0 +1,1197 @@
+{
+  "version": 1,
+  "sections": {
+    "7af8c1a9f31c-configuration-management": {
+      "id": "7af8c1a9f31c-configuration-management",
+      "documentId": "7af8c1a9f31c",
+      "documentPath": "configuration-management.md",
+      "heading": "Configuration Management",
+      "level": 1,
+      "startLine": 1,
+      "endLine": 1,
+      "tokenCount": 9,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "7af8c1a9f31c-overview": {
+      "id": "7af8c1a9f31c-overview",
+      "documentId": "7af8c1a9f31c",
+      "documentPath": "configuration-management.md",
+      "heading": "Overview",
+      "level": 2,
+      "startLine": 3,
+      "endLine": 5,
+      "tokenCount": 73,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "7af8c1a9f31c-core-principles": {
+      "id": "7af8c1a9f31c-core-principles",
+      "documentId": "7af8c1a9f31c",
+      "documentPath": "configuration-management.md",
+      "heading": "Core Principles",
+      "level": 2,
+      "startLine": 7,
+      "endLine": 7,
+      "tokenCount": 7,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "7af8c1a9f31c-infrastructure-as-code": {
+      "id": "7af8c1a9f31c-infrastructure-as-code",
+      "documentId": "7af8c1a9f31c",
+      "documentPath": "configuration-management.md",
+      "heading": "Infrastructure as Code",
+      "level": 3,
+      "startLine": 9,
+      "endLine": 15,
+      "tokenCount": 65,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "7af8c1a9f31c-separation-of-concerns": {
+      "id": "7af8c1a9f31c-separation-of-concerns",
+      "documentId": "7af8c1a9f31c",
+      "documentPath": "configuration-management.md",
+      "heading": "Separation of Concerns",
+      "level": 3,
+      "startLine": 17,
+      "endLine": 22,
+      "tokenCount": 64,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "7af8c1a9f31c-configuration-sources": {
+      "id": "7af8c1a9f31c-configuration-sources",
+      "documentId": "7af8c1a9f31c",
+      "documentPath": "configuration-management.md",
+      "heading": "Configuration Sources",
+      "level": 2,
+      "startLine": 24,
+      "endLine": 24,
+      "tokenCount": 9,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "7af8c1a9f31c-hierarchy-of-configuration": {
+      "id": "7af8c1a9f31c-hierarchy-of-configuration",
+      "documentId": "7af8c1a9f31c",
+      "documentPath": "configuration-management.md",
+      "heading": "Hierarchy of Configuration",
+      "level": 3,
+      "startLine": 26,
+      "endLine": 32,
+      "tokenCount": 71,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "7af8c1a9f31c-configuration-file-formats": {
+      "id": "7af8c1a9f31c-configuration-file-formats",
+      "documentId": "7af8c1a9f31c",
+      "documentPath": "configuration-management.md",
+      "heading": "Configuration File Formats",
+      "level": 3,
+      "startLine": 34,
+      "endLine": 40,
+      "tokenCount": 93,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "7af8c1a9f31c-implementation": {
+      "id": "7af8c1a9f31c-implementation",
+      "documentId": "7af8c1a9f31c",
+      "documentPath": "configuration-management.md",
+      "heading": "Implementation",
+      "level": 2,
+      "startLine": 42,
+      "endLine": 65,
+      "tokenCount": 241,
+      "hasCode": true,
+      "hasList": false,
+      "hasTable": false
+    },
+    "7af8c1a9f31c-best-practices": {
+      "id": "7af8c1a9f31c-best-practices",
+      "documentId": "7af8c1a9f31c",
+      "documentPath": "configuration-management.md",
+      "heading": "Best Practices",
+      "level": 2,
+      "startLine": 67,
+      "endLine": 73,
+      "tokenCount": 125,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "7af8c1a9f31c-common-patterns": {
+      "id": "7af8c1a9f31c-common-patterns",
+      "documentId": "7af8c1a9f31c",
+      "documentPath": "configuration-management.md",
+      "heading": "Common Patterns",
+      "level": 2,
+      "startLine": 75,
+      "endLine": 75,
+      "tokenCount": 7,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "7af8c1a9f31c-feature-flags": {
+      "id": "7af8c1a9f31c-feature-flags",
+      "documentId": "7af8c1a9f31c",
+      "documentPath": "configuration-management.md",
+      "heading": "Feature Flags",
+      "level": 3,
+      "startLine": 77,
+      "endLine": 85,
+      "tokenCount": 66,
+      "hasCode": true,
+      "hasList": false,
+      "hasTable": false
+    },
+    "7af8c1a9f31c-environment-specific-configuration": {
+      "id": "7af8c1a9f31c-environment-specific-configuration",
+      "documentId": "7af8c1a9f31c",
+      "documentPath": "configuration-management.md",
+      "heading": "Environment-Specific Configuration",
+      "level": 3,
+      "startLine": 87,
+      "endLine": 99,
+      "tokenCount": 97,
+      "hasCode": true,
+      "hasList": false,
+      "hasTable": false
+    },
+    "c7a87467b534-distributed-systems-architecture": {
+      "id": "c7a87467b534-distributed-systems-architecture",
+      "documentId": "c7a87467b534",
+      "documentPath": "distributed-systems.md",
+      "heading": "Distributed Systems Architecture",
+      "level": 1,
+      "startLine": 1,
+      "endLine": 1,
+      "tokenCount": 12,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "c7a87467b534-what-are-distributed-systems": {
+      "id": "c7a87467b534-what-are-distributed-systems",
+      "documentId": "c7a87467b534",
+      "documentPath": "distributed-systems.md",
+      "heading": "What Are Distributed Systems?",
+      "level": 2,
+      "startLine": 3,
+      "endLine": 5,
+      "tokenCount": 77,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "c7a87467b534-key-challenges": {
+      "id": "c7a87467b534-key-challenges",
+      "documentId": "c7a87467b534",
+      "documentPath": "distributed-systems.md",
+      "heading": "Key Challenges",
+      "level": 2,
+      "startLine": 7,
+      "endLine": 7,
+      "tokenCount": 7,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "c7a87467b534-network-partitions": {
+      "id": "c7a87467b534-network-partitions",
+      "documentId": "c7a87467b534",
+      "documentPath": "distributed-systems.md",
+      "heading": "Network Partitions",
+      "level": 3,
+      "startLine": 9,
+      "endLine": 14,
+      "tokenCount": 43,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "c7a87467b534-consistency-vs-availability": {
+      "id": "c7a87467b534-consistency-vs-availability",
+      "documentId": "c7a87467b534",
+      "documentPath": "distributed-systems.md",
+      "heading": "Consistency vs Availability",
+      "level": 3,
+      "startLine": 16,
+      "endLine": 21,
+      "tokenCount": 92,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "c7a87467b534-clock-synchronization": {
+      "id": "c7a87467b534-clock-synchronization",
+      "documentId": "c7a87467b534",
+      "documentPath": "distributed-systems.md",
+      "heading": "Clock Synchronization",
+      "level": 3,
+      "startLine": 23,
+      "endLine": 28,
+      "tokenCount": 54,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "c7a87467b534-design-patterns": {
+      "id": "c7a87467b534-design-patterns",
+      "documentId": "c7a87467b534",
+      "documentPath": "distributed-systems.md",
+      "heading": "Design Patterns",
+      "level": 2,
+      "startLine": 30,
+      "endLine": 30,
+      "tokenCount": 7,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "c7a87467b534-service-discovery": {
+      "id": "c7a87467b534-service-discovery",
+      "documentId": "c7a87467b534",
+      "documentPath": "distributed-systems.md",
+      "heading": "Service Discovery",
+      "level": 3,
+      "startLine": 32,
+      "endLine": 37,
+      "tokenCount": 55,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "c7a87467b534-circuit-breakers": {
+      "id": "c7a87467b534-circuit-breakers",
+      "documentId": "c7a87467b534",
+      "documentPath": "distributed-systems.md",
+      "heading": "Circuit Breakers",
+      "level": 3,
+      "startLine": 39,
+      "endLine": 63,
+      "tokenCount": 224,
+      "hasCode": true,
+      "hasList": false,
+      "hasTable": false
+    },
+    "c7a87467b534-event-sourcing": {
+      "id": "c7a87467b534-event-sourcing",
+      "documentId": "c7a87467b534",
+      "documentPath": "distributed-systems.md",
+      "heading": "Event Sourcing",
+      "level": 3,
+      "startLine": 65,
+      "endLine": 70,
+      "tokenCount": 47,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "c7a87467b534-communication-patterns": {
+      "id": "c7a87467b534-communication-patterns",
+      "documentId": "c7a87467b534",
+      "documentPath": "distributed-systems.md",
+      "heading": "Communication Patterns",
+      "level": 2,
+      "startLine": 72,
+      "endLine": 72,
+      "tokenCount": 9,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "c7a87467b534-synchronous-request-response": {
+      "id": "c7a87467b534-synchronous-request-response",
+      "documentId": "c7a87467b534",
+      "documentPath": "distributed-systems.md",
+      "heading": "Synchronous (Request-Response)",
+      "level": 3,
+      "startLine": 74,
+      "endLine": 78,
+      "tokenCount": 33,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "c7a87467b534-asynchronous-message-based": {
+      "id": "c7a87467b534-asynchronous-message-based",
+      "documentId": "c7a87467b534",
+      "documentPath": "distributed-systems.md",
+      "heading": "Asynchronous (Message-Based)",
+      "level": 3,
+      "startLine": 80,
+      "endLine": 84,
+      "tokenCount": 36,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "c7a87467b534-best-practices": {
+      "id": "c7a87467b534-best-practices",
+      "documentId": "c7a87467b534",
+      "documentPath": "distributed-systems.md",
+      "heading": "Best Practices",
+      "level": 2,
+      "startLine": 86,
+      "endLine": 92,
+      "tokenCount": 125,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "94adf3c4c1b9-error-handling-patterns": {
+      "id": "94adf3c4c1b9-error-handling-patterns",
+      "documentId": "94adf3c4c1b9",
+      "documentPath": "error-handling.md",
+      "heading": "Error Handling Patterns",
+      "level": 1,
+      "startLine": 1,
+      "endLine": 1,
+      "tokenCount": 9,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "94adf3c4c1b9-introduction-to-error-handling": {
+      "id": "94adf3c4c1b9-introduction-to-error-handling",
+      "documentId": "94adf3c4c1b9",
+      "documentPath": "error-handling.md",
+      "heading": "Introduction to Error Handling",
+      "level": 2,
+      "startLine": 3,
+      "endLine": 5,
+      "tokenCount": 65,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "94adf3c4c1b9-error-types": {
+      "id": "94adf3c4c1b9-error-types",
+      "documentId": "94adf3c4c1b9",
+      "documentPath": "error-handling.md",
+      "heading": "Error Types",
+      "level": 2,
+      "startLine": 7,
+      "endLine": 7,
+      "tokenCount": 6,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "94adf3c4c1b9-operational-errors": {
+      "id": "94adf3c4c1b9-operational-errors",
+      "documentId": "94adf3c4c1b9",
+      "documentPath": "error-handling.md",
+      "heading": "Operational Errors",
+      "level": 3,
+      "startLine": 9,
+      "endLine": 15,
+      "tokenCount": 59,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "94adf3c4c1b9-programming-errors": {
+      "id": "94adf3c4c1b9-programming-errors",
+      "documentId": "94adf3c4c1b9",
+      "documentPath": "error-handling.md",
+      "heading": "Programming Errors",
+      "level": 3,
+      "startLine": 17,
+      "endLine": 23,
+      "tokenCount": 48,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "94adf3c4c1b9-handling-strategies": {
+      "id": "94adf3c4c1b9-handling-strategies",
+      "documentId": "94adf3c4c1b9",
+      "documentPath": "error-handling.md",
+      "heading": "Handling Strategies",
+      "level": 2,
+      "startLine": 25,
+      "endLine": 25,
+      "tokenCount": 9,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "94adf3c4c1b9-try-catch-blocks": {
+      "id": "94adf3c4c1b9-try-catch-blocks",
+      "documentId": "94adf3c4c1b9",
+      "documentPath": "error-handling.md",
+      "heading": "Try-Catch Blocks",
+      "level": 3,
+      "startLine": 27,
+      "endLine": 42,
+      "tokenCount": 147,
+      "hasCode": true,
+      "hasList": false,
+      "hasTable": false
+    },
+    "94adf3c4c1b9-result-types": {
+      "id": "94adf3c4c1b9-result-types",
+      "documentId": "94adf3c4c1b9",
+      "documentPath": "error-handling.md",
+      "heading": "Result Types",
+      "level": 3,
+      "startLine": 44,
+      "endLine": 56,
+      "tokenCount": 126,
+      "hasCode": true,
+      "hasList": false,
+      "hasTable": false
+    },
+    "94adf3c4c1b9-error-boundaries": {
+      "id": "94adf3c4c1b9-error-boundaries",
+      "documentId": "94adf3c4c1b9",
+      "documentPath": "error-handling.md",
+      "heading": "Error Boundaries",
+      "level": 3,
+      "startLine": 58,
+      "endLine": 63,
+      "tokenCount": 62,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "94adf3c4c1b9-best-practices": {
+      "id": "94adf3c4c1b9-best-practices",
+      "documentId": "94adf3c4c1b9",
+      "documentPath": "error-handling.md",
+      "heading": "Best Practices",
+      "level": 2,
+      "startLine": 65,
+      "endLine": 71,
+      "tokenCount": 141,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "94adf3c4c1b9-error-handling-anti-patterns": {
+      "id": "94adf3c4c1b9-error-handling-anti-patterns",
+      "documentId": "94adf3c4c1b9",
+      "documentPath": "error-handling.md",
+      "heading": "Error Handling Anti-Patterns",
+      "level": 2,
+      "startLine": 73,
+      "endLine": 78,
+      "tokenCount": 55,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "bd3d01a0b08c-failure-automation": {
+      "id": "bd3d01a0b08c-failure-automation",
+      "documentId": "bd3d01a0b08c",
+      "documentPath": "failure-automation.md",
+      "heading": "Failure Automation",
+      "level": 1,
+      "startLine": 1,
+      "endLine": 1,
+      "tokenCount": 7,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "bd3d01a0b08c-overview": {
+      "id": "bd3d01a0b08c-overview",
+      "documentId": "bd3d01a0b08c",
+      "documentPath": "failure-automation.md",
+      "heading": "Overview",
+      "level": 2,
+      "startLine": 3,
+      "endLine": 5,
+      "tokenCount": 81,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "bd3d01a0b08c-core-concepts": {
+      "id": "bd3d01a0b08c-core-concepts",
+      "documentId": "bd3d01a0b08c",
+      "documentPath": "failure-automation.md",
+      "heading": "Core Concepts",
+      "level": 2,
+      "startLine": 7,
+      "endLine": 7,
+      "tokenCount": 7,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "bd3d01a0b08c-automated-failure-detection": {
+      "id": "bd3d01a0b08c-automated-failure-detection",
+      "documentId": "bd3d01a0b08c",
+      "documentPath": "failure-automation.md",
+      "heading": "Automated Failure Detection",
+      "level": 3,
+      "startLine": 9,
+      "endLine": 11,
+      "tokenCount": 64,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "bd3d01a0b08c-automatic-recovery": {
+      "id": "bd3d01a0b08c-automatic-recovery",
+      "documentId": "bd3d01a0b08c",
+      "documentPath": "failure-automation.md",
+      "heading": "Automatic Recovery",
+      "level": 3,
+      "startLine": 13,
+      "endLine": 19,
+      "tokenCount": 66,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "bd3d01a0b08c-failure-isolation": {
+      "id": "bd3d01a0b08c-failure-isolation",
+      "documentId": "bd3d01a0b08c",
+      "documentPath": "failure-automation.md",
+      "heading": "Failure Isolation",
+      "level": 3,
+      "startLine": 21,
+      "endLine": 23,
+      "tokenCount": 57,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "bd3d01a0b08c-best-practices": {
+      "id": "bd3d01a0b08c-best-practices",
+      "documentId": "bd3d01a0b08c",
+      "documentPath": "failure-automation.md",
+      "heading": "Best Practices",
+      "level": 2,
+      "startLine": 25,
+      "endLine": 30,
+      "tokenCount": 125,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "bd3d01a0b08c-implementation-example": {
+      "id": "bd3d01a0b08c-implementation-example",
+      "documentId": "bd3d01a0b08c",
+      "documentPath": "failure-automation.md",
+      "heading": "Implementation Example",
+      "level": 2,
+      "startLine": 32,
+      "endLine": 48,
+      "tokenCount": 161,
+      "hasCode": true,
+      "hasList": false,
+      "hasTable": false
+    },
+    "bd3d01a0b08c-related-topics": {
+      "id": "bd3d01a0b08c-related-topics",
+      "documentId": "bd3d01a0b08c",
+      "documentPath": "failure-automation.md",
+      "heading": "Related Topics",
+      "level": 2,
+      "startLine": 50,
+      "endLine": 55,
+      "tokenCount": 52,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "f686caa5e0ff-job-context": {
+      "id": "f686caa5e0ff-job-context",
+      "documentId": "f686caa5e0ff",
+      "documentPath": "job-context.md",
+      "heading": "Job Context",
+      "level": 1,
+      "startLine": 1,
+      "endLine": 1,
+      "tokenCount": 5,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "f686caa5e0ff-what-is-job-context": {
+      "id": "f686caa5e0ff-what-is-job-context",
+      "documentId": "f686caa5e0ff",
+      "documentPath": "job-context.md",
+      "heading": "What is Job Context?",
+      "level": 2,
+      "startLine": 3,
+      "endLine": 5,
+      "tokenCount": 78,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "f686caa5e0ff-components-of-job-context": {
+      "id": "f686caa5e0ff-components-of-job-context",
+      "documentId": "f686caa5e0ff",
+      "documentPath": "job-context.md",
+      "heading": "Components of Job Context",
+      "level": 2,
+      "startLine": 7,
+      "endLine": 7,
+      "tokenCount": 10,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "f686caa5e0ff-runtime-environment": {
+      "id": "f686caa5e0ff-runtime-environment",
+      "documentId": "f686caa5e0ff",
+      "documentPath": "job-context.md",
+      "heading": "Runtime Environment",
+      "level": 3,
+      "startLine": 9,
+      "endLine": 15,
+      "tokenCount": 69,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "f686caa5e0ff-execution-metadata": {
+      "id": "f686caa5e0ff-execution-metadata",
+      "documentId": "f686caa5e0ff",
+      "documentPath": "job-context.md",
+      "heading": "Execution Metadata",
+      "level": 3,
+      "startLine": 17,
+      "endLine": 23,
+      "tokenCount": 65,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "f686caa5e0ff-state-information": {
+      "id": "f686caa5e0ff-state-information",
+      "documentId": "f686caa5e0ff",
+      "documentPath": "job-context.md",
+      "heading": "State Information",
+      "level": 3,
+      "startLine": 25,
+      "endLine": 31,
+      "tokenCount": 59,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "f686caa5e0ff-passing-context-between-jobs": {
+      "id": "f686caa5e0ff-passing-context-between-jobs",
+      "documentId": "f686caa5e0ff",
+      "documentPath": "job-context.md",
+      "heading": "Passing Context Between Jobs",
+      "level": 2,
+      "startLine": 33,
+      "endLine": 55,
+      "tokenCount": 223,
+      "hasCode": true,
+      "hasList": false,
+      "hasTable": false
+    },
+    "f686caa5e0ff-best-practices": {
+      "id": "f686caa5e0ff-best-practices",
+      "documentId": "f686caa5e0ff",
+      "documentPath": "job-context.md",
+      "heading": "Best Practices",
+      "level": 2,
+      "startLine": 57,
+      "endLine": 62,
+      "tokenCount": 111,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "f686caa5e0ff-use-cases": {
+      "id": "f686caa5e0ff-use-cases",
+      "documentId": "f686caa5e0ff",
+      "documentPath": "job-context.md",
+      "heading": "Use Cases",
+      "level": 2,
+      "startLine": 64,
+      "endLine": 69,
+      "tokenCount": 71,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "0daacc6a0c05-process-orchestration": {
+      "id": "0daacc6a0c05-process-orchestration",
+      "documentId": "0daacc6a0c05",
+      "documentPath": "process-orchestration.md",
+      "heading": "Process Orchestration",
+      "level": 1,
+      "startLine": 1,
+      "endLine": 1,
+      "tokenCount": 8,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "0daacc6a0c05-introduction": {
+      "id": "0daacc6a0c05-introduction",
+      "documentId": "0daacc6a0c05",
+      "documentPath": "process-orchestration.md",
+      "heading": "Introduction",
+      "level": 2,
+      "startLine": 3,
+      "endLine": 5,
+      "tokenCount": 70,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "0daacc6a0c05-orchestration-vs-choreography": {
+      "id": "0daacc6a0c05-orchestration-vs-choreography",
+      "documentId": "0daacc6a0c05",
+      "documentPath": "process-orchestration.md",
+      "heading": "Orchestration vs Choreography",
+      "level": 2,
+      "startLine": 7,
+      "endLine": 7,
+      "tokenCount": 12,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "0daacc6a0c05-orchestration-central-control": {
+      "id": "0daacc6a0c05-orchestration-central-control",
+      "documentId": "0daacc6a0c05",
+      "documentPath": "process-orchestration.md",
+      "heading": "Orchestration (Central Control)",
+      "level": 3,
+      "startLine": 9,
+      "endLine": 15,
+      "tokenCount": 68,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "0daacc6a0c05-choreography-distributed": {
+      "id": "0daacc6a0c05-choreography-distributed",
+      "documentId": "0daacc6a0c05",
+      "documentPath": "process-orchestration.md",
+      "heading": "Choreography (Distributed)",
+      "level": 3,
+      "startLine": 17,
+      "endLine": 23,
+      "tokenCount": 65,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "0daacc6a0c05-orchestration-patterns": {
+      "id": "0daacc6a0c05-orchestration-patterns",
+      "documentId": "0daacc6a0c05",
+      "documentPath": "process-orchestration.md",
+      "heading": "Orchestration Patterns",
+      "level": 2,
+      "startLine": 25,
+      "endLine": 25,
+      "tokenCount": 9,
+      "hasCode": false,
+      "hasList": false,
+      "hasTable": false
+    },
+    "0daacc6a0c05-sequential-execution": {
+      "id": "0daacc6a0c05-sequential-execution",
+      "documentId": "0daacc6a0c05",
+      "documentPath": "process-orchestration.md",
+      "heading": "Sequential Execution",
+      "level": 3,
+      "startLine": 27,
+      "endLine": 39,
+      "tokenCount": 139,
+      "hasCode": true,
+      "hasList": false,
+      "hasTable": false
+    },
+    "0daacc6a0c05-parallel-execution": {
+      "id": "0daacc6a0c05-parallel-execution",
+      "documentId": "0daacc6a0c05",
+      "documentPath": "process-orchestration.md",
+      "heading": "Parallel Execution",
+      "level": 3,
+      "startLine": 41,
+      "endLine": 55,
+      "tokenCount": 176,
+      "hasCode": true,
+      "hasList": false,
+      "hasTable": false
+    },
+    "0daacc6a0c05-saga-pattern": {
+      "id": "0daacc6a0c05-saga-pattern",
+      "documentId": "0daacc6a0c05",
+      "documentPath": "process-orchestration.md",
+      "heading": "Saga Pattern",
+      "level": 3,
+      "startLine": 57,
+      "endLine": 83,
+      "tokenCount": 299,
+      "hasCode": true,
+      "hasList": false,
+      "hasTable": false
+    },
+    "0daacc6a0c05-workflow-engines": {
+      "id": "0daacc6a0c05-workflow-engines",
+      "documentId": "0daacc6a0c05",
+      "documentPath": "process-orchestration.md",
+      "heading": "Workflow Engines",
+      "level": 2,
+      "startLine": 85,
+      "endLine": 91,
+      "tokenCount": 89,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    },
+    "0daacc6a0c05-best-practices": {
+      "id": "0daacc6a0c05-best-practices",
+      "documentId": "0daacc6a0c05",
+      "documentPath": "process-orchestration.md",
+      "heading": "Best Practices",
+      "level": 2,
+      "startLine": 93,
+      "endLine": 99,
+      "tokenCount": 119,
+      "hasCode": false,
+      "hasList": true,
+      "hasTable": false
+    }
+  },
+  "byHeading": {
+    "configuration management": [
+      "7af8c1a9f31c-configuration-management",
+      "7af8c1a9f31c-configuration-management"
+    ],
+    "overview": [
+      "7af8c1a9f31c-overview",
+      "bd3d01a0b08c-overview",
+      "7af8c1a9f31c-overview",
+      "bd3d01a0b08c-overview"
+    ],
+    "core principles": [
+      "7af8c1a9f31c-core-principles",
+      "7af8c1a9f31c-core-principles"
+    ],
+    "infrastructure as code": [
+      "7af8c1a9f31c-infrastructure-as-code",
+      "7af8c1a9f31c-infrastructure-as-code"
+    ],
+    "separation of concerns": [
+      "7af8c1a9f31c-separation-of-concerns",
+      "7af8c1a9f31c-separation-of-concerns"
+    ],
+    "configuration sources": [
+      "7af8c1a9f31c-configuration-sources",
+      "7af8c1a9f31c-configuration-sources"
+    ],
+    "hierarchy of configuration": [
+      "7af8c1a9f31c-hierarchy-of-configuration",
+      "7af8c1a9f31c-hierarchy-of-configuration"
+    ],
+    "configuration file formats": [
+      "7af8c1a9f31c-configuration-file-formats",
+      "7af8c1a9f31c-configuration-file-formats"
+    ],
+    "implementation": [
+      "7af8c1a9f31c-implementation",
+      "7af8c1a9f31c-implementation"
+    ],
+    "best practices": [
+      "7af8c1a9f31c-best-practices",
+      "c7a87467b534-best-practices",
+      "94adf3c4c1b9-best-practices",
+      "bd3d01a0b08c-best-practices",
+      "f686caa5e0ff-best-practices",
+      "0daacc6a0c05-best-practices",
+      "7af8c1a9f31c-best-practices",
+      "c7a87467b534-best-practices",
+      "94adf3c4c1b9-best-practices",
+      "bd3d01a0b08c-best-practices",
+      "f686caa5e0ff-best-practices",
+      "0daacc6a0c05-best-practices"
+    ],
+    "common patterns": [
+      "7af8c1a9f31c-common-patterns",
+      "7af8c1a9f31c-common-patterns"
+    ],
+    "feature flags": [
+      "7af8c1a9f31c-feature-flags",
+      "7af8c1a9f31c-feature-flags"
+    ],
+    "environment-specific configuration": [
+      "7af8c1a9f31c-environment-specific-configuration",
+      "7af8c1a9f31c-environment-specific-configuration"
+    ],
+    "distributed systems architecture": [
+      "c7a87467b534-distributed-systems-architecture",
+      "c7a87467b534-distributed-systems-architecture"
+    ],
+    "what are distributed systems?": [
+      "c7a87467b534-what-are-distributed-systems",
+      "c7a87467b534-what-are-distributed-systems"
+    ],
+    "key challenges": [
+      "c7a87467b534-key-challenges",
+      "c7a87467b534-key-challenges"
+    ],
+    "network partitions": [
+      "c7a87467b534-network-partitions",
+      "c7a87467b534-network-partitions"
+    ],
+    "consistency vs availability": [
+      "c7a87467b534-consistency-vs-availability",
+      "c7a87467b534-consistency-vs-availability"
+    ],
+    "clock synchronization": [
+      "c7a87467b534-clock-synchronization",
+      "c7a87467b534-clock-synchronization"
+    ],
+    "design patterns": [
+      "c7a87467b534-design-patterns",
+      "c7a87467b534-design-patterns"
+    ],
+    "service discovery": [
+      "c7a87467b534-service-discovery",
+      "c7a87467b534-service-discovery"
+    ],
+    "circuit breakers": [
+      "c7a87467b534-circuit-breakers",
+      "c7a87467b534-circuit-breakers"
+    ],
+    "event sourcing": [
+      "c7a87467b534-event-sourcing",
+      "c7a87467b534-event-sourcing"
+    ],
+    "communication patterns": [
+      "c7a87467b534-communication-patterns",
+      "c7a87467b534-communication-patterns"
+    ],
+    "synchronous (request-response)": [
+      "c7a87467b534-synchronous-request-response",
+      "c7a87467b534-synchronous-request-response"
+    ],
+    "asynchronous (message-based)": [
+      "c7a87467b534-asynchronous-message-based",
+      "c7a87467b534-asynchronous-message-based"
+    ],
+    "error handling patterns": [
+      "94adf3c4c1b9-error-handling-patterns",
+      "94adf3c4c1b9-error-handling-patterns"
+    ],
+    "introduction to error handling": [
+      "94adf3c4c1b9-introduction-to-error-handling",
+      "94adf3c4c1b9-introduction-to-error-handling"
+    ],
+    "error types": ["94adf3c4c1b9-error-types", "94adf3c4c1b9-error-types"],
+    "operational errors": [
+      "94adf3c4c1b9-operational-errors",
+      "94adf3c4c1b9-operational-errors"
+    ],
+    "programming errors": [
+      "94adf3c4c1b9-programming-errors",
+      "94adf3c4c1b9-programming-errors"
+    ],
+    "handling strategies": [
+      "94adf3c4c1b9-handling-strategies",
+      "94adf3c4c1b9-handling-strategies"
+    ],
+    "try-catch blocks": [
+      "94adf3c4c1b9-try-catch-blocks",
+      "94adf3c4c1b9-try-catch-blocks"
+    ],
+    "result types": ["94adf3c4c1b9-result-types", "94adf3c4c1b9-result-types"],
+    "error boundaries": [
+      "94adf3c4c1b9-error-boundaries",
+      "94adf3c4c1b9-error-boundaries"
+    ],
+    "error handling anti-patterns": [
+      "94adf3c4c1b9-error-handling-anti-patterns",
+      "94adf3c4c1b9-error-handling-anti-patterns"
+    ],
+    "failure automation": [
+      "bd3d01a0b08c-failure-automation",
+      "bd3d01a0b08c-failure-automation"
+    ],
+    "core concepts": [
+      "bd3d01a0b08c-core-concepts",
+      "bd3d01a0b08c-core-concepts"
+    ],
+    "automated failure detection": [
+      "bd3d01a0b08c-automated-failure-detection",
+      "bd3d01a0b08c-automated-failure-detection"
+    ],
+    "automatic recovery": [
+      "bd3d01a0b08c-automatic-recovery",
+      "bd3d01a0b08c-automatic-recovery"
+    ],
+    "failure isolation": [
+      "bd3d01a0b08c-failure-isolation",
+      "bd3d01a0b08c-failure-isolation"
+    ],
+    "implementation example": [
+      "bd3d01a0b08c-implementation-example",
+      "bd3d01a0b08c-implementation-example"
+    ],
+    "related topics": [
+      "bd3d01a0b08c-related-topics",
+      "bd3d01a0b08c-related-topics"
+    ],
+    "job context": ["f686caa5e0ff-job-context", "f686caa5e0ff-job-context"],
+    "what is job context?": [
+      "f686caa5e0ff-what-is-job-context",
+      "f686caa5e0ff-what-is-job-context"
+    ],
+    "components of job context": [
+      "f686caa5e0ff-components-of-job-context",
+      "f686caa5e0ff-components-of-job-context"
+    ],
+    "runtime environment": [
+      "f686caa5e0ff-runtime-environment",
+      "f686caa5e0ff-runtime-environment"
+    ],
+    "execution metadata": [
+      "f686caa5e0ff-execution-metadata",
+      "f686caa5e0ff-execution-metadata"
+    ],
+    "state information": [
+      "f686caa5e0ff-state-information",
+      "f686caa5e0ff-state-information"
+    ],
+    "passing context between jobs": [
+      "f686caa5e0ff-passing-context-between-jobs",
+      "f686caa5e0ff-passing-context-between-jobs"
+    ],
+    "use cases": ["f686caa5e0ff-use-cases", "f686caa5e0ff-use-cases"],
+    "process orchestration": [
+      "0daacc6a0c05-process-orchestration",
+      "0daacc6a0c05-process-orchestration"
+    ],
+    "introduction": ["0daacc6a0c05-introduction", "0daacc6a0c05-introduction"],
+    "orchestration vs choreography": [
+      "0daacc6a0c05-orchestration-vs-choreography",
+      "0daacc6a0c05-orchestration-vs-choreography"
+    ],
+    "orchestration (central control)": [
+      "0daacc6a0c05-orchestration-central-control",
+      "0daacc6a0c05-orchestration-central-control"
+    ],
+    "choreography (distributed)": [
+      "0daacc6a0c05-choreography-distributed",
+      "0daacc6a0c05-choreography-distributed"
+    ],
+    "orchestration patterns": [
+      "0daacc6a0c05-orchestration-patterns",
+      "0daacc6a0c05-orchestration-patterns"
+    ],
+    "sequential execution": [
+      "0daacc6a0c05-sequential-execution",
+      "0daacc6a0c05-sequential-execution"
+    ],
+    "parallel execution": [
+      "0daacc6a0c05-parallel-execution",
+      "0daacc6a0c05-parallel-execution"
+    ],
+    "saga pattern": ["0daacc6a0c05-saga-pattern", "0daacc6a0c05-saga-pattern"],
+    "workflow engines": [
+      "0daacc6a0c05-workflow-engines",
+      "0daacc6a0c05-workflow-engines"
+    ]
+  },
+  "byDocument": {
+    "7af8c1a9f31c": [
+      "7af8c1a9f31c-configuration-management",
+      "7af8c1a9f31c-overview",
+      "7af8c1a9f31c-core-principles",
+      "7af8c1a9f31c-infrastructure-as-code",
+      "7af8c1a9f31c-separation-of-concerns",
+      "7af8c1a9f31c-configuration-sources",
+      "7af8c1a9f31c-hierarchy-of-configuration",
+      "7af8c1a9f31c-configuration-file-formats",
+      "7af8c1a9f31c-implementation",
+      "7af8c1a9f31c-best-practices",
+      "7af8c1a9f31c-common-patterns",
+      "7af8c1a9f31c-feature-flags",
+      "7af8c1a9f31c-environment-specific-configuration"
+    ],
+    "c7a87467b534": [
+      "c7a87467b534-distributed-systems-architecture",
+      "c7a87467b534-what-are-distributed-systems",
+      "c7a87467b534-key-challenges",
+      "c7a87467b534-network-partitions",
+      "c7a87467b534-consistency-vs-availability",
+      "c7a87467b534-clock-synchronization",
+      "c7a87467b534-design-patterns",
+      "c7a87467b534-service-discovery",
+      "c7a87467b534-circuit-breakers",
+      "c7a87467b534-event-sourcing",
+      "c7a87467b534-communication-patterns",
+      "c7a87467b534-synchronous-request-response",
+      "c7a87467b534-asynchronous-message-based",
+      "c7a87467b534-best-practices"
+    ],
+    "94adf3c4c1b9": [
+      "94adf3c4c1b9-error-handling-patterns",
+      "94adf3c4c1b9-introduction-to-error-handling",
+      "94adf3c4c1b9-error-types",
+      "94adf3c4c1b9-operational-errors",
+      "94adf3c4c1b9-programming-errors",
+      "94adf3c4c1b9-handling-strategies",
+      "94adf3c4c1b9-try-catch-blocks",
+      "94adf3c4c1b9-result-types",
+      "94adf3c4c1b9-error-boundaries",
+      "94adf3c4c1b9-best-practices",
+      "94adf3c4c1b9-error-handling-anti-patterns"
+    ],
+    "bd3d01a0b08c": [
+      "bd3d01a0b08c-failure-automation",
+      "bd3d01a0b08c-overview",
+      "bd3d01a0b08c-core-concepts",
+      "bd3d01a0b08c-automated-failure-detection",
+      "bd3d01a0b08c-automatic-recovery",
+      "bd3d01a0b08c-failure-isolation",
+      "bd3d01a0b08c-best-practices",
+      "bd3d01a0b08c-implementation-example",
+      "bd3d01a0b08c-related-topics"
+    ],
+    "f686caa5e0ff": [
+      "f686caa5e0ff-job-context",
+      "f686caa5e0ff-what-is-job-context",
+      "f686caa5e0ff-components-of-job-context",
+      "f686caa5e0ff-runtime-environment",
+      "f686caa5e0ff-execution-metadata",
+      "f686caa5e0ff-state-information",
+      "f686caa5e0ff-passing-context-between-jobs",
+      "f686caa5e0ff-best-practices",
+      "f686caa5e0ff-use-cases"
+    ],
+    "0daacc6a0c05": [
+      "0daacc6a0c05-process-orchestration",
+      "0daacc6a0c05-introduction",
+      "0daacc6a0c05-orchestration-vs-choreography",
+      "0daacc6a0c05-orchestration-central-control",
+      "0daacc6a0c05-choreography-distributed",
+      "0daacc6a0c05-orchestration-patterns",
+      "0daacc6a0c05-sequential-execution",
+      "0daacc6a0c05-parallel-execution",
+      "0daacc6a0c05-saga-pattern",
+      "0daacc6a0c05-workflow-engines",
+      "0daacc6a0c05-best-practices"
+    ]
+  }
+}

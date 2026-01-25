@@ -117,6 +117,7 @@ export const ErrorCode = {
 
   // Vector store errors (E6xx)
   VECTOR_STORE: 'E600',
+  DIMENSION_MISMATCH: 'E601',
 
   // Config errors (E7xx)
   CONFIG: 'E700',
@@ -413,6 +414,40 @@ export class EmbeddingsNotFoundError extends Data.TaggedError(
   }
 }
 
+/**
+ * Embedding dimension mismatch between corpus and current provider.
+ *
+ * This happens when trying to search a corpus that was created with a different
+ * embedding configuration (different dimensions or provider).
+ */
+export class DimensionMismatchError extends Data.TaggedError(
+  'DimensionMismatchError',
+)<{
+  /** Dimensions stored in the corpus */
+  readonly corpusDimensions: number
+  /** Dimensions expected by the current provider */
+  readonly providerDimensions: number
+  /** Provider that created the corpus (e.g., "openai:text-embedding-3-small") */
+  readonly corpusProvider?: string
+  /** Current provider being used */
+  readonly currentProvider?: string
+  /** Path to the corpus */
+  readonly path: string
+}> {
+  get code(): typeof ErrorCode.DIMENSION_MISMATCH {
+    return ErrorCode.DIMENSION_MISMATCH
+  }
+  get message(): string {
+    const corpusInfo = this.corpusProvider
+      ? `${this.corpusDimensions} (${this.corpusProvider})`
+      : `${this.corpusDimensions}`
+    const currentInfo = this.currentProvider
+      ? `${this.providerDimensions} (${this.currentProvider})`
+      : `${this.providerDimensions}`
+    return `Embedding dimension mismatch: corpus has ${corpusInfo}, current provider expects ${currentInfo}`
+  }
+}
+
 // ============================================================================
 // Watch Errors
 // ============================================================================
@@ -477,7 +512,10 @@ export type IndexError =
 /**
  * All search-related errors
  */
-export type SearchError = DocumentNotFoundError | EmbeddingsNotFoundError
+export type SearchError =
+  | DocumentNotFoundError
+  | EmbeddingsNotFoundError
+  | DimensionMismatchError
 
 /**
  * Union of all mdcontext errors

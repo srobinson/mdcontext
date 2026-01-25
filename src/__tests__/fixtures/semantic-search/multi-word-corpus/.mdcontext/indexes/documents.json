@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "rootPath": "/Users/alphab/Dev/LLM/DEV/mdcontext-worktrees/nancy-ALP-34/src/__tests__/fixtures/semantic-search/multi-word-corpus",
+  "documents": {
+    "configuration-management.md": {
+      "id": "7af8c1a9f31c",
+      "path": "configuration-management.md",
+      "title": "Configuration Management",
+      "mtime": 1769357779590,
+      "hash": "d469829280835377",
+      "tokenCount": 950,
+      "sectionCount": 13
+    },
+    "distributed-systems.md": {
+      "id": "c7a87467b534",
+      "path": "distributed-systems.md",
+      "title": "Distributed Systems Architecture",
+      "mtime": 1769357779678,
+      "hash": "28542b613f8a9ff6",
+      "tokenCount": 844,
+      "sectionCount": 14
+    },
+    "error-handling.md": {
+      "id": "94adf3c4c1b9",
+      "path": "error-handling.md",
+      "title": "Error Handling Patterns",
+      "mtime": 1769357779499,
+      "hash": "982e7d1dd35685c7",
+      "tokenCount": 745,
+      "sectionCount": 11
+    },
+    "failure-automation.md": {
+      "id": "bd3d01a0b08c",
+      "path": "failure-automation.md",
+      "title": "Failure Automation",
+      "mtime": 1769357779315,
+      "hash": "45362eec6165a247",
+      "tokenCount": 635,
+      "sectionCount": 9
+    },
+    "job-context.md": {
+      "id": "f686caa5e0ff",
+      "path": "job-context.md",
+      "title": "Job Context",
+      "mtime": 1769357779412,
+      "hash": "333b2b47b0dd26a2",
+      "tokenCount": 706,
+      "sectionCount": 9
+    },
+    "process-orchestration.md": {
+      "id": "0daacc6a0c05",
+      "path": "process-orchestration.md",
+      "title": "Process Orchestration",
+      "mtime": 1769357779767,
+      "hash": "1d554b2b8e0b9bc2",
+      "tokenCount": 1072,
+      "sectionCount": 11
+    }
+  }
+}

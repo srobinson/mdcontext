@@ -319,7 +319,21 @@ export const indexCommand = Command.make(
               `Cost: ~$${estimate.totalCost.toFixed(4)} for this corpus (~${estimate.estimatedTimeSeconds}s)`,
             )
           }
-          yield* Console.log('Requires: OPENAI_API_KEY environment variable')
+          yield* Console.log('Requires an embedding provider. Options:')
+          yield* Console.log(
+            '  - OpenAI (cloud): Set OPENAI_API_KEY environment variable',
+          )
+          yield* Console.log(
+            '  - Ollama (free, local): Run "ollama serve" - no API key needed',
+          )
+          yield* Console.log(
+            '  - LM Studio (free, local): Start the server - no API key needed',
+          )
+          yield* Console.log(
+            '  - OpenRouter (cloud): Set OPENROUTER_API_KEY environment variable',
+          )
+          yield* Console.log('')
+          yield* Console.log('See CONFIG.md for detailed setup instructions.')
           yield* Console.log('')
 
           const answer = yield* Effect.promise(() =>
@@ -327,17 +341,29 @@ export const indexCommand = Command.make(
           )
 
           if (answer === 'y' || answer === 'yes') {
-            // Check for API key
+            // Check for API key (only required for cloud providers)
+            // Note: When no provider is configured, we default to OpenAI which needs a key
+            // Local providers (Ollama, LM Studio) don't need API keys
             if (!process.env.OPENAI_API_KEY) {
               yield* Console.log('')
-              yield* Console.log('OPENAI_API_KEY not set.')
+              yield* Console.log('No embedding provider configured.')
+              yield* Console.log('')
+              yield* Console.log('Choose a provider:')
+              yield* Console.log('')
+              yield* Console.log('  Cloud (requires API key):')
+              yield* Console.log('    export OPENAI_API_KEY=sk-...')
+              yield* Console.log('    export OPENROUTER_API_KEY=sk-...')
+              yield* Console.log('')
+              yield* Console.log('  Local (free, no API key needed):')
+              yield* Console.log(
+                '    Ollama: ollama serve && ollama pull nomic-embed-text',
+              )
+              yield* Console.log('    LM Studio: Start the server GUI')
               yield* Console.log('')
               yield* Console.log(
-                'To enable semantic search, set your OpenAI API key:',
+                'Then run: mdcontext index --embed [--provider <name>]',
               )
-              yield* Console.log('  export OPENAI_API_KEY=sk-...')
-              yield* Console.log('')
-              yield* Console.log('Or add to .env file in project root.')
+              yield* Console.log('See CONFIG.md for detailed setup.')
             } else {
               yield* Console.log('')
               yield* Console.log('Building embeddings...')

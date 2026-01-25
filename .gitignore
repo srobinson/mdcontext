@@ -32,6 +32,7 @@ coverage/
 # mdcontext indexes (local data)
 .mdcontext/
 !tests/fixtures/cli/.mdcontext/
+!src/__tests__/fixtures/semantic-search/multi-word-corpus/.mdcontext/
 
 # Temporary files
 *.tmp

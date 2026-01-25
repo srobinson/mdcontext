@@ -16,7 +16,7 @@ import type {
 import {
   buildEmbeddings,
   estimateEmbeddingCost,
-  semanticSearch,
+  semanticSearchWithStats,
 } from '../../embeddings/semantic-search.js'
 import {
   detectSearchModes,
@@ -81,7 +81,7 @@ export const searchCommand = Command.make(
     ),
     threshold: Options.float('threshold').pipe(
       Options.withDescription('Similarity threshold for semantic search (0-1)'),
-      Options.withDefault(0.45),
+      Options.withDefault(0.35),
     ),
     context: Options.integer('context').pipe(
       Options.withAlias('C'),
@@ -147,7 +147,7 @@ export const searchCommand = Command.make(
       // Note: CLI options have static defaults for help text; config overrides those defaults
       const effectiveLimit = limit === 10 ? searchConfig.defaultLimit : limit
       const effectiveThreshold =
-        threshold === 0.45 ? searchConfig.minSimilarity : threshold
+        threshold === 0.35 ? searchConfig.minSimilarity : threshold
       const effectiveAutoIndexThreshold = Option.getOrElse(
         autoIndexThreshold,
         () => searchConfig.autoIndexThreshold,
@@ -392,12 +392,18 @@ export const searchCommand = Command.make(
             }
           : undefined
 
-        // Semantic search
-        const results = yield* semanticSearch(resolvedDir, query, {
-          limit: effectiveLimit,
-          threshold: effectiveThreshold,
-          providerConfig,
-        })
+        // Semantic search with stats for below-threshold feedback
+        const searchResult = yield* semanticSearchWithStats(
+          resolvedDir,
+          query,
+          {
+            limit: effectiveLimit,
+            threshold: effectiveThreshold,
+            providerConfig,
+          },
+        )
+        const { results, belowThresholdCount, belowThresholdHighest } =
+          searchResult
 
         if (json) {
           const output = {
@@ -405,6 +411,8 @@ export const searchCommand = Command.make(
             modeReason,
             query,
             results,
+            belowThresholdCount,
+            belowThresholdHighest,
           }
           yield* Console.log(formatJson(output, pretty))
         } else {
@@ -420,6 +428,27 @@ export const searchCommand = Command.make(
             const similarity = (result.similarity * 100).toFixed(1)
             yield* Console.log(`  ${result.documentPath}`)
             yield* Console.log(`    ${result.heading} (${similarity}% match)`)
+            yield* Console.log('')
+          }
+
+          // Show below-threshold feedback when 0 results but content exists
+          if (
+            results.length === 0 &&
+            belowThresholdCount !== undefined &&
+            belowThresholdCount > 0 &&
+            belowThresholdHighest !== undefined
+          ) {
+            const highestPct = (belowThresholdHighest * 100).toFixed(1)
+            const suggestedThreshold = Math.max(
+              0.1,
+              belowThresholdHighest - 0.05,
+            ).toFixed(2)
+            yield* Console.log(
+              `Note: ${belowThresholdCount} results found below ${(effectiveThreshold * 100).toFixed(0)}% threshold (highest: ${highestPct}%)`,
+            )
+            yield* Console.log(
+              `Tip: Use --threshold ${suggestedThreshold} to see more results`,
+            )
             yield* Console.log('')
           }
 

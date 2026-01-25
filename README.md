@@ -64,7 +64,22 @@ Search by meaning (semantic) or keyword (text match).
 mdcontext search "how to authenticate"        # Semantic search (if embeddings exist)
 mdcontext search -k "auth.*flow"              # Keyword search (text match)
 mdcontext search -n 5 "setup"                 # Limit to 5 results
-mdcontext search --threshold 0.8 "deploy"     # Higher similarity threshold
+mdcontext search --threshold 0.25 "deploy"    # Lower threshold for more results
+```
+
+#### Similarity Threshold
+
+Semantic search filters results by similarity score (0-1). Default: **0.35** (35%).
+
+- **0 results?** Content may exist below the threshold. Try `--threshold 0.25`
+- **Typical scores**: Single-word queries score ~30-40%, multi-word phrases ~50-70%
+- **Higher threshold** = stricter matching, fewer results
+- **Lower threshold** = more results, possibly less relevant
+
+```bash
+mdcontext search "authentication"              # Uses default 0.35 threshold
+mdcontext search --threshold 0.25 "auth"       # Lower threshold for broad queries
+mdcontext search --threshold 0.6 "specific"    # Higher threshold for precision
 ```
 
 #### Context Lines

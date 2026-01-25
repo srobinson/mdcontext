@@ -360,6 +360,21 @@ export const formatError = (error: MdContextError): FormattedError =>
       exitCode: EXIT_CODE.USER_ERROR,
     })),
 
+    // Dimension mismatch errors
+    Match.tag('DimensionMismatchError', (e) => ({
+      code: e.code,
+      message: 'Embedding dimension mismatch',
+      details: e.message,
+      suggestions: [
+        e.corpusProvider
+          ? `Switch back to original provider: --provider ${e.corpusProvider.split(':')[0]} --provider-model ${e.corpusProvider.split(':')[1] ?? ''}`
+          : 'Check your embedding provider configuration',
+        "Rebuild corpus with current provider: 'mdcontext index --embed --force'",
+        'The corpus was created with different embedding dimensions than your current provider',
+      ] as const,
+      exitCode: EXIT_CODE.USER_ERROR,
+    })),
+
     // Vector store errors
     Match.tag('VectorStoreError', (e) => ({
       code: e.code,

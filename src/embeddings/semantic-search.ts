@@ -8,19 +8,20 @@ import { Effect } from 'effect'
 import {
   type ApiKeyInvalidError,
   type ApiKeyMissingError,
+  type DimensionMismatchError,
   EmbeddingError,
   EmbeddingsNotFoundError,
   type FileReadError,
   type IndexCorruptedError,
   IndexNotFoundError,
-  type VectorStoreError,
+  VectorStoreError,
 } from '../errors/index.js'
 import {
   createStorage,
   loadDocumentIndex,
   loadSectionIndex,
 } from '../index/storage.js'
-import type { SectionEntry } from '../index/types.js'
+import { INDEX_DIR, type SectionEntry } from '../index/types.js'
 import {
   checkPricingFreshness,
   getPricingDate,
@@ -31,13 +32,61 @@ import {
   createEmbeddingProviderDirect,
   type ProviderFactoryConfig,
 } from './provider-factory.js'
-import type {
-  EmbeddingProvider,
-  SemanticSearchOptions,
-  SemanticSearchResult,
-  VectorEntry,
+import {
+  type EmbeddingProvider,
+  hasProviderMetadata,
+  type SemanticSearchOptions,
+  type SemanticSearchResult,
+  type SemanticSearchResultWithStats,
+  type VectorEntry,
+  type VectorIndex,
 } from './types.js'
 import { createVectorStore, type HnswVectorStore } from './vector-store.js'
+
+// ============================================================================
+// Provider Mismatch Warning
+// ============================================================================
+
+interface VectorStoreStats {
+  readonly provider: string
+  readonly providerModel?: string | undefined
+}
+
+/**
+ * Check for provider/model mismatch between index and query, returning a warning Effect if mismatch detected.
+ * This consolidates the warning logic used in both semanticSearch and semanticSearchWithStats.
+ */
+const checkProviderMismatch = (
+  stats: VectorStoreStats,
+  currentProvider: string,
+  currentProviderModel: string,
+): Effect.Effect<void, never, never> => {
+  // Check if index provider/model differs from query provider/model
+  if (stats.providerModel && stats.providerModel !== currentProviderModel) {
+    return Effect.logWarning(
+      `Provider mismatch: Index was created with ${stats.provider}/${stats.providerModel}, ` +
+        `but querying with ${currentProvider}/${currentProviderModel}. ` +
+        `Results may be inconsistent. Consider re-indexing.`,
+    )
+  }
+
+  // Legacy index without model info - extract from provider name if possible
+  if (!stats.providerModel) {
+    const indexProviderParts = stats.provider.split(':')
+    if (
+      indexProviderParts.length === 2 &&
+      indexProviderParts[1] !== currentProviderModel
+    ) {
+      return Effect.logWarning(
+        `Provider mismatch: Index was created with ${indexProviderParts[0]}/${indexProviderParts[1]}, ` +
+          `but querying with ${currentProvider}/${currentProviderModel}. ` +
+          `Results may be inconsistent. Consider re-indexing.`,
+      )
+    }
+  }
+
+  return Effect.void
+}
 
 // ============================================================================
 // Embedding Text Generation
@@ -224,10 +273,11 @@ export interface BuildEmbeddingsResult {
  * @throws IndexNotFoundError - Index doesn't exist at path
  * @throws FileReadError - Cannot read index or source files
  * @throws IndexCorruptedError - Index files are corrupted
- * @throws ApiKeyMissingError - OPENAI_API_KEY not set
- * @throws ApiKeyInvalidError - API key rejected by OpenAI
+ * @throws ApiKeyMissingError - API key not set (check provider config)
+ * @throws ApiKeyInvalidError - API key rejected by provider
  * @throws EmbeddingError - Embedding API failure (rate limit, quota, network)
  * @throws VectorStoreError - Cannot save vector index
+ * @throws DimensionMismatchError - Existing embeddings have different dimensions
  */
 export const buildEmbeddings = (
   rootPath: string,
@@ -241,6 +291,7 @@ export const buildEmbeddings = (
   | ApiKeyInvalidError
   | EmbeddingError
   | VectorStoreError
+  | DimensionMismatchError
 > =>
   Effect.gen(function* () {
     const startTime = Date.now()
@@ -259,8 +310,7 @@ export const buildEmbeddings = (
     // Priority: explicit provider > providerConfig > default (openai)
     const providerConfig = options.providerConfig ?? { provider: 'openai' }
     const provider =
-      options.provider ??
-      (yield* createEmbeddingProviderDirect(providerConfig))
+      options.provider ?? (yield* createEmbeddingProviderDirect(providerConfig))
     const dimensions = provider.dimensions
 
     // Create vector store
@@ -268,14 +318,12 @@ export const buildEmbeddings = (
       resolvedRoot,
       dimensions,
     ) as HnswVectorStore
-    // Use provider properties if available (e.g. OpenAIProvider), otherwise fall back to name.
-    // Safely read optional metadata without assuming it exists on all providers.
-    const providerMeta = provider as { model?: unknown; baseURL?: unknown }
-    const model =
-      typeof providerMeta.model === 'string' ? providerMeta.model : undefined
-    const baseURL =
-      typeof providerMeta.baseURL === 'string' ? providerMeta.baseURL : undefined
-    vectorStore.setProvider(provider.name, model, baseURL)
+    // Use type guard to safely access extended provider metadata
+    if (hasProviderMetadata(provider)) {
+      vectorStore.setProvider(provider.name, provider.model, provider.baseURL)
+    } else {
+      vectorStore.setProvider(provider.name, undefined, undefined)
+    }
 
     // Load existing if not forcing
     if (!options.force) {
@@ -435,7 +483,10 @@ export const buildEmbeddings = (
 
     // Generate embeddings
     const texts = sectionsToEmbed.map((s) => s.text)
-    const result = yield* wrapEmbedding(provider.embed(texts))
+    const result = yield* wrapEmbedding(
+      provider.embed(texts),
+      providerConfig.provider ?? 'openai',
+    )
 
     // Create vector entries
     const entries: VectorEntry[] = []
@@ -484,10 +535,11 @@ export const buildEmbeddings = (
  * @returns Ranked list of matching sections by similarity
  *
  * @throws EmbeddingsNotFoundError - No embeddings exist (run index --embed first)
- * @throws ApiKeyMissingError - OPENAI_API_KEY not set
- * @throws ApiKeyInvalidError - API key rejected by OpenAI
+ * @throws ApiKeyMissingError - API key not set (check provider config)
+ * @throws ApiKeyInvalidError - API key rejected by provider
  * @throws EmbeddingError - Embedding API failure (rate limit, quota, network)
  * @throws VectorStoreError - Cannot load or search vector index
+ * @throws DimensionMismatchError - Corpus has different dimensions than current provider
  */
 export const semanticSearch = (
   rootPath: string,
@@ -500,6 +552,7 @@ export const semanticSearch = (
   | ApiKeyInvalidError
   | EmbeddingError
   | VectorStoreError
+  | DimensionMismatchError
 > =>
   Effect.gen(function* () {
     const resolvedRoot = path.resolve(rootPath)
@@ -522,41 +575,16 @@ export const semanticSearch = (
 
     // Check for provider mismatch
     const stats = vectorStore.getStats()
-    const currentProviderModel = options.providerConfig?.model ?? 'text-embedding-3-small'
+    const currentProviderModel =
+      options.providerConfig?.model ?? 'text-embedding-3-small'
     const currentProvider = options.providerConfig?.provider ?? 'openai'
-
-    // Warn if index provider/model differs from query provider/model
-    if (stats.providerModel && stats.providerModel !== currentProviderModel) {
-      console.warn(
-        `⚠️  Index was created with ${stats.provider}/${stats.providerModel}`,
-      )
-      console.warn(
-        `   but querying with ${currentProvider}/${currentProviderModel}`,
-      )
-      console.warn(
-        '   Results may be inconsistent. Consider re-indexing.',
-      )
-    } else if (!stats.providerModel) {
-      // Legacy index without model info - extract from provider name if possible
-      const indexProviderParts = stats.provider.split(':')
-      if (
-        indexProviderParts.length === 2 &&
-        indexProviderParts[1] !== currentProviderModel
-      ) {
-        console.warn(
-          `⚠️  Index was created with ${indexProviderParts[0]}/${indexProviderParts[1]}`,
-        )
-        console.warn(
-          `   but querying with ${currentProvider}/${currentProviderModel}`,
-        )
-        console.warn(
-          '   Results may be inconsistent. Consider re-indexing.',
-        )
-      }
-    }
+    yield* checkProviderMismatch(stats, currentProvider, currentProviderModel)
 
     // Embed the query
-    const queryResult = yield* wrapEmbedding(provider.embed([query]))
+    const queryResult = yield* wrapEmbedding(
+      provider.embed([query]),
+      currentProvider,
+    )
 
     const queryVector = queryResult.embeddings[0]
     if (!queryVector) {
@@ -564,7 +592,7 @@ export const semanticSearch = (
         new EmbeddingError({
           reason: 'Unknown',
           message: 'Failed to generate query embedding',
-          provider: 'OpenAI',
+          provider: currentProvider,
         }),
       )
     }
@@ -602,6 +630,119 @@ export const semanticSearch = (
     return results
   })
 
+/**
+ * Perform semantic search with stats about below-threshold results.
+ * Use this when you want to provide feedback to users about results that
+ * didn't meet the threshold.
+ *
+ * @param rootPath - Root directory containing embeddings
+ * @param query - Natural language search query
+ * @param options - Search options (limit, threshold, path filter)
+ * @returns Results with optional below-threshold stats
+ *
+ * @throws EmbeddingsNotFoundError - No embeddings exist (run index --embed first)
+ * @throws ApiKeyMissingError - API key not set (check provider config)
+ * @throws ApiKeyInvalidError - API key rejected by provider
+ * @throws EmbeddingError - Embedding API failure (rate limit, quota, network)
+ * @throws VectorStoreError - Cannot load or search vector index
+ * @throws DimensionMismatchError - Corpus has different dimensions than current provider
+ */
+export const semanticSearchWithStats = (
+  rootPath: string,
+  query: string,
+  options: SemanticSearchOptions = {},
+): Effect.Effect<
+  SemanticSearchResultWithStats,
+  | EmbeddingsNotFoundError
+  | ApiKeyMissingError
+  | ApiKeyInvalidError
+  | EmbeddingError
+  | VectorStoreError
+  | DimensionMismatchError
+> =>
+  Effect.gen(function* () {
+    const resolvedRoot = path.resolve(rootPath)
+
+    // Get provider for query embedding - use factory for config-driven selection
+    const provider = yield* createEmbeddingProviderDirect(
+      options.providerConfig ?? { provider: 'openai' },
+    )
+    const dimensions = provider.dimensions
+
+    // Load vector store
+    const vectorStore = createVectorStore(resolvedRoot, dimensions)
+    const loaded = yield* vectorStore.load()
+
+    if (!loaded) {
+      return yield* Effect.fail(
+        new EmbeddingsNotFoundError({ path: resolvedRoot }),
+      )
+    }
+
+    // Check for provider mismatch
+    const stats = vectorStore.getStats()
+    const currentProviderModel =
+      options.providerConfig?.model ?? 'text-embedding-3-small'
+    const currentProvider = options.providerConfig?.provider ?? 'openai'
+    yield* checkProviderMismatch(stats, currentProvider, currentProviderModel)
+
+    // Embed the query
+    const queryResult = yield* wrapEmbedding(
+      provider.embed([query]),
+      currentProvider,
+    )
+
+    const queryVector = queryResult.embeddings[0]
+    if (!queryVector) {
+      return yield* Effect.fail(
+        new EmbeddingError({
+          reason: 'Unknown',
+          message: 'Failed to generate query embedding',
+          provider: currentProvider,
+        }),
+      )
+    }
+
+    // Search with stats
+    const limit = options.limit ?? 10
+    const threshold = options.threshold ?? 0
+
+    const searchResultWithStats = yield* vectorStore.searchWithStats(
+      queryVector,
+      limit * 2,
+      threshold,
+    )
+
+    // Apply path filter if specified
+    let filteredResults = searchResultWithStats.results
+    if (options.pathPattern) {
+      const pattern = options.pathPattern
+        .replace(/\./g, '\\.')
+        .replace(/\*/g, '.*')
+      const regex = new RegExp(`^${pattern}$`, 'i')
+      filteredResults = searchResultWithStats.results.filter((r) =>
+        regex.test(r.documentPath),
+      )
+    }
+
+    // Convert to SemanticSearchResult
+    const results: SemanticSearchResult[] = filteredResults
+      .slice(0, limit)
+      .map((r) => ({
+        sectionId: r.sectionId,
+        documentPath: r.documentPath,
+        heading: r.heading,
+        similarity: r.similarity,
+      }))
+
+    return {
+      results,
+      belowThresholdCount: searchResultWithStats.belowThresholdCount,
+      belowThresholdHighest:
+        searchResultWithStats.belowThresholdHighest ?? undefined,
+    }
+  })
+
 // ============================================================================
 // Search with Content
 // ============================================================================
@@ -617,10 +758,11 @@ export const semanticSearch = (
  * @throws EmbeddingsNotFoundError - No embeddings exist (run index --embed first)
  * @throws FileReadError - Cannot read index files
  * @throws IndexCorruptedError - Index files are corrupted
- * @throws ApiKeyMissingError - OPENAI_API_KEY not set
- * @throws ApiKeyInvalidError - API key rejected by OpenAI
+ * @throws ApiKeyMissingError - API key not set (check provider config)
+ * @throws ApiKeyInvalidError - API key rejected by provider
  * @throws EmbeddingError - Embedding API failure (rate limit, quota, network)
  * @throws VectorStoreError - Cannot load or search vector index
+ * @throws DimensionMismatchError - Corpus has different dimensions than current provider
  */
 export const semanticSearchWithContent = (
   rootPath: string,
@@ -635,6 +777,7 @@ export const semanticSearchWithContent = (
   | ApiKeyInvalidError
   | EmbeddingError
   | VectorStoreError
+  | DimensionMismatchError
 > =>
   Effect.gen(function* () {
     const resolvedRoot = path.resolve(rootPath)
@@ -718,12 +861,21 @@ export const getEmbeddingStats = (
 ): Effect.Effect<EmbeddingStats, VectorStoreError> =>
   Effect.gen(function* () {
     const resolvedRoot = path.resolve(rootPath)
+    const metaPath = path.join(resolvedRoot, INDEX_DIR, 'vectors.meta.json')
 
-    // Try to load with default dimensions
-    const vectorStore = createVectorStore(resolvedRoot, 1536)
-    const loaded = yield* vectorStore.load()
+    // Read metadata directly without loading vectors (avoids dimension mismatch errors)
+    // Use catchAll to handle file-not-found gracefully (no embeddings = not an error)
+    const metaContent = yield* Effect.tryPromise({
+      try: () => fs.readFile(metaPath, 'utf-8'),
+      catch: (e) =>
+        new VectorStoreError({
+          operation: 'load',
+          message: `Failed to read metadata: ${e instanceof Error ? e.message : String(e)}`,
+          cause: e,
+        }),
+    }).pipe(Effect.catchAll(() => Effect.succeed(null as string | null)))
 
-    if (!loaded) {
+    if (!metaContent) {
       return {
         hasEmbeddings: false,
         count: 0,
@@ -734,13 +886,24 @@ export const getEmbeddingStats = (
       }
     }
 
-    const stats = vectorStore.getStats()
+    const meta = yield* Effect.try({
+      try: () => JSON.parse(metaContent) as VectorIndex,
+      catch: (e) =>
+        new VectorStoreError({
+          operation: 'load',
+          message: `Failed to parse metadata: ${e instanceof Error ? e.message : String(e)}`,
+          cause: e,
+        }),
+    })
+
     return {
       hasEmbeddings: true,
-      count: stats.count,
-      provider: stats.provider,
-      dimensions: stats.dimensions,
-      totalCost: stats.totalCost,
-      totalTokens: stats.totalTokens,
+      count: Object.keys(meta.entries).length,
+      provider: meta.providerModel
+        ? `${meta.provider}:${meta.providerModel}`
+        : meta.provider || 'openai',
+      dimensions: meta.dimensions,
+      totalCost: meta.totalCost || 0,
+      totalTokens: meta.totalTokens || 0,
     }
   })

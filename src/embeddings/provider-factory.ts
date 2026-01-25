@@ -11,27 +11,11 @@ import { ConfigService, type EmbeddingProvider } from '../config/index.js'
 import type { EmbeddingsConfig } from '../config/schema.js'
 import type { ApiKeyMissingError } from '../errors/index.js'
 import { createOpenAIProvider } from './openai-provider.js'
+import { PROVIDER_BASE_URLS } from './provider-constants.js'
 import type { EmbeddingProvider as EmbeddingProviderInterface } from './types.js'
 
-// ============================================================================
-// Provider BaseURL Mapping
-// ============================================================================
-
-/**
- * Default base URLs for each embedding provider.
- *
- * - openai: Uses SDK default (https://api.openai.com/v1)
- * - ollama: Local Ollama server
- * - lm-studio: Local LM Studio server
- * - openrouter: OpenRouter API gateway
- */
-export const PROVIDER_BASE_URLS: Record<EmbeddingProvider, string | undefined> =
-  {
-    openai: undefined, // Use OpenAI SDK default
-    ollama: 'http://localhost:11434/v1',
-    'lm-studio': 'http://localhost:1234/v1',
-    openrouter: 'https://openrouter.ai/api/v1',
-  } as const
+// Re-export provider constants for backward compatibility
+export { PROVIDER_BASE_URLS } from './provider-constants.js'
 
 /**
  * Get the base URL for a provider, respecting config override.
@@ -65,6 +49,7 @@ export interface ProviderFactoryConfig {
   readonly provider: EmbeddingProvider
   readonly baseURL?: Option.Option<string> | string | undefined
   readonly model?: string | undefined
+  readonly dimensions?: number | undefined
   readonly batchSize?: number | undefined
   readonly apiKey?: Option.Option<string> | string | undefined
 }
@@ -135,7 +120,7 @@ export const createEmbeddingProvider = (
           provider: config.provider,
           baseURL: normalizeBaseURL(config.baseURL),
           model: config.model ?? 'text-embedding-3-small',
-          dimensions: 512,
+          dimensions: config.dimensions, // Let provider determine default if not specified
           batchSize: config.batchSize ?? 100,
           maxRetries: 3,
           retryDelayMs: 1000,
@@ -156,6 +141,7 @@ export const createEmbeddingProvider = (
     // Future: Could return different provider classes here (e.g., native Ollama SDK)
     return yield* createOpenAIProvider({
       model: embeddingsConfig.model,
+      dimensions: embeddingsConfig.dimensions,
       batchSize: embeddingsConfig.batchSize,
       baseURL,
       apiKey,
@@ -183,6 +169,7 @@ export const createEmbeddingProviderDirect = (
 
     return yield* createOpenAIProvider({
       model: config.model,
+      dimensions: config.dimensions,
       batchSize: config.batchSize,
       baseURL,
       apiKey: normalizeApiKey(config.apiKey),

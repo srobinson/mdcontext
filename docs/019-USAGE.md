@@ -33,7 +33,9 @@ npx mdcontext --help
 **Requirements:**
 
 - Node.js 18+
-- OpenAI API key (for semantic search only)
+- Embedding provider for semantic search (see [CONFIG.md](./CONFIG.md) for options):
+  - OpenAI or OpenRouter (cloud, requires API key)
+  - Ollama or LM Studio (free, local, no API key needed)
 
 ---
 
@@ -51,8 +53,21 @@ mdcontext tree ./docs/README.md       # Document outline
 mdcontext context ./docs/README.md
 
 # 4. Enable semantic search (optional)
+# Choose ONE provider:
+
+# Option A: OpenAI (cloud, requires API key)
 export OPENAI_API_KEY=sk-...
 mdcontext index --embed
+
+# Option B: Ollama (free, local, no API key needed)
+ollama serve && ollama pull nomic-embed-text
+mdcontext index --embed --provider ollama --provider-model nomic-embed-text
+
+# Option C: LM Studio (free, local, no API key needed)
+# Start LM Studio, load an embedding model, then:
+mdcontext index --embed --provider lm-studio
+
+# Then search by meaning:
 mdcontext search "how to authenticate"
 ```
 
@@ -558,9 +573,11 @@ By default, indexes are stored in `.mdcontext/` in your project root:
 
 ### Environment Variables
 
-| Variable         | Required            | Description    |
-| ---------------- | ------------------- | -------------- |
-| `OPENAI_API_KEY` | For semantic search | OpenAI API key |
+| Variable             | Required                    | Description                          |
+| -------------------- | --------------------------- | ------------------------------------ |
+| `OPENAI_API_KEY`     | For OpenAI provider         | OpenAI API key (cloud provider)      |
+| `OPENROUTER_API_KEY` | For OpenRouter provider     | OpenRouter API key (cloud provider)  |
+| N/A                  | Ollama / LM Studio          | Local providers - no API key needed  |
 
 All configuration options can also be set via `MDCONTEXT_*` environment variables. See [CONFIG.md](./CONFIG.md#environment-variables) for the complete reference.
 
@@ -587,8 +604,14 @@ Run `mdcontext index` to build the index first.
 
 ### "Semantic search not available"
 
-1. Set `OPENAI_API_KEY` environment variable
+1. Set up an embedding provider:
+   - **OpenAI (cloud):** Set `OPENAI_API_KEY` environment variable
+   - **OpenRouter (cloud):** Set `OPENROUTER_API_KEY` environment variable
+   - **Ollama (free, local):** Run `ollama serve` (no API key needed)
+   - **LM Studio (free, local):** Start the server GUI (no API key needed)
 2. Run `mdcontext index --embed` to build embedding index
+   - For local providers: `mdcontext index --embed --provider ollama`
+3. See [CONFIG.md](./CONFIG.md) for detailed provider setup
 
 ### "File not found in index"
 

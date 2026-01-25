@@ -127,7 +127,7 @@ export const helpContent: Record<string, CommandHelp> = {
       {
         name: '--threshold <n>',
         description:
-          'Similarity threshold 0-1 for semantic search (default: 0.5)',
+          'Similarity threshold 0-1 for semantic search (default: 0.35)',
       },
       {
         name: '--provider <name>',
@@ -142,6 +142,12 @@ export const helpContent: Record<string, CommandHelp> = {
       'Quoted phrases match exactly: "context resumption".',
       'Regex patterns (e.g., "API.*") always use keyword search.',
       'Run "mdcontext index --embed" first for semantic search.',
+      '',
+      'Similarity threshold (--threshold):',
+      '  Default: 0.35 (35%). Results below this similarity are filtered out.',
+      '  If 0 results: content may exist below threshold. Try --threshold 0.25.',
+      '  Typical scores: single words ~30-40%, phrases ~50-70%.',
+      '  Higher threshold = stricter matching. Lower = more results.',
     ],
   },
   context: {

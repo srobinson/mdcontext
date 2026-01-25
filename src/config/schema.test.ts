@@ -79,7 +79,7 @@ describe('Config Schema', () => {
 
       expect(result.defaultLimit).toBe(10)
       expect(result.maxLimit).toBe(100)
-      expect(result.minSimilarity).toBe(0.5)
+      expect(result.minSimilarity).toBe(0.35)
       expect(result.includeSnippets).toBe(true)
       expect(result.snippetLength).toBe(200)
     })
@@ -344,7 +344,7 @@ describe('Config Schema', () => {
 
       expect(defaultConfig.search.defaultLimit).toBe(10)
       expect(defaultConfig.search.maxLimit).toBe(100)
-      expect(defaultConfig.search.minSimilarity).toBe(0.5)
+      expect(defaultConfig.search.minSimilarity).toBe(0.35)
       expect(defaultConfig.search.includeSnippets).toBe(true)
       expect(defaultConfig.search.snippetLength).toBe(200)
 
