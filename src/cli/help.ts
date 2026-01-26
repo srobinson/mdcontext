@@ -94,6 +94,11 @@ export const helpContent: Record<string, CommandHelp> = {
       '# Context lines (like grep):',
       'mdcontext search "checkpoint" -C 3         # 3 lines before AND after',
       'mdcontext search "error" -B 2 -A 5         # 2 before, 5 after',
+      '',
+      '# AI summarization:',
+      'mdcontext search "auth" --summarize        # Get AI summary of results',
+      'mdcontext search "error" -s --yes          # Skip cost confirmation',
+      'mdcontext search "config" -s --stream      # Stream summary output',
     ],
     options: [
       {
@@ -135,6 +140,18 @@ export const helpContent: Record<string, CommandHelp> = {
       },
       { name: '--json', description: 'Output results as JSON' },
       { name: '--pretty', description: 'Pretty-print JSON output' },
+      {
+        name: '-s, --summarize',
+        description: 'Generate AI summary of search results',
+      },
+      {
+        name: '-y, --yes',
+        description: 'Skip cost confirmation for paid AI providers',
+      },
+      {
+        name: '--stream',
+        description: 'Stream AI summary output in real-time',
+      },
     ],
     notes: [
       'Auto-detects mode: semantic if embeddings exist, keyword otherwise.',

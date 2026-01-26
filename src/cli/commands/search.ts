@@ -25,6 +25,16 @@ import {
 } from '../../search/hybrid-search.js'
 import { isAdvancedQuery } from '../../search/query-parser.js'
 import { search, searchContent } from '../../search/searcher.js'
+import {
+  type APIProviderName,
+  buildPrompt,
+  type CLIProviderName,
+  displaySummarizationError,
+  estimateSummaryCost,
+  formatResultsForSummary,
+  getBestAvailableSummarizer,
+  type SummarizableResult,
+} from '../../summarization/index.js'
 import { jsonOption, prettyOption } from '../options.js'
 import {
   createCostEstimateErrorHandler,
@@ -117,6 +127,20 @@ export const searchCommand = Command.make(
     ),
     json: jsonOption,
     pretty: prettyOption,
+    summarize: Options.boolean('summarize').pipe(
+      Options.withAlias('s'),
+      Options.withDescription('Generate AI summary of search results'),
+      Options.withDefault(false),
+    ),
+    yes: Options.boolean('yes').pipe(
+      Options.withAlias('y'),
+      Options.withDescription('Skip cost confirmation for paid AI providers'),
+      Options.withDefault(false),
+    ),
+    stream: Options.boolean('stream').pipe(
+      Options.withDescription('Stream AI summary output in real-time'),
+      Options.withDefault(false),
+    ),
   },
   ({
     query,
@@ -133,6 +157,9 @@ export const searchCommand = Command.make(
     provider,
     json,
     pretty,
+    summarize,
+    yes,
+    stream,
   }) =>
     Effect.gen(function* () {
       // Get configuration (with fallback to defaults if not available)
@@ -291,6 +318,30 @@ export const searchCommand = Command.make(
             yield* Console.log('')
           }
         }
+
+        // Summarization for hybrid search
+        if (summarize && results.length > 0) {
+          const summarizableResults: SummarizableResult[] = results.map(
+            (r) => ({
+              documentPath: r.documentPath,
+              heading: r.heading,
+              score: r.score,
+              ...(r.similarity !== undefined && { similarity: r.similarity }),
+            }),
+          )
+          yield* runSummarization({
+            results: summarizableResults,
+            query,
+            searchMode: 'hybrid',
+            json,
+            yes,
+            stream,
+            config: {
+              mode: config.aiSummarization.mode,
+              provider: config.aiSummarization.provider,
+            },
+          })
+        }
       } else if (effectiveMode === 'keyword') {
         // Keyword search - content by default, heading-only if flag set
         const results = headingOnly
@@ -380,6 +431,28 @@ export const searchCommand = Command.make(
             )
           }
         }
+
+        // Summarization for keyword search
+        if (summarize && results.length > 0) {
+          const summarizableResults: SummarizableResult[] = results.map(
+            (r) => ({
+              documentPath: r.section.documentPath,
+              heading: r.section.heading,
+            }),
+          )
+          yield* runSummarization({
+            results: summarizableResults,
+            query,
+            searchMode: 'keyword',
+            json,
+            yes,
+            stream,
+            config: {
+              mode: config.aiSummarization.mode,
+              provider: config.aiSummarization.provider,
+            },
+          })
+        }
       } else {
         // Build provider config from CLI flag if specified
         const providerConfig = Option.isSome(provider)
@@ -454,9 +527,218 @@ export const searchCommand = Command.make(
 
           yield* Console.log('Tip: Use --mode keyword for exact text matching')
         }
+
+        // Summarization for semantic search
+        if (summarize && results.length > 0) {
+          const summarizableResults: SummarizableResult[] = results.map(
+            (r) => ({
+              documentPath: r.documentPath,
+              heading: r.heading,
+              similarity: r.similarity,
+            }),
+          )
+          yield* runSummarization({
+            results: summarizableResults,
+            query,
+            searchMode: 'semantic',
+            json,
+            yes,
+            stream,
+            config: {
+              mode: config.aiSummarization.mode,
+              provider: config.aiSummarization.provider,
+            },
+          })
+        }
       }
     }),
 ).pipe(Command.withDescription('Search by meaning or structure'))
+
+/**
+ * Options for running AI summarization
+ */
+interface SummarizationOptions {
+  readonly results: readonly SummarizableResult[]
+  readonly query: string
+  readonly searchMode: 'hybrid' | 'semantic' | 'keyword'
+  readonly json: boolean
+  readonly yes: boolean
+  readonly stream: boolean
+  readonly config: {
+    readonly mode: 'cli' | 'api'
+    readonly provider: CLIProviderName | APIProviderName
+  }
+}
+
+/**
+ * Run AI summarization on search results.
+ * Handles cost estimation, user consent, and output formatting.
+ *
+ * GRACEFUL DEGRADATION: This function never fails - on error, it displays
+ * an error message and returns, allowing search results to still be shown.
+ */
+const runSummarization = (
+  options: SummarizationOptions,
+): Effect.Effect<void, never> =>
+  runSummarizationUnsafe(options).pipe(
+    Effect.catchAll((error) =>
+      Effect.sync(() => {
+        if (!options.json) {
+          displaySummarizationError(error)
+        }
+      }),
+    ),
+  )
+
+/**
+ * Internal implementation that may fail.
+ * Wrapped by runSummarization for graceful error handling.
+ */
+const runSummarizationUnsafe = (
+  options: SummarizationOptions,
+): Effect.Effect<void, Error> =>
+  Effect.gen(function* () {
+    const { results, query, searchMode, json, yes, stream, config } = options
+
+    if (results.length === 0) {
+      if (!json) {
+        yield* Console.log('No results to summarize.')
+      }
+      return
+    }
+
+    // Get summarizer
+    const summarizerData = yield* Effect.tryPromise({
+      try: async () => {
+        const result = await getBestAvailableSummarizer({
+          mode: config.mode,
+          provider: config.provider,
+        })
+        if (!result) {
+          throw new Error('No summarization providers available')
+        }
+        return result
+      },
+      catch: (e) => new Error(`Failed to get summarizer: ${e}`),
+    })
+
+    const { summarizer, config: resolvedConfig } = summarizerData
+
+    // Format results for summary input
+    const resultsText = formatResultsForSummary(results)
+
+    // Estimate cost
+    const costEstimate = estimateSummaryCost(
+      resultsText,
+      resolvedConfig.mode,
+      resolvedConfig.provider,
+    )
+
+    // Display cost info
+    if (!json) {
+      if (costEstimate.isPaid) {
+        yield* Console.log('')
+        yield* Console.log('Cost Estimate:')
+        yield* Console.log(`  Provider: ${costEstimate.provider}`)
+        yield* Console.log(
+          `  Input tokens: ~${costEstimate.inputTokens.toLocaleString()}`,
+        )
+        yield* Console.log(
+          `  Output tokens: ~${costEstimate.outputTokens.toLocaleString()}`,
+        )
+        yield* Console.log(`  Estimated cost: ${costEstimate.formattedCost}`)
+
+        // Get user consent if needed
+        if (!yes) {
+          const answer = yield* Effect.promise(() =>
+            promptUser('Continue with summarization? [Y/n]: '),
+          )
+          if (answer === 'n' || answer === 'no') {
+            yield* Console.log('Summarization cancelled.')
+            return
+          }
+        }
+      } else {
+        yield* Console.log('')
+        yield* Console.log(
+          `Using ${resolvedConfig.provider} (subscription - FREE)`,
+        )
+      }
+    }
+
+    // Build prompt
+    const prompt = buildPrompt({
+      query,
+      resultCount: results.length,
+      searchMode,
+    })
+
+    // Generate summary
+    if (!json) {
+      yield* Console.log('')
+      yield* Console.log('--- AI Summary ---')
+      yield* Console.log('')
+    }
+
+    const startTime = Date.now()
+
+    if (stream && 'summarizeStream' in summarizer) {
+      // Streaming output
+      yield* Effect.tryPromise({
+        try: () =>
+          (
+            summarizer as {
+              summarizeStream: (
+                input: string,
+                prompt: string,
+                options: { onChunk: (chunk: string) => void },
+              ) => Promise<void>
+            }
+          ).summarizeStream(resultsText, prompt, {
+            onChunk: (chunk) => {
+              process.stdout.write(chunk)
+            },
+          }),
+        catch: (e) => new Error(`Summarization failed: ${e}`),
+      })
+      if (!json) {
+        yield* Console.log('') // Final newline
+      }
+    } else {
+      // Non-streaming output
+      const summaryResult = yield* Effect.tryPromise({
+        try: () => summarizer.summarize(resultsText, prompt),
+        catch: (e) => new Error(`Summarization failed: ${e}`),
+      })
+
+      if (json) {
+        yield* Console.log(
+          JSON.stringify(
+            {
+              summary: summaryResult.summary,
+              provider: summaryResult.provider,
+              mode: summaryResult.mode,
+              durationMs: summaryResult.durationMs,
+              cost: costEstimate.isPaid ? costEstimate.formattedCost : 'FREE',
+            },
+            null,
+            2,
+          ),
+        )
+      } else {
+        yield* Console.log(summaryResult.summary)
+      }
+    }
+
+    const durationMs = Date.now() - startTime
+    if (!json) {
+      yield* Console.log('')
+      yield* Console.log('------------------')
+      yield* Console.log(
+        `Generated in ${(durationMs / 1000).toFixed(1)}s | ${costEstimate.isPaid ? costEstimate.formattedCost : 'FREE'}`,
+      )
+    }
+  })
 
 /**
  * Handle the case when embeddings don't exist.

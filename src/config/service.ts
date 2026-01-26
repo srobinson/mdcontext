@@ -214,6 +214,10 @@ export const mergeWithDefaults = (
   search: { ...defaultConfig.search, ...partial.search },
   embeddings: { ...defaultConfig.embeddings, ...partial.embeddings },
   summarization: { ...defaultConfig.summarization, ...partial.summarization },
+  aiSummarization: {
+    ...defaultConfig.aiSummarization,
+    ...partial.aiSummarization,
+  },
   output: { ...defaultConfig.output, ...partial.output },
   paths: { ...defaultConfig.paths, ...partial.paths },
 })

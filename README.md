@@ -93,6 +93,18 @@ mdcontext search "error" -B 2 -A 5            # 2 lines before, 5 lines after
 
 Auto-detection: Uses semantic search if embeddings exist and query looks like natural language. Use `-k` to force keyword search.
 
+#### AI Summarization
+
+Generate AI-powered summaries of search results:
+
+```bash
+mdcontext search "authentication" --summarize     # Get AI summary of results
+mdcontext search "error handling" -s --yes        # Skip cost confirmation
+mdcontext search "database" -s --stream           # Stream output in real-time
+```
+
+Uses your existing AI subscription (Claude Code, Copilot CLI) for free, or pay-per-use API providers. See [AI Summarization](#ai-summarization) for setup.
+
 ### context
 
 Get LLM-ready summaries from one or more files.
@@ -284,6 +296,114 @@ Indexes are stored in `.mdcontext/` in your project root:
 | `OPENAI_API_KEY` | Required for OpenAI semantic search (default provider) |
 | `OPENROUTER_API_KEY` | Required for OpenRouter semantic search |
 | `MDCONTEXT_*` | Configuration overrides (see [CONFIG.md](./docs/CONFIG.md)) |
+
+---
+
+## AI Summarization
+
+Transform search results into actionable insights using AI.
+
+### Quick Start
+
+```bash
+# Basic usage (auto-detects installed CLI tools)
+mdcontext search "authentication" --summarize
+
+# Skip confirmation for scripts
+mdcontext search "error handling" --summarize --yes
+
+# Stream output in real-time
+mdcontext search "database" --summarize --stream
+```
+
+### First-Time Setup
+
+On first use, mdcontext auto-detects available providers:
+
+```
+Using claude (subscription - FREE)
+
+--- AI Summary ---
+
+Based on the search results, here are the key findings...
+```
+
+### Providers
+
+**CLI Providers (FREE with subscription):**
+
+| Provider | Command | Subscription Required |
+|----------|---------|----------------------|
+| Claude Code | `claude` | Claude Pro/Team |
+| GitHub Copilot | `gh copilot` | Copilot subscription |
+| OpenCode | `opencode` | BYOK (any provider) |
+
+**API Providers (pay-per-use):**
+
+| Provider | Cost per 1M tokens | Notes |
+|----------|-------------------|-------|
+| DeepSeek | $0.14-0.56 | Ultra-cheap |
+| Qwen | $0.03-0.12 | Budget option |
+| Google Gemini | $0.30-2.50 | Balanced |
+| OpenAI GPT | $1.75-14.00 | Premium |
+| Anthropic Claude | $3.00-15.00 | Premium |
+
+### Configuration
+
+**Option 1: Auto-detection (recommended)**
+
+Just run `--summarize` - mdcontext finds installed CLI tools automatically.
+
+**Option 2: Config file**
+
+```javascript
+// mdcontext.config.js
+/** @type {import('mdcontext').PartialMdContextConfig} */
+export default {
+  aiSummarization: {
+    mode: 'cli',        // 'cli' (free) or 'api' (paid)
+    provider: 'claude', // Provider name
+  },
+}
+```
+
+**Option 3: Environment variables**
+
+```bash
+export MDCONTEXT_AISUMMARIZATION_MODE=api
+export MDCONTEXT_AISUMMARIZATION_PROVIDER=deepseek
+export DEEPSEEK_API_KEY=sk-...
+```
+
+### CLI Flags
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--summarize` | `-s` | Enable AI summarization |
+| `--yes` | `-y` | Skip cost confirmation |
+| `--stream` | | Stream output in real-time |
+
+### Cost Transparency
+
+API providers show cost estimates before proceeding:
+
+```
+Cost Estimate:
+  Provider: deepseek
+  Input tokens: ~2,500
+  Output tokens: ~500
+  Estimated cost: $0.0007
+
+Continue with summarization? [Y/n]:
+```
+
+CLI providers show free status:
+
+```
+Using claude (subscription - FREE)
+```
+
+See [docs/summarization.md](./docs/summarization.md) for architecture details and troubleshooting.
 
 ---
 

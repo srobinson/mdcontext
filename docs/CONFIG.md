@@ -12,6 +12,7 @@ mdcontext supports a layered configuration system that allows you to set persist
   - [Search Configuration](#search-configuration)
   - [Embeddings Configuration](#embeddings-configuration)
   - [Summarization Configuration](#summarization-configuration)
+  - [AI Summarization Configuration](#ai-summarization-configuration)
   - [Output Configuration](#output-configuration)
   - [Paths Configuration](#paths-configuration)
 - [Environment Variables](#environment-variables)
@@ -439,6 +440,68 @@ export default defineConfig({
 })
 ```
 
+### AI Summarization Configuration
+
+Controls AI-powered summarization of search results. This is separate from `summarization` which handles token budgets for context assembly.
+
+| Option     | Type     | Default    | Description                                    |
+| ---------- | -------- | ---------- | ---------------------------------------------- |
+| `mode`     | `string` | `'cli'`    | `'cli'` (free) or `'api'` (pay-per-use)       |
+| `provider` | `string` | `'claude'` | Provider name (see tables below)               |
+| `model`    | `string` | (optional) | Model name for API providers                   |
+| `stream`   | `boolean`| `false`    | Enable streaming output                        |
+| `baseURL`  | `string` | (optional) | Custom API base URL                            |
+| `apiKey`   | `string` | (from env) | API key (prefer environment variable)          |
+
+**CLI Providers (FREE with subscription):**
+
+| Provider | Config Value | Requires |
+|----------|--------------|----------|
+| Claude Code | `'claude'` | Claude Pro/Team subscription |
+| GitHub Copilot | `'copilot'` | Copilot subscription |
+| OpenCode | `'opencode'` | BYOK configuration |
+| Aider | `'aider'` | Model configuration |
+| Cline | `'cline'` | Model configuration |
+
+**API Providers (pay-per-use):**
+
+| Provider | Config Value | Cost per 1M tokens | API Key Env Var |
+|----------|--------------|-------------------|-----------------|
+| DeepSeek | `'deepseek'` | $0.14-0.56 | `DEEPSEEK_API_KEY` |
+| Qwen | `'qwen'` | $0.03-0.12 | `QWEN_API_KEY` |
+| Google Gemini | `'gemini'` | $0.30-2.50 | `GOOGLE_API_KEY` |
+| OpenAI GPT | `'openai'` | $1.75-14.00 | `OPENAI_API_KEY` |
+| Anthropic Claude | `'anthropic'` | $3.00-15.00 | `ANTHROPIC_API_KEY` |
+
+**Example:**
+
+```javascript
+// mdcontext.config.js
+/** @type {import('mdcontext').PartialMdContextConfig} */
+export default {
+  aiSummarization: {
+    // Use Claude CLI (free with subscription)
+    mode: 'cli',
+    provider: 'claude',
+  },
+}
+```
+
+**Example with API provider:**
+
+```javascript
+export default {
+  aiSummarization: {
+    // Use DeepSeek API (ultra-cheap)
+    mode: 'api',
+    provider: 'deepseek',
+    model: 'deepseek-chat',
+  },
+}
+```
+
+See [docs/summarization.md](./summarization.md) for architecture details and adding new providers.
+
 ### Output Configuration
 
 Controls CLI output formatting.
@@ -551,6 +614,20 @@ environment var:   MDCONTEXT_INDEX_MAXDEPTH
 | `MDCONTEXT_SUMMARIZATION_MINSECTIONTOKENS` | `summarization.minSectionTokens` |
 | `MDCONTEXT_SUMMARIZATION_MAXTOPICS`        | `summarization.maxTopics`        |
 | `MDCONTEXT_SUMMARIZATION_MINPARTIALBUDGET` | `summarization.minPartialBudget` |
+
+#### AI Summarization Configuration
+
+| Variable                                | Config Key                  |
+| --------------------------------------- | --------------------------- |
+| `MDCONTEXT_AISUMMARIZATION_MODE`        | `aiSummarization.mode`      |
+| `MDCONTEXT_AISUMMARIZATION_PROVIDER`    | `aiSummarization.provider`  |
+| `MDCONTEXT_AISUMMARIZATION_MODEL`       | `aiSummarization.model`     |
+| `MDCONTEXT_AISUMMARIZATION_STREAM`      | `aiSummarization.stream`    |
+| `MDCONTEXT_AISUMMARIZATION_BASEURL`     | `aiSummarization.baseURL`   |
+| `MDCONTEXT_AISUMMARIZATION_APIKEY`      | `aiSummarization.apiKey`    |
+
+**Note:** For API providers, also set the provider-specific API key environment variable:
+- `DEEPSEEK_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_API_KEY`, `QWEN_API_KEY`
 
 #### Output Configuration
 

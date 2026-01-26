@@ -294,6 +294,77 @@ const estimate = yield* estimateEmbeddingCost(dir).pipe(
 )
 ```
 
+## Summarization Error Handling
+
+AI summarization uses a separate error system with graceful degradation - errors never prevent search results from being displayed.
+
+### Summarization Error Codes
+
+| Code | Error Type | Description |
+|------|------------|-------------|
+| PROVIDER_NOT_FOUND | Provider name unknown | Check provider spelling |
+| PROVIDER_NOT_AVAILABLE | CLI tool not installed | Install the CLI tool |
+| CLI_EXECUTION_FAILED | CLI process error | Check CLI authentication |
+| API_REQUEST_FAILED | API call failed | Check API key and network |
+| RATE_LIMITED | Too many requests | Wait and retry |
+| INVALID_RESPONSE | Bad provider response | Report as bug |
+| TIMEOUT | Request timed out | Reduce result set |
+| NO_API_KEY | Missing API key | Set environment variable |
+
+### Troubleshooting Summarization
+
+**"CLI tool 'claude' not found"**
+```bash
+# Install Claude Code
+# Visit: https://claude.ai/download
+```
+
+**"CLI tool 'opencode' not found"**
+```bash
+# Install OpenCode
+npm install -g @opencode/cli
+# Or: https://github.com/opencode-ai/opencode
+```
+
+**"Authentication failed for anthropic"**
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+**"Rate limit exceeded"**
+- Wait 60 seconds and retry
+- Consider switching to CLI provider (free with subscription)
+
+**"Summarization failed: timeout"**
+- Reduce results: `mdcontext search "query" --limit 5 --summarize`
+- The default timeout is 60 seconds
+
+**"No summarization providers available"**
+Either:
+1. Install a CLI tool: `claude`, `opencode`, or `gh copilot`
+2. Configure an API provider with a valid API key
+
+### Graceful Degradation
+
+Summarization errors never crash the CLI. When summarization fails:
+
+1. Error message is displayed
+2. Search results are shown normally
+3. Exit code remains 0 (success)
+
+```typescript
+// Implementation pattern in search.ts
+const runSummarization = (options: SummarizationOptions): Effect.Effect<void, never> =>
+  runSummarizationUnsafe(options).pipe(
+    Effect.catchAll((error) =>
+      Effect.sync(() => {
+        displaySummarizationError(error)
+        // Search results still displayed
+      }),
+    ),
+  )
+```
+
 ## Error Formatting
 
 Error formatting (user-friendly messages) should only happen at the CLI boundary in `src/cli/error-handler.ts`. Internal errors carry structured data; presentation is separate from logic.

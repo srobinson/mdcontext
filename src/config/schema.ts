@@ -346,6 +346,111 @@ export type SummarizationConfig = Config.Config.Success<
 >
 
 // ============================================================================
+// AI Summarization Configuration
+// ============================================================================
+
+/**
+ * Supported AI summarization modes
+ *
+ * - cli: Use CLI tools like Claude Code, Copilot CLI (free with subscription)
+ * - api: Use API providers like DeepSeek, OpenAI (pay-per-use)
+ */
+export type AISummarizationMode = 'cli' | 'api'
+
+/**
+ * CLI provider names for AI summarization
+ */
+export type CLIProviderName =
+  | 'claude'
+  | 'copilot'
+  | 'cline'
+  | 'aider'
+  | 'opencode'
+  | 'amp'
+
+/**
+ * API provider names for AI summarization
+ */
+export type APIProviderName =
+  | 'deepseek'
+  | 'anthropic'
+  | 'openai'
+  | 'gemini'
+  | 'qwen'
+
+/**
+ * All provider names (CLI + API)
+ */
+export type SummarizationProviderName = CLIProviderName | APIProviderName
+
+/**
+ * Configuration for AI-powered summarization of search results.
+ *
+ * This is separate from SummarizationConfig which handles token budgets
+ * for context assembly. AISummarizationConfig controls the AI provider
+ * used to generate natural language summaries.
+ */
+export const AISummarizationConfig = Config.all({
+  /**
+   * Summarization mode: 'cli' (free) or 'api' (pay-per-use)
+   * Default: 'cli' - prioritize free CLI tools
+   */
+  mode: Config.literal(
+    'cli',
+    'api',
+  )('mode').pipe(Config.withDefault('cli' as const)),
+
+  /**
+   * Provider name (e.g., 'claude', 'opencode' for CLI; 'deepseek', 'openai' for API)
+   * Default: 'claude' - most common CLI tool
+   */
+  provider: Config.literal(
+    // CLI providers
+    'claude',
+    'copilot',
+    'cline',
+    'aider',
+    'opencode',
+    'amp',
+    // API providers
+    'deepseek',
+    'anthropic',
+    'openai',
+    'gemini',
+    'qwen',
+  )('provider').pipe(Config.withDefault('claude' as const)),
+
+  /**
+   * Model name for API providers (ignored for CLI providers)
+   * Default: 'deepseek-chat' - ultra-cheap default
+   */
+  model: Config.option(Config.string('model')),
+
+  /**
+   * Enable streaming output
+   * Default: false
+   */
+  stream: Config.boolean('stream').pipe(Config.withDefault(false)),
+
+  /**
+   * Custom API base URL (for API providers)
+   */
+  baseURL: Config.option(Config.string('baseURL')),
+
+  /**
+   * API key (for API providers, usually from environment)
+   */
+  apiKey: Config.option(Config.string('apiKey')),
+})
+
+/**
+ * Inferred type for AI summarization configuration
+ */
+export type AISummarizationConfig = Config.Config.Success<
+  typeof AISummarizationConfig
+>
+
+// ============================================================================
 // Paths Configuration
 // ============================================================================
 
@@ -392,6 +497,7 @@ export const MdContextConfig = Config.all({
   search: Config.nested(SearchConfig, 'search'),
   embeddings: Config.nested(EmbeddingsConfig, 'embeddings'),
   summarization: Config.nested(SummarizationConfig, 'summarization'),
+  aiSummarization: Config.nested(AISummarizationConfig, 'aiSummarization'),
   output: Config.nested(OutputConfig, 'output'),
   paths: Config.nested(PathsConfig, 'paths'),
 })
@@ -443,6 +549,14 @@ export const defaultConfig: MdContextConfig = {
     minSectionTokens: 20,
     maxTopics: 10,
     minPartialBudget: 50,
+  },
+  aiSummarization: {
+    mode: 'cli',
+    provider: 'claude',
+    model: Option.none(),
+    stream: false,
+    baseURL: Option.none(),
+    apiKey: Option.none(),
   },
   output: {
     format: 'text',
