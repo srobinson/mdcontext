@@ -4,6 +4,7 @@
 
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
+import * as msgpack from '@msgpack/msgpack'
 import { Effect } from 'effect'
 import HierarchicalNSW from 'hnswlib-node'
 import { DimensionMismatchError, VectorStoreError } from '../errors/index.js'
@@ -15,7 +16,7 @@ import type { VectorEntry, VectorIndex } from './types.js'
 // ============================================================================
 
 const VECTOR_INDEX_FILE = 'vectors.bin'
-const VECTOR_META_FILE = 'vectors.meta.json'
+const VECTOR_META_FILE = 'vectors.meta.bin'
 const INDEX_VERSION = 1
 
 // ============================================================================
@@ -397,8 +398,20 @@ class HnswVectorStore implements VectorStore {
         }
 
         yield* Effect.tryPromise({
-          try: () =>
-            fs.writeFile(this.getMetaPath(), JSON.stringify(meta, null, 2)),
+          try: async () => {
+            // Size validation
+            const estimatedSize = this.entries.size * 15000
+            if (estimatedSize > 100_000_000) {
+              console.warn(
+                `Large metadata detected: ~${(estimatedSize / 1e6).toFixed(0)}MB. ` +
+                  `Consider indexing subdirectories separately.`,
+              )
+            }
+
+            // Encode with MessagePack and write
+            const encoded = msgpack.encode(meta)
+            await fs.writeFile(this.getMetaPath(), encoded)
+          },
           catch: (e) =>
             new VectorStoreError({
               operation: 'save',
@@ -420,11 +433,19 @@ class HnswVectorStore implements VectorStore {
         const metaPath = this.getMetaPath()
 
         // Check if files exist - catch file not found gracefully
+        // For metadata, check both binary (.bin) and JSON (.json) for migration
         const filesExist = yield* Effect.tryPromise({
           try: async () => {
             await fs.access(vectorPath)
-            await fs.access(metaPath)
-            return true
+            // Check if either binary or JSON metadata exists
+            try {
+              await fs.access(metaPath)
+              return true
+            } catch {
+              const jsonPath = metaPath.replace('.bin', '.json')
+              await fs.access(jsonPath)
+              return true
+            }
           },
           catch: () =>
             new VectorStoreError({
@@ -439,23 +460,43 @@ class HnswVectorStore implements VectorStore {
           return { loaded: false }
         }
 
-        // Load metadata first
-        const metaContent = yield* Effect.tryPromise({
-          try: () => fs.readFile(metaPath, 'utf-8'),
+        // Load metadata - try binary first, fall back to JSON for migration
+        const loadedMeta = yield* Effect.tryPromise({
+          try: async () => {
+            // Try binary format first (new)
+            try {
+              await fs.access(metaPath)
+              const buffer = await fs.readFile(metaPath)
+              return msgpack.decode(buffer) as VectorIndex
+            } catch {
+              // Fall back to JSON for migration (old)
+              const jsonPath = metaPath.replace('.bin', '.json')
+              try {
+                await fs.access(jsonPath)
+                const json = await fs.readFile(jsonPath, 'utf-8')
+                const meta = JSON.parse(json) as VectorIndex
+
+                // Auto-migrate to binary format (safe for concurrent access)
+                try {
+                  const encoded = msgpack.encode(meta)
+                  await fs.writeFile(metaPath, encoded)
+
+                  // Remove old JSON file (ignore errors if already deleted by another process)
+                  await fs.unlink(jsonPath).catch(() => {})
+                } catch {
+                  // Migration failed, but we have the data - continue
+                }
+
+                return meta
+              } catch {
+                throw new Error('Metadata file not found')
+              }
+            }
+          },
           catch: (e) =>
             new VectorStoreError({
               operation: 'load',
               message: `Failed to read metadata: ${e instanceof Error ? e.message : String(e)}`,
-              cause: e,
-            }),
-        })
-
-        const loadedMeta = yield* Effect.try({
-          try: () => JSON.parse(metaContent) as VectorIndex,
-          catch: (e) =>
-            new VectorStoreError({
-              operation: 'load',
-              message: `Failed to parse metadata: ${e instanceof Error ? e.message : String(e)}`,
               cause: e,
             }),
         })

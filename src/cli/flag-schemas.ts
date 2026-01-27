@@ -84,6 +84,43 @@ export const indexSchema: CommandSchema = {
       description: 'Skip semantic search prompt',
     },
     {
+      name: 'exclude',
+      type: 'string',
+      alias: 'x',
+      description: 'Additional patterns to exclude (comma-separated)',
+    },
+    {
+      name: 'no-gitignore',
+      type: 'boolean',
+      description: 'Ignore .gitignore file',
+    },
+    {
+      name: 'provider',
+      type: 'string',
+      description:
+        'Embedding provider: openai, ollama, lm-studio, openrouter, voyage',
+    },
+    {
+      name: 'provider-base-url',
+      type: 'string',
+      description: 'Custom API base URL for the provider',
+    },
+    {
+      name: 'provider-model',
+      type: 'string',
+      description: 'Model name (e.g., nomic-embed-text for Ollama)',
+    },
+    {
+      name: 'hnsw-m',
+      type: 'string',
+      description: 'HNSW M parameter',
+    },
+    {
+      name: 'hnsw-ef-construction',
+      type: 'string',
+      description: 'HNSW efConstruction parameter',
+    },
+    {
       name: 'watch',
       type: 'boolean',
       alias: 'w',

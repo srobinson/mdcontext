@@ -20,6 +20,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.25.3
         version: 1.25.3(hono@4.11.5)(zod@4.3.6)
+      '@msgpack/msgpack':
+        specifier: ^3.1.3
+        version: 3.1.3
       chokidar:
         specifier: ^5.0.0
         version: 5.0.0
@@ -498,6 +501,10 @@ packages:
     peerDependenciesMeta:
       '@cfworker/json-schema':
         optional: true
+
+  '@msgpack/msgpack@3.1.3':
+    resolution: {integrity: sha512-47XIizs9XZXvuJgoaJUIE2lFoID8ugvc0jzSHP+Ptfk8nTbnR8g788wv48N03Kx0UkAv559HWRQ3yzOgzlRNUA==}
+    engines: {node: '>= 18'}
 
   '@msgpackr-extract/msgpackr-extract-darwin-arm64@3.0.3':
     resolution: {integrity: sha512-QZHtlVgbAdy2zAqNA9Gu1UpIuI8Xvsd1v8ic6B2pZmeFnFcMWiPLfWXh7TVw4eGEZ/C9TH281KwhVoeQUKbyjw==}
@@ -2545,6 +2552,8 @@ snapshots:
     transitivePeerDependencies:
       - hono
       - supports-color
+
+  '@msgpack/msgpack@3.1.3': {}
 
   '@msgpackr-extract/msgpackr-extract-darwin-arm64@3.0.3':
     optional: true

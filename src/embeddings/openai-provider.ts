@@ -116,17 +116,17 @@ export class OpenAIProvider implements EmbeddingProvider {
   ) {
     this.baseURL = options.baseURL
     this.client = new OpenAI({
-      apiKey: Redacted.value(apiKey), // Only expose API key when creating client
-      baseURL: options.baseURL, // If undefined, SDK uses default https://api.openai.com/v1
+      apiKey: Redacted.value(apiKey),
+      baseURL: options.baseURL,
+      timeout: 30000,
+      maxRetries: 2,
     })
     this.model = options.model ?? 'text-embedding-3-small'
     this.batchSize = options.batchSize ?? 100
-    // Infer provider name from baseURL if not explicitly provided
     this.providerName =
       options.providerName ?? this.inferProviderName(options.baseURL)
     this.name = `${this.providerName}:${this.model}`
 
-    // Determine dimensions: use explicit config, or fall back to recommended for model
     const recommendedDims = getRecommendedDimensions(this.model)
     this.dimensions = options.dimensions ?? recommendedDims ?? 512
   }

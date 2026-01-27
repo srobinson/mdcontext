@@ -486,8 +486,8 @@ export const searchCommand = Command.make(
       const beforeValue = Option.getOrUndefined(beforeContext)
       const afterValue = Option.getOrUndefined(afterContext)
 
-      const contextBefore = beforeValue ?? contextValue ?? 1
-      const contextAfter = afterValue ?? contextValue ?? 1
+      const contextBefore = beforeValue ?? contextValue
+      const contextAfter = afterValue ?? contextValue
 
       if (effectiveMode === 'hybrid') {
         // Hybrid search - combines BM25 and semantic with RRF
@@ -508,6 +508,8 @@ export const searchCommand = Command.make(
             mode: 'hybrid',
             rerank,
             quality: effectiveQuality,
+            contextBefore,
+            contextAfter,
             ...(scopedPathPattern && { pathPattern: scopedPathPattern }),
           },
         )
@@ -568,6 +570,7 @@ export const searchCommand = Command.make(
               similarity: r.similarity,
               bm25Score: r.bm25Score,
               sources: r.sources,
+              ...(r.contextLines && { contextLines: r.contextLines }),
             })),
           }
           yield* Console.log(formatJson(output, pretty))
@@ -600,6 +603,17 @@ export const searchCommand = Command.make(
             yield* Console.log(
               `    ${result.heading} (${score} RRF, ${sources})`,
             )
+
+            if (result.contextLines && result.contextLines.length > 0) {
+              yield* Console.log('')
+              for (const ctxLine of result.contextLines) {
+                const marker = ctxLine.isMatch ? '>' : ' '
+                yield* Console.log(
+                  `  ${marker} ${ctxLine.lineNumber}: ${ctxLine.line}`,
+                )
+              }
+            }
+
             yield* Console.log('')
           }
         }
@@ -805,6 +819,8 @@ export const searchCommand = Command.make(
           providerConfig,
           quality: semanticQuality,
           hyde,
+          contextBefore,
+          contextAfter,
           ...(scopedPathPattern && { pathPattern: scopedPathPattern }),
         })
         let {
@@ -883,6 +899,17 @@ export const searchCommand = Command.make(
             const similarity = (result.similarity * 100).toFixed(1)
             yield* Console.log(`  ${result.documentPath}`)
             yield* Console.log(`    ${result.heading} (${similarity}% match)`)
+
+            if (result.contextLines && result.contextLines.length > 0) {
+              yield* Console.log('')
+              for (const ctxLine of result.contextLines) {
+                const marker = ctxLine.isMatch ? '>' : ' '
+                yield* Console.log(
+                  `  ${marker} ${ctxLine.lineNumber}: ${ctxLine.line}`,
+                )
+              }
+            }
+
             yield* Console.log('')
           }
 
@@ -1161,8 +1188,8 @@ const handleMissingEmbeddings = (
         force: false,
         onFileProgress: (progress) => {
           if (!json) {
-            process.stdout.write(
-              `\r  [${progress.fileIndex}/${progress.totalFiles}] ${progress.filePath}...`,
+            console.log(
+              `  [${progress.fileIndex}/${progress.totalFiles}] ${progress.filePath}`,
             )
           }
         },
@@ -1176,7 +1203,6 @@ const handleMissingEmbeddings = (
       }
 
       if (!json) {
-        process.stdout.write(`\r${' '.repeat(80)}\r`)
         yield* Console.log(
           `Index created (${result.sectionsEmbedded} sections, $${result.cost.toFixed(6)})`,
         )
@@ -1213,8 +1239,8 @@ const handleMissingEmbeddings = (
         force: false,
         onFileProgress: (progress) => {
           if (!json) {
-            process.stdout.write(
-              `\r  [${progress.fileIndex}/${progress.totalFiles}] ${progress.filePath}...`,
+            console.log(
+              `  [${progress.fileIndex}/${progress.totalFiles}] ${progress.filePath}`,
             )
           }
         },
@@ -1228,7 +1254,6 @@ const handleMissingEmbeddings = (
       }
 
       if (!json) {
-        process.stdout.write(`\r${' '.repeat(80)}\r`)
         yield* Console.log(
           `Index created (${result.sectionsEmbedded} sections, $${result.cost.toFixed(6)})`,
         )

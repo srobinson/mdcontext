@@ -59,6 +59,10 @@ export interface HybridSearchOptions {
   readonly rerank?: boolean
   /** Search quality mode: fast, balanced (default), or thorough */
   readonly quality?: SearchQuality | undefined
+  /** Lines of context before matches */
+  readonly contextBefore?: number | undefined
+  /** Lines of context after matches */
+  readonly contextAfter?: number | undefined
 }
 
 export interface HybridSearchResult {
@@ -75,6 +79,17 @@ export interface HybridSearchResult {
   readonly sources: readonly ('semantic' | 'keyword')[]
   /** Cross-encoder re-ranking score (if reranking was enabled) */
   readonly rerankerScore?: number
+  /** Context lines with their line numbers (when context is requested) */
+  readonly contextLines?: readonly ContextLine[] | undefined
+}
+
+export interface ContextLine {
+  /** The line number (1-based) */
+  readonly lineNumber: number
+  /** The line text */
+  readonly line: string
+  /** Whether this is a matching line (for keyword search) */
+  readonly isMatch: boolean
 }
 
 export interface HybridSearchStats {
@@ -128,6 +143,7 @@ const fusionRRF = (
       similarity?: number
       bm25Score?: number
       sources: Set<'semantic' | 'keyword'>
+      contextLines?: readonly ContextLine[]
     }
   >()
 
@@ -143,14 +159,29 @@ const fusionRRF = (
       existing.rrfScore += rrfContribution
       existing.similarity = result.similarity
       existing.sources.add('semantic')
+      if (result.contextLines && !existing.contextLines) {
+        existing.contextLines = result.contextLines
+      }
     } else {
-      scoreMap.set(result.sectionId, {
+      const entry: {
+        documentPath: string
+        heading: string
+        rrfScore: number
+        similarity?: number
+        bm25Score?: number
+        sources: Set<'semantic' | 'keyword'>
+        contextLines?: readonly ContextLine[]
+      } = {
         documentPath: result.documentPath,
         heading: result.heading,
         rrfScore: rrfContribution,
         similarity: result.similarity,
         sources: new Set(['semantic']),
-      })
+      }
+      if (result.contextLines) {
+        entry.contextLines = result.contextLines
+      }
+      scoreMap.set(result.sectionId, entry)
     }
   }
 
@@ -192,6 +223,10 @@ const fusionRRF = (
       }
       if (data.bm25Score !== undefined) {
         ;(result as { bm25Score: number }).bm25Score = data.bm25Score
+      }
+      if (data.contextLines !== undefined) {
+        ;(result as { contextLines: readonly ContextLine[] }).contextLines =
+          data.contextLines
       }
       return result
     })
@@ -257,6 +292,8 @@ export const hybridSearch = (
         threshold,
         pathPattern: options.pathPattern,
         quality: options.quality,
+        contextBefore: options.contextBefore,
+        contextAfter: options.contextAfter,
       })
 
       const semanticTry = yield* Effect.either(semanticEffect)

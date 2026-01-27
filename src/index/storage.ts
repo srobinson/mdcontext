@@ -209,8 +209,8 @@ export const saveSectionIndex = (
 export const createEmptySectionIndex = (): SectionIndex => ({
   version: INDEX_VERSION,
   sections: {},
-  byHeading: {},
-  byDocument: {},
+  byHeading: Object.create(null),
+  byDocument: Object.create(null),
 })
 
 // ============================================================================
@@ -230,8 +230,8 @@ export const saveLinkIndex = (
 
 export const createEmptyLinkIndex = (): LinkIndex => ({
   version: INDEX_VERSION,
-  forward: {},
-  backward: {},
+  forward: Object.create(null),
+  backward: Object.create(null),
   broken: [],
 })
 

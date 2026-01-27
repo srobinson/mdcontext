@@ -20,6 +20,7 @@
 import * as fs from 'node:fs'
 import { createRequire } from 'node:module'
 import * as path from 'node:path'
+import * as util from 'node:util'
 
 // Read version from package.json using createRequire for ESM compatibility
 const require = createRequire(import.meta.url)
@@ -351,6 +352,14 @@ const runCli = (
 
   Effect.suspend(() => cli(filteredArgv)).pipe(
     Effect.provide(appLayers),
+    Effect.tap(() =>
+      Effect.sync(() => {
+        // Force exit after successful completion to prevent hanging
+        // This is necessary because some dependencies (like OpenAI SDK)
+        // may keep the event loop alive with HTTP keep-alive connections
+        setImmediate(() => process.exit(0))
+      }),
+    ),
     Effect.catchAll((error) =>
       Effect.sync(() => {
         if (isEffectCliValidationError(error)) {
@@ -361,7 +370,15 @@ const runCli = (
         }
         // Handle all other unexpected errors instead of rethrowing
         console.error('\nUnexpected error:')
-        console.error(error)
+        if (error instanceof Error) {
+          console.error(`  ${error.message}`)
+          if (error.stack) {
+            console.error(`\nStack trace:`)
+            console.error(error.stack)
+          }
+        } else {
+          console.error(util.inspect(error, { depth: null }))
+        }
         process.exit(2)
       }),
     ),
@@ -398,7 +415,15 @@ if (needsAsyncLoading(customConfigPath)) {
   })().catch((error) => {
     // Catch any errors that escape the try-catch (e.g., errors before try block)
     console.error('\nUnexpected error during initialization')
-    console.error(error)
+    if (error instanceof Error) {
+      console.error(`  ${error.message}`)
+      if (error.stack) {
+        console.error(`\nStack trace:`)
+        console.error(error.stack)
+      }
+    } else {
+      console.error(util.inspect(error, { depth: null }))
+    }
     process.exit(1)
   })
 } else {

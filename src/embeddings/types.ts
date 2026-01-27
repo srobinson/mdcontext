@@ -168,6 +168,10 @@ export interface SemanticSearchOptions {
         readonly temperature?: number | undefined
       }
     | undefined
+  /** Lines of context before matches */
+  readonly contextBefore?: number | undefined
+  /** Lines of context after matches */
+  readonly contextAfter?: number | undefined
 }
 
 // ============================================================================
@@ -297,6 +301,23 @@ export interface SemanticSearchResult {
   readonly heading: string
   readonly similarity: number
   readonly content?: string | undefined
+  /** Context lines with their line numbers (when context is requested) */
+  readonly contextLines?: readonly ContextLine[] | undefined
+}
+
+export interface ContextLine {
+  /** The line number (1-based) */
+  readonly lineNumber: number
+  /** The line text */
+  readonly line: string
+  /**
+   * Whether this line is part of the matched result.
+   *
+   * - For keyword search: true when the line directly matches the query.
+   * - For semantic/hybrid search: true when the line lies within the
+   *   selected/matched section span, even if it is not a direct text match.
+   */
+  readonly isMatch: boolean
 }
 
 /**

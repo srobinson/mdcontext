@@ -286,16 +286,15 @@ export const indexCommand = Command.make(
             hnswOptions,
             onFileProgress: (progress) => {
               if (!json) {
-                process.stdout.write(
-                  `\r  [${progress.fileIndex}/${progress.totalFiles}] ${progress.filePath} (${progress.sectionCount} sections)...`,
-                )
+                const progressMsg = `  [${progress.fileIndex}/${progress.totalFiles}] ${progress.filePath} (${progress.sectionCount} sections)...`
+                process.stdout.write(`\r${' '.repeat(120)}\r${progressMsg}`)
               }
             },
           })
 
           if (!json) {
-            // Clear the progress line
-            process.stdout.write(`\r${' '.repeat(80)}\r`)
+            // Clear the progress line completely
+            process.stdout.write(`\r${' '.repeat(120)}\r`)
             yield* Console.log('')
 
             if (embedResult.cacheHit) {
@@ -409,8 +408,8 @@ export const indexCommand = Command.make(
                 force: false,
                 hnswOptions: hnswOptionsPrompt,
                 onFileProgress: (progress) => {
-                  process.stdout.write(
-                    `\r  [${progress.fileIndex}/${progress.totalFiles}] ${progress.filePath} (${progress.sectionCount} sections)...`,
+                  console.log(
+                    `  [${progress.fileIndex}/${progress.totalFiles}] ${progress.filePath}`,
                   )
                 },
               }).pipe(
@@ -419,8 +418,6 @@ export const indexCommand = Command.make(
               )
 
               if (embedResult) {
-                // Clear the progress line
-                process.stdout.write(`\r${' '.repeat(80)}\r`)
                 yield* Console.log('')
                 yield* Console.log(
                   `Completed in ${(embedResult.duration / 1000).toFixed(1)}s`,

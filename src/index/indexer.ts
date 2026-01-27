@@ -257,21 +257,33 @@ export const buildIndex = (
     const mutableDocuments: Record<string, DocumentEntry> = {
       ...docIndex.documents,
     }
-    // Initialize with existing data to preserve sections/links for unchanged files
     const mutableSections: Record<string, SectionEntry> = {
       ...sectionIndex.sections,
     }
-    const mutableByHeading: Record<string, string[]> = Object.fromEntries(
-      Object.entries(sectionIndex.byHeading).map(([k, v]) => [k, [...v]]),
+
+    const mutableByHeading: Record<string, string[]> = Object.assign(
+      Object.create(null),
+      Object.fromEntries(
+        Object.entries(sectionIndex.byHeading).map(([k, v]) => [k, [...v]]),
+      ),
     )
-    const mutableByDocument: Record<string, string[]> = Object.fromEntries(
-      Object.entries(sectionIndex.byDocument).map(([k, v]) => [k, [...v]]),
+    const mutableByDocument: Record<string, string[]> = Object.assign(
+      Object.create(null),
+      Object.fromEntries(
+        Object.entries(sectionIndex.byDocument).map(([k, v]) => [k, [...v]]),
+      ),
     )
-    const mutableForward: Record<string, string[]> = Object.fromEntries(
-      Object.entries(linkIndex.forward).map(([k, v]) => [k, [...v]]),
+    const mutableForward: Record<string, string[]> = Object.assign(
+      Object.create(null),
+      Object.fromEntries(
+        Object.entries(linkIndex.forward).map(([k, v]) => [k, [...v]]),
+      ),
     )
-    const mutableBackward: Record<string, string[]> = Object.fromEntries(
-      Object.entries(linkIndex.backward).map(([k, v]) => [k, [...v]]),
+    const mutableBackward: Record<string, string[]> = Object.assign(
+      Object.create(null),
+      Object.fromEntries(
+        Object.entries(linkIndex.backward).map(([k, v]) => [k, [...v]]),
+      ),
     )
     const brokenLinks: string[] = [...linkIndex.broken]
 

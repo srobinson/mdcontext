@@ -51,6 +51,7 @@ import {
   type HnswBuildOptions,
   type HnswMismatchWarning,
   type HnswVectorStore,
+  type VectorSearchResult,
 } from './vector-store.js'
 
 // ============================================================================
@@ -541,7 +542,9 @@ export const buildEmbeddings = (
     vectorStore.addCost(result.cost, result.tokensUsed)
 
     // Save
+    console.log('Saving index...')
     yield* vectorStore.save()
+    console.log('Index saved successfully')
 
     const duration = Date.now() - startTime
 
@@ -552,6 +555,99 @@ export const buildEmbeddings = (
       duration,
       filesProcessed,
     }
+  })
+
+// ============================================================================
+// Context Lines Helper
+// ============================================================================
+
+/**
+ * Add context lines to search results by loading section content from files.
+ * This helper is used by both semanticSearch and semanticSearchWithStats to avoid code duplication.
+ */
+const addContextLinesToResults = (
+  limitedResults: readonly VectorSearchResult[],
+  sectionIndex: { sections: Record<string, SectionEntry> },
+  resolvedRoot: string,
+  options: {
+    contextBefore?: number | undefined
+    contextAfter?: number | undefined
+  },
+): Effect.Effect<readonly SemanticSearchResult[], FileReadError, never> =>
+  Effect.gen(function* () {
+    const contextBefore = options.contextBefore ?? 0
+    const contextAfter = options.contextAfter ?? 0
+
+    const resultsWithContext: SemanticSearchResult[] = []
+    const fileCache = new Map<string, string>()
+
+    for (const r of limitedResults) {
+      const section = sectionIndex.sections[r.sectionId]
+      if (!section) {
+        resultsWithContext.push({
+          sectionId: r.sectionId,
+          documentPath: r.documentPath,
+          heading: r.heading,
+          similarity: r.similarity,
+        })
+        continue
+      }
+
+      let fileContent = fileCache.get(r.documentPath)
+      if (!fileContent) {
+        const filePath = path.join(resolvedRoot, r.documentPath)
+        const contentResult = yield* Effect.promise(() =>
+          fs.readFile(filePath, 'utf-8'),
+        ).pipe(
+          Effect.map((content) => content),
+          Effect.catchAll(() => Effect.succeed(null as string | null)),
+        )
+
+        if (contentResult) {
+          fileContent = contentResult
+          fileCache.set(r.documentPath, fileContent)
+        }
+      }
+
+      if (fileContent) {
+        const lines = fileContent.split('\n')
+        const startIdx = Math.max(0, section.startLine - 1 - contextBefore)
+        const endIdx = Math.min(lines.length, section.endLine + contextAfter)
+
+        const contextLines: {
+          lineNumber: number
+          line: string
+          isMatch: boolean
+        }[] = []
+        for (let i = startIdx; i < endIdx; i++) {
+          const line = lines[i]
+          if (line !== undefined) {
+            contextLines.push({
+              lineNumber: i + 1,
+              line,
+              isMatch: i >= section.startLine - 1 && i < section.endLine,
+            })
+          }
+        }
+
+        resultsWithContext.push({
+          sectionId: r.sectionId,
+          documentPath: r.documentPath,
+          heading: r.heading,
+          similarity: r.similarity,
+          contextLines,
+        })
+      } else {
+        resultsWithContext.push({
+          sectionId: r.sectionId,
+          documentPath: r.documentPath,
+          heading: r.heading,
+          similarity: r.similarity,
+        })
+      }
+    }
+
+    return resultsWithContext
   })
 
 // ============================================================================
@@ -580,6 +676,8 @@ export const semanticSearch = (
 ): Effect.Effect<
   readonly SemanticSearchResult[],
   | EmbeddingsNotFoundError
+  | FileReadError
+  | IndexCorruptedError
   | ApiKeyMissingError
   | ApiKeyInvalidError
   | EmbeddingError
@@ -693,16 +791,44 @@ export const semanticSearch = (
         }))
       : filteredResults
 
-    // Re-sort by boosted similarity and convert to SemanticSearchResult
-    const results: SemanticSearchResult[] = boostedResults
-      .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, limit)
-      .map((r) => ({
+    // Re-sort by boosted similarity
+    const sortedResults = boostedResults.sort(
+      (a, b) => b.similarity - a.similarity,
+    )
+    const limitedResults = sortedResults.slice(0, limit)
+
+    // If context lines are requested, load section content
+    let results: readonly SemanticSearchResult[]
+    if (
+      options.contextBefore !== undefined ||
+      options.contextAfter !== undefined
+    ) {
+      const storage = createStorage(resolvedRoot)
+      const sectionIndex = yield* loadSectionIndex(storage)
+
+      if (sectionIndex) {
+        results = yield* addContextLinesToResults(
+          limitedResults,
+          sectionIndex,
+          resolvedRoot,
+          options,
+        )
+      } else {
+        results = limitedResults.map((r) => ({
+          sectionId: r.sectionId,
+          documentPath: r.documentPath,
+          heading: r.heading,
+          similarity: r.similarity,
+        }))
+      }
+    } else {
+      results = limitedResults.map((r) => ({
         sectionId: r.sectionId,
         documentPath: r.documentPath,
         heading: r.heading,
         similarity: r.similarity,
       }))
+    }
 
     return results
   })
@@ -731,6 +857,8 @@ export const semanticSearchWithStats = (
 ): Effect.Effect<
   SemanticSearchResultWithStats,
   | EmbeddingsNotFoundError
+  | FileReadError
+  | IndexCorruptedError
   | ApiKeyMissingError
   | ApiKeyInvalidError
   | EmbeddingError
@@ -851,14 +979,40 @@ export const semanticSearchWithStats = (
       (a, b) => b.similarity - a.similarity,
     )
     const totalAvailable = sortedResults.length
-    const results: SemanticSearchResult[] = sortedResults
-      .slice(0, limit)
-      .map((r) => ({
+    const limitedResults = sortedResults.slice(0, limit)
+
+    // If context lines are requested, load section content
+    let results: readonly SemanticSearchResult[]
+    if (
+      options.contextBefore !== undefined ||
+      options.contextAfter !== undefined
+    ) {
+      const storage = createStorage(resolvedRoot)
+      const sectionIndex = yield* loadSectionIndex(storage)
+
+      if (sectionIndex) {
+        results = yield* addContextLinesToResults(
+          limitedResults,
+          sectionIndex,
+          resolvedRoot,
+          options,
+        )
+      } else {
+        results = limitedResults.map((r) => ({
+          sectionId: r.sectionId,
+          documentPath: r.documentPath,
+          heading: r.heading,
+          similarity: r.similarity,
+        }))
+      }
+    } else {
+      results = limitedResults.map((r) => ({
         sectionId: r.sectionId,
         documentPath: r.documentPath,
         heading: r.heading,
         similarity: r.similarity,
       }))
+    }
 
     return {
       results,
