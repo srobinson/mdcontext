@@ -55,6 +55,16 @@ The problem isn't LLM read behavior. The problem is the format.
 
 Invisible. Dead on arrival.
 
+### Self-Announcing Header = Visible
+
+```typescript
+// --- FMM ---
+// exports: [validateUser]
+// ---
+```
+
+LLM sees `FMM` → pattern match → "this is metadata"
+
 ### Code = Parsed
 
 ```typescript
