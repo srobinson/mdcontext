@@ -221,6 +221,116 @@ describe('buildIndex', () => {
     })
   })
 
+  describe('changedPaths with deleted files (watch mode)', () => {
+    it('should not throw when changedPaths includes a deleted file', async () => {
+      const dir = await createFixture({
+        'keep.md': '# Keep\n',
+        'deleted.md': '# Will Be Deleted\n',
+      })
+
+      // Build initial index
+      await runBuildIndex(dir)
+
+      // Delete the file, then pass its path via changedPaths
+      const deletedPath = path.join(dir, 'deleted.md')
+      await fs.rm(deletedPath)
+
+      // This should succeed without ENOENT
+      const result = await runBuildIndex(dir, {
+        changedPaths: [deletedPath],
+      })
+
+      expect(result.errors).toHaveLength(0)
+      expect(result.totalDocuments).toBe(1)
+    })
+
+    it('should remove deleted document from section and document indexes', async () => {
+      const dir = await createFixture({
+        'keep.md': '# Keep\n\n## Section A\n\nContent\n',
+        'deleted.md':
+          '# Deleted Doc\n\n## Section B\n\nContent B\n\n## Section C\n\nContent C\n',
+      })
+
+      // Build initial index
+      const first = await runBuildIndex(dir)
+      expect(first.totalDocuments).toBe(2)
+      expect(first.totalSections).toBeGreaterThanOrEqual(4) // at least 2 per doc
+
+      // Delete the file
+      const deletedPath = path.join(dir, 'deleted.md')
+      await fs.rm(deletedPath)
+
+      // Incremental reindex via changedPaths
+      const result = await runBuildIndex(dir, {
+        changedPaths: [deletedPath],
+      })
+
+      expect(result.totalDocuments).toBe(1)
+      // Only sections from keep.md should remain
+      expect(result.totalSections).toBeGreaterThanOrEqual(2)
+      expect(result.totalSections).toBeLessThanOrEqual(3)
+    })
+
+    it('should remove deleted document from link indexes', async () => {
+      const dir = await createFixture({
+        'README.md': '# Home\n\nSee [Guide](./guide.md)\n',
+        'guide.md': '# Guide\n\nBack to [Home](./README.md)\n',
+      })
+
+      // Build initial index with links
+      await runBuildIndex(dir, { force: true })
+
+      // Verify links exist
+      const linksBefore = await runGetOutgoingLinks(
+        dir,
+        path.join(dir, 'guide.md'),
+      )
+      expect(linksBefore).toContain('README.md')
+
+      // Delete guide.md and reindex via changedPaths
+      const deletedPath = path.join(dir, 'guide.md')
+      await fs.rm(deletedPath)
+
+      const result = await runBuildIndex(dir, {
+        changedPaths: [deletedPath],
+      })
+
+      expect(result.totalDocuments).toBe(1)
+
+      // guide.md's forward links should be gone
+      const linksAfter = await runGetOutgoingLinks(
+        dir,
+        path.join(dir, 'guide.md'),
+      )
+      expect(linksAfter).toEqual([])
+    })
+
+    it('should handle rename as delete + add without stale entries', async () => {
+      const dir = await createFixture({
+        'old-name.md': '# Document\n\n## Important Section\n\nContent\n',
+        'other.md': '# Other\n',
+      })
+
+      // Build initial index
+      const first = await runBuildIndex(dir)
+      expect(first.totalDocuments).toBe(2)
+
+      // Simulate rename: delete old, create new
+      const oldPath = path.join(dir, 'old-name.md')
+      const newPath = path.join(dir, 'new-name.md')
+      await fs.rename(oldPath, newPath)
+
+      // Pass both the deleted and the new path
+      const result = await runBuildIndex(dir, {
+        changedPaths: [oldPath, newPath],
+      })
+
+      expect(result.errors).toHaveLength(0)
+      expect(result.totalDocuments).toBe(2) // other.md + new-name.md
+      expect(result.documentsIndexed).toBe(1) // only new-name.md was indexed
+    })
+  })
+
   describe('file exclusion', () => {
     it('should exclude hidden files by default', async () => {
       const dir = await createFixture({

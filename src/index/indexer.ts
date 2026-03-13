@@ -299,9 +299,36 @@ export const buildIndex = (
     let files: string[]
     let walkSkipped: { excluded: number; hidden: number }
 
+    // Track paths that were deleted (watcher mode only). Populated during
+    // file discovery, consumed after mutable indexes are initialized.
+    const deletedPaths: string[] = []
+
     if (options.changedPaths && options.changedPaths.length > 0) {
-      // Watcher mode: process only the changed files
-      files = options.changedPaths.filter((p) => isMarkdownFile(p)) as string[]
+      // Watcher mode: separate deleted files from changed/added files.
+      // Deleted paths arrive from chokidar's unlink event and no longer
+      // exist on disk. Attempting fs.readFile on them would ENOENT, leaving
+      // stale entries in the index.
+      const markdownPaths = options.changedPaths.filter((p) =>
+        isMarkdownFile(p),
+      ) as string[]
+      const existResults = yield* Effect.promise(() =>
+        Promise.all(
+          markdownPaths.map((p) =>
+            fs
+              .stat(p)
+              .then(() => true)
+              .catch(() => false),
+          ),
+        ),
+      )
+      files = []
+      for (let i = 0; i < markdownPaths.length; i++) {
+        if (existResults[i]) {
+          files.push(markdownPaths[i]!)
+        } else {
+          deletedPaths.push(markdownPaths[i]!)
+        }
+      }
       walkSkipped = { excluded: 0, hidden: 0 }
     } else {
       const walkResult = yield* Effect.tryPromise({
@@ -363,6 +390,47 @@ export const buildIndex = (
       ),
     )
     const brokenLinks = new Set<string>(linkIndex.broken)
+
+    // Remove deleted files from all indexes before the parse phase.
+    // In watcher mode, chokidar's unlink events produce paths that no longer
+    // exist on disk. Without this cleanup, stale document/section/link entries
+    // persist in the stored index after a file is deleted or renamed.
+    for (const deletedPath of deletedPaths) {
+      const relativePath = path.relative(storage.rootPath, deletedPath)
+      const existingEntry = mutableDocuments[relativePath]
+      if (!existingEntry) continue
+
+      // Remove sections belonging to this document
+      const oldSectionIds = mutableByDocument[existingEntry.id] ?? []
+      for (const sectionId of oldSectionIds) {
+        const oldSection = mutableSections[sectionId]
+        if (oldSection) {
+          const headingKey = oldSection.heading.toLowerCase()
+          const headingList = mutableByHeading[headingKey]
+          if (headingList) {
+            const idx = headingList.indexOf(sectionId)
+            if (idx !== -1) headingList.splice(idx, 1)
+          }
+        }
+        delete mutableSections[sectionId]
+      }
+      delete mutableByDocument[existingEntry.id]
+
+      // Remove forward links from this document and clean up backward refs
+      const forwardTargets = mutableForward[relativePath] ?? []
+      for (const target of forwardTargets) {
+        const backList = mutableBackward[target]
+        if (backList) {
+          const idx = backList.indexOf(relativePath)
+          if (idx !== -1) backList.splice(idx, 1)
+        }
+      }
+      delete mutableForward[relativePath]
+
+      // Remove document entry
+      delete mutableDocuments[relativePath]
+    }
+
     const totalFiles = files.length
 
     // Phase 1: Read and parse files concurrently.
