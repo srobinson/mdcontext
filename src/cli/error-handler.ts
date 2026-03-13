@@ -17,7 +17,7 @@
  */
 
 import { Console, Effect, Match } from 'effect'
-import type { EmbeddingProvider } from '../config/schema.js'
+import type { EmbeddingProviderName } from '../config/schema.js'
 import {
   detectProviderError,
   getProviderErrorTitle,
@@ -215,7 +215,7 @@ export const formatError = (error: MdContextError): FormattedError =>
     // Embedding errors - enhanced with provider-specific detection
     Match.tag('EmbeddingError', (e) => {
       // Try to detect provider-specific error for better messaging
-      const provider = (e.provider ?? 'openai') as EmbeddingProvider
+      const provider = (e.provider ?? 'openai') as EmbeddingProviderName
       const providerError = detectProviderError(provider, e.cause)
 
       if (providerError) {

@@ -35,7 +35,7 @@ export {
   // Default values
   defaultConfig,
   // Types
-  type EmbeddingProvider,
+  type EmbeddingProviderName,
   EmbeddingsConfig,
   // Config schemas
   IndexConfig,

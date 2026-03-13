@@ -145,7 +145,7 @@ export type SearchConfig = Config.Config.Success<typeof SearchConfig>
  * - lm-studio: LM Studio's local embedding server
  * - openrouter: OpenRouter API gateway for multiple providers
  */
-export type EmbeddingProvider =
+export type EmbeddingProviderName =
   | 'openai'
   | 'ollama'
   | 'lm-studio'

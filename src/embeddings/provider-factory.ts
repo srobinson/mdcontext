@@ -7,12 +7,12 @@
  */
 
 import { Effect, Option, Redacted } from 'effect'
-import { ConfigService, type EmbeddingProvider } from '../config/index.js'
+import { ConfigService, type EmbeddingProviderName } from '../config/index.js'
 import type { EmbeddingsConfig } from '../config/schema.js'
 import type { ApiKeyMissingError } from '../errors/index.js'
 import { createOpenAIProvider } from './openai-provider.js'
 import { PROVIDER_BASE_URLS } from './provider-constants.js'
-import type { EmbeddingProvider as EmbeddingProviderInterface } from './types.js'
+import type { EmbeddingProvider } from './types.js'
 import { createVoyageProvider } from './voyage-provider.js'
 
 // Re-export provider constants for backward compatibility
@@ -27,7 +27,7 @@ export { PROVIDER_BASE_URLS } from './provider-constants.js'
  * 3. OpenAI SDK default (undefined means use SDK default)
  */
 export const getProviderBaseURL = (
-  provider: EmbeddingProvider,
+  provider: EmbeddingProviderName,
   configBaseURL: Option.Option<string>,
 ): string | undefined => {
   // Config baseURL takes precedence
@@ -47,7 +47,7 @@ export const getProviderBaseURL = (
  * Extracted from EmbeddingsConfig to allow direct config passing.
  */
 export interface ProviderFactoryConfig {
-  readonly provider: EmbeddingProvider
+  readonly provider: EmbeddingProviderName
   readonly baseURL?: Option.Option<string> | string | undefined
   readonly model?: string | undefined
   readonly dimensions?: number | undefined
@@ -134,11 +134,7 @@ const normalizeApiKey = (
  */
 export const createEmbeddingProvider = (
   config?: ProviderFactoryConfig,
-): Effect.Effect<
-  EmbeddingProviderInterface,
-  ApiKeyMissingError,
-  ConfigService
-> =>
+): Effect.Effect<EmbeddingProvider, ApiKeyMissingError, ConfigService> =>
   Effect.gen(function* () {
     // Get embeddings config from service if not provided
     const embeddingsConfig: EmbeddingsConfig = config
@@ -195,7 +191,7 @@ export const createEmbeddingProvider = (
  */
 export const createEmbeddingProviderDirect = (
   config: ProviderFactoryConfig,
-): Effect.Effect<EmbeddingProviderInterface, ApiKeyMissingError> =>
+): Effect.Effect<EmbeddingProvider, ApiKeyMissingError> =>
   Effect.gen(function* () {
     const provider = config.provider
     const baseURL = getProviderBaseURL(
