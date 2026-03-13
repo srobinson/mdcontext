@@ -44,7 +44,15 @@ const runIndex = async (
   try {
     const stdout = execSync(`node ${bin} index ${args}`, {
       cwd,
-      env: { ...process.env, HOME: fakeHome },
+      env: {
+        ...process.env,
+        HOME: fakeHome,
+        // Windows: os.homedir() reads USERPROFILE (and HOMEDRIVE+HOMEPATH),
+        // not HOME. Set all three so the subprocess is fully isolated.
+        USERPROFILE: fakeHome,
+        HOMEDRIVE: '',
+        HOMEPATH: fakeHome,
+      },
       encoding: 'utf-8',
       timeout: 30000,
     })

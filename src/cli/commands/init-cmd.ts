@@ -56,14 +56,22 @@ const appendSource = (
     content = fs.readFileSync(globalConfigPath, 'utf-8')
   }
 
-  // Check if this path is already registered
-  if (content.includes(`path = "${sourcePath}"`)) {
+  // Normalize path separators for TOML: backslashes are escape characters in
+  // TOML basic strings. Forward slashes are valid on all platforms including
+  // Windows, so we use them universally to avoid invalid escape sequences.
+  const normalizedPath = sourcePath.replace(/\\/g, '/')
+
+  // Check if this path is already registered (check both forms for idempotency)
+  if (
+    content.includes(`path = "${normalizedPath}"`) ||
+    content.includes(`path = "${sourcePath}"`)
+  ) {
     return
   }
 
   const sourceEntry = name
-    ? `\n[[sources]]\npath = "${sourcePath}"\nname = "${name}"\n`
-    : `\n[[sources]]\npath = "${sourcePath}"\n`
+    ? `\n[[sources]]\npath = "${normalizedPath}"\nname = "${name}"\n`
+    : `\n[[sources]]\npath = "${normalizedPath}"\n`
 
   fs.writeFileSync(globalConfigPath, content + sourceEntry, 'utf-8')
 }

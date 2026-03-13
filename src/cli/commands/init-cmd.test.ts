@@ -48,7 +48,15 @@ const runInit = async (
   try {
     const stdout = execSync(`node ${bin} init ${args}`, {
       cwd,
-      env: { ...process.env, HOME: fakeHome },
+      env: {
+        ...process.env,
+        HOME: fakeHome,
+        // Windows: os.homedir() reads USERPROFILE (and HOMEDRIVE+HOMEPATH),
+        // not HOME. Set all three so the subprocess is fully isolated.
+        USERPROFILE: fakeHome,
+        HOMEDRIVE: '',
+        HOMEPATH: fakeHome,
+      },
       encoding: 'utf-8',
       timeout: 10000,
     })
@@ -132,7 +140,10 @@ describe('mdm init --global', () => {
     await runInit('--global --yes', tempDir)
     const configPath = path.join(fakeHome, '.mdm', '.mdm.toml')
     const content = fs.readFileSync(configPath, 'utf-8')
-    expect(content).toContain(`path = "${tempDir}"`)
+    // Paths are normalized to forward slashes in TOML (backslashes are escape
+    // characters in TOML basic strings and invalid on Windows paths).
+    const normalizedTempDir = tempDir.replace(/\\/g, '/')
+    expect(content).toContain(`path = "${normalizedTempDir}"`)
   })
 
   it('does not duplicate source on second init', async () => {
@@ -140,8 +151,10 @@ describe('mdm init --global', () => {
     await runInit('--global --yes', tempDir)
     const configPath = path.join(fakeHome, '.mdm', '.mdm.toml')
     const content = fs.readFileSync(configPath, 'utf-8')
+    // Paths are normalized to forward slashes in TOML output.
+    const normalizedTempDir = tempDir.replace(/\\/g, '/')
     const matches = content.match(
-      new RegExp(tempDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+      new RegExp(normalizedTempDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
     )
     expect(matches).toHaveLength(1)
   })
@@ -155,8 +168,10 @@ describe('mdm init --global', () => {
       await runInit('--global --yes', secondDir)
       const configPath = path.join(fakeHome, '.mdm', '.mdm.toml')
       const content = fs.readFileSync(configPath, 'utf-8')
-      expect(content).toContain(`path = "${tempDir}"`)
-      expect(content).toContain(`path = "${secondDir}"`)
+      // Paths are normalized to forward slashes in TOML output.
+      expect(content).toContain(`path = "${tempDir.replace(/\\/g, '/')}"`)
+      expect(content).toContain(`path = "${secondDir.replace(/\\/g, '/')}"`)
+
     } finally {
       fs.rmSync(secondDir, { recursive: true, force: true })
     }
@@ -183,6 +198,7 @@ describe('mdm init with existing global', () => {
       path.join(fakeHome, '.mdm', '.mdm.toml'),
       'utf-8',
     )
-    expect(content).toContain(`path = "${tempDir}"`)
+    // Paths are normalized to forward slashes in TOML output.
+    expect(content).toContain(`path = "${tempDir.replace(/\\/g, '/')}"`)
   })
 })
