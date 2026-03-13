@@ -91,6 +91,75 @@ const IndexConfigSchema = Schema.Struct({
 })
 
 // ============================================================================
+// Module-level Index Cache (mtime-invalidated)
+// ============================================================================
+
+/**
+ * Caches parsed index data keyed by file path, invalidated when the
+ * file's mtime changes. Avoids repeated JSON.parse on every search
+ * request in long-lived processes (MCP server).
+ */
+type CacheEntry<T> = { mtimeMs: number; data: T }
+const indexCache = new Map<string, CacheEntry<unknown>>()
+
+/**
+ * Clear the entire index cache. Useful for testing.
+ */
+export const clearIndexCache = (): void => {
+  indexCache.clear()
+}
+
+/**
+ * Read and parse a JSON file with mtime-based caching.
+ * Returns cached data if the file mtime has not changed.
+ */
+const readJsonFileCached = <A, I>(
+  filePath: string,
+  schema: Schema.Schema<A, I>,
+): Effect.Effect<A | null, FileReadError | IndexCorruptedError> =>
+  Effect.gen(function* () {
+    // Check mtime to determine if cache is still valid
+    const stat = yield* Effect.tryPromise({
+      try: () => fs.stat(filePath),
+      catch: (e) => {
+        if (e && typeof e === 'object' && 'code' in e && e.code === 'ENOENT') {
+          return { notFound: true as const }
+        }
+        return new FileReadError({
+          path: filePath,
+          message: e instanceof Error ? e.message : String(e),
+          cause: e,
+        })
+      },
+    }).pipe(
+      Effect.catchAll((e) =>
+        e && 'notFound' in e
+          ? Effect.succeed({ notFound: true as const })
+          : Effect.fail(e),
+      ),
+    )
+
+    if ('notFound' in stat) {
+      indexCache.delete(filePath)
+      return null
+    }
+
+    const cached = indexCache.get(filePath)
+    if (cached && cached.mtimeMs === stat.mtimeMs) {
+      return cached.data as A
+    }
+
+    // Cache miss or stale: full read + parse
+    const data = yield* readJsonFile(filePath, schema)
+    if (data !== null) {
+      indexCache.set(filePath, { mtimeMs: stat.mtimeMs, data })
+    } else {
+      indexCache.delete(filePath)
+    }
+    return data
+  })
+
+// ============================================================================
 // File System Helpers
 // ============================================================================
 
@@ -259,7 +328,7 @@ export const saveConfig = (
 export const loadDocumentIndex = (
   storage: IndexStorage,
 ): Effect.Effect<DocumentIndex | null, FileReadError | IndexCorruptedError> =>
-  readJsonFile(storage.paths.documents, DocumentIndexSchema)
+  readJsonFileCached(storage.paths.documents, DocumentIndexSchema)
 
 export const saveDocumentIndex = (
   storage: IndexStorage,
@@ -280,7 +349,7 @@ export const createEmptyDocumentIndex = (rootPath: string): DocumentIndex => ({
 export const loadSectionIndex = (
   storage: IndexStorage,
 ): Effect.Effect<SectionIndex | null, FileReadError | IndexCorruptedError> =>
-  readJsonFile(storage.paths.sections, SectionIndexSchema)
+  readJsonFileCached(storage.paths.sections, SectionIndexSchema)
 
 export const saveSectionIndex = (
   storage: IndexStorage,
@@ -302,7 +371,7 @@ export const createEmptySectionIndex = (): SectionIndex => ({
 export const loadLinkIndex = (
   storage: IndexStorage,
 ): Effect.Effect<LinkIndex | null, FileReadError | IndexCorruptedError> =>
-  readJsonFile(storage.paths.links, LinkIndexSchema)
+  readJsonFileCached(storage.paths.links, LinkIndexSchema)
 
 export const saveLinkIndex = (
   storage: IndexStorage,
