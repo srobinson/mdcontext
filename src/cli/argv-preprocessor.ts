@@ -32,10 +32,19 @@ export interface PreprocessResult {
 }
 
 /**
- * Check if an argument looks like a flag
+ * Check if an argument looks like a flag (as opposed to a positional or value).
  */
 const isFlag = (arg: string): boolean => {
   return arg.startsWith('-')
+}
+
+/**
+ * Check if an argument looks like a negative number (e.g. "-1", "-0.5").
+ * Used to distinguish negative numeric values from flags when parsing
+ * flag values. Without this, `--threshold -1` treats `-1` as a flag.
+ */
+const isNegativeNumber = (arg: string): boolean => {
+  return arg.startsWith('-') && !Number.isNaN(Number(arg))
 }
 
 /**
@@ -175,10 +184,12 @@ export const preprocessArgvWithValidation = (
         // Flag with separate value
         flags.push(arg)
         i++
-        // Grab the value if it exists and isn't another flag
+        // Grab the value if it exists and isn't another flag.
+        // Negative numbers (e.g. "-1") start with "-" but should be
+        // consumed as values, not treated as flags.
         if (i < restArgs.length) {
           const nextArg = restArgs[i]
-          if (nextArg && !isFlag(nextArg)) {
+          if (nextArg && (!isFlag(nextArg) || isNegativeNumber(nextArg))) {
             flags.push(nextArg)
             i++
           }

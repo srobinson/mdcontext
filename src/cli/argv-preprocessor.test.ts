@@ -207,4 +207,92 @@ describe('preprocessArgvWithValidation', () => {
       expect(result.argv).toContain('-t')
     })
   })
+
+  describe('negative numeric values', () => {
+    it('--threshold -1 should pass -1 as the value, not as a flag', () => {
+      const result = preprocessArgvWithValidation([
+        node,
+        script,
+        'search',
+        'query',
+        '--threshold',
+        '-1',
+      ])
+      expect(result.error).toBeUndefined()
+      expect(result.argv).toEqual([
+        node,
+        script,
+        'search',
+        '--threshold',
+        '-1',
+        'query',
+      ])
+    })
+
+    it('--fuzzy-distance -1 should pass -1 as the value', () => {
+      const result = preprocessArgvWithValidation([
+        node,
+        script,
+        'search',
+        'query',
+        '--fuzzy-distance',
+        '-1',
+      ])
+      expect(result.error).toBeUndefined()
+      expect(result.argv).toEqual([
+        node,
+        script,
+        'search',
+        '--fuzzy-distance',
+        '-1',
+        'query',
+      ])
+    })
+
+    it('--tokens -1 should pass -1 as the value', () => {
+      const result = preprocessArgvWithValidation([
+        node,
+        script,
+        'context',
+        'README.md',
+        '--tokens',
+        '-1',
+      ])
+      expect(result.error).toBeUndefined()
+      expect(result.argv).toEqual([
+        node,
+        script,
+        'context',
+        '--tokens',
+        '-1',
+        'README.md',
+      ])
+    })
+
+    it('--threshold -0.5 should pass -0.5 as the value', () => {
+      const result = preprocessArgvWithValidation([
+        node,
+        script,
+        'search',
+        'query',
+        '--threshold',
+        '-0.5',
+      ])
+      expect(result.error).toBeUndefined()
+      expect(result.argv).toContain('-0.5')
+    })
+
+    it('non-numeric flag after value flag should still be rejected', () => {
+      const result = preprocessArgvWithValidation([
+        node,
+        script,
+        'search',
+        'query',
+        '--threshold',
+        '--unknown',
+      ])
+      // --unknown is not a negative number and not a valid flag
+      expect(result.error).toBeDefined()
+    })
+  })
 })
