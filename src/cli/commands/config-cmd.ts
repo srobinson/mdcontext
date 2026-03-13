@@ -5,6 +5,7 @@
  */
 
 import * as fs from 'node:fs'
+import * as os from 'node:os'
 import * as path from 'node:path'
 import { Command, Options } from '@effect/cli'
 import { Console, Effect, Option } from 'effect'
@@ -27,40 +28,47 @@ const initCommand = Command.make(
       Options.withDescription('Overwrite existing config file'),
       Options.withDefault(false),
     ),
+    global: Options.boolean('global').pipe(
+      Options.withAlias('g'),
+      Options.withDescription('Write to ~/.mdm/.mdm.toml instead of PWD'),
+      Options.withDefault(false),
+    ),
     json: jsonOption,
     pretty: prettyOption,
   },
-  ({ force, json, pretty }) =>
+  ({ force, global: useGlobal, json, pretty }) =>
     Effect.gen(function* () {
-      const cwd = process.cwd()
+      const targetDir = useGlobal
+        ? path.join(os.homedir(), '.mdm')
+        : process.cwd()
+
+      // Ensure target dir exists for global
+      if (useGlobal && !fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true })
+      }
+
+      const filepath = path.join(targetDir, '.mdm.toml')
 
       // Check if a config file already exists
-      const existingConfig = loadConfigFile(cwd)
-
-      if (existingConfig && !force) {
+      if (fs.existsSync(filepath) && !force) {
         if (json) {
           yield* Console.log(
             formatJson(
               {
                 error: 'Config file already exists',
-                path: existingConfig.path,
+                path: filepath,
                 hint: 'Use --force to overwrite',
               },
               pretty,
             ),
           )
         } else {
-          yield* Console.error(
-            `Config file already exists: ${existingConfig.path}`,
-          )
+          yield* Console.error(`Config file already exists: ${filepath}`)
           yield* Console.error('')
           yield* Console.error('Use --force to overwrite.')
         }
         return
       }
-
-      const filename = '.mdm.toml'
-      const filepath = path.join(cwd, filename)
 
       // Generate TOML content from defaults
       const { generateDefaultToml } = yield* Effect.tryPromise({
@@ -86,7 +94,7 @@ const initCommand = Command.make(
           ),
         )
       } else {
-        yield* Console.log(`Created ${filename}`)
+        yield* Console.log(`Created ${filepath}`)
         yield* Console.log('')
         yield* Console.log('Edit the file to customize mdm for your project.')
       }
