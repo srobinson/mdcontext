@@ -24,7 +24,7 @@ describe('Ignore Patterns Module', () => {
   let testDir: string
 
   beforeEach(async () => {
-    testDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mdcontext-ignore-test-'))
+    testDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mdm-ignore-test-'))
   })
 
   afterEach(async () => {

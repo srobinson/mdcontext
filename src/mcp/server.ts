@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * MCP Server for mdcontext.
+ * MCP Server for mdm.
  *
  * Wires tool definitions, handlers, and transport together. Handler
  * implementations, input schemas, and the Effect-to-MCP adapter live
@@ -51,7 +51,7 @@ const MCP_VERSION: string = packageJson.version
 export const createServer = (rootPath: string, config: MdmConfig) => {
   const server = new Server(
     {
-      name: 'mdcontext-mcp',
+      name: 'mdm-mcp',
       version: MCP_VERSION,
     },
     {
@@ -121,9 +121,7 @@ export const loadConfig = async (rootPath: string): Promise<MdmConfig> => {
   return Effect.runPromise(
     program.pipe(
       Effect.catchAll((error) => {
-        console.error(
-          `[mdcontext] Config loading failed, using defaults: ${error}`,
-        )
+        console.error(`[mdm] Config loading failed, using defaults: ${error}`)
         return Effect.succeed(defaultConfig)
       }),
     ),

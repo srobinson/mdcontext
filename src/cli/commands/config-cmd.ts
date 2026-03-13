@@ -77,7 +77,7 @@ const generateConfigContent = (format: 'js' | 'json'): string => {
  * This file configures mdm behavior for this project.
  * See https://mdm.dev/config for full documentation.
  *
- * @type {import('mdm').PartialMdmConfig}
+ * @type {import('markdown-matters').PartialMdmConfig}
  */
 export default {
   // Index settings - control how markdown files are discovered and parsed

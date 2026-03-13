@@ -1,20 +1,20 @@
 #!/usr/bin/env node
 
 /**
- * mdcontext CLI - Token-efficient markdown analysis
+ * mdm CLI - Token-efficient markdown analysis
  *
  * CORE COMMANDS
- *   mdcontext index [path]           Index markdown files (default: .)
- *   mdcontext search <query> [path]  Search by meaning or structure
- *   mdcontext context <files...>     Get LLM-ready summary
- *   mdcontext tree [path|file]       Show files or document outline
+ *   mdm index [path]           Index markdown files (default: .)
+ *   mdm search <query> [path]  Search by meaning or structure
+ *   mdm context <files...>     Get LLM-ready summary
+ *   mdm tree [path|file]       Show files or document outline
  *
  * LINK ANALYSIS
- *   mdcontext links <file>           What does this link to?
- *   mdcontext backlinks <file>       What links to this?
+ *   mdm links <file>           What does this link to?
+ *   mdm backlinks <file>       What links to this?
  *
  * INSPECTION
- *   mdcontext stats [path]           Index statistics
+ *   mdm stats [path]           Index statistics
  */
 
 import * as fs from 'node:fs'
@@ -62,7 +62,7 @@ import {
 // Main CLI
 // ============================================================================
 
-const mainCommand = Command.make('mdcontext').pipe(
+const mainCommand = Command.make('mdm').pipe(
   Command.withDescription('Token-efficient markdown analysis for LLMs'),
   Command.withSubcommands([
     indexCommand,
@@ -79,7 +79,7 @@ const mainCommand = Command.make('mdcontext').pipe(
 )
 
 const cli = Command.run(mainCommand, {
-  name: 'mdcontext',
+  name: 'mdm',
   version: CLI_VERSION,
 })
 
@@ -367,7 +367,7 @@ const runCli = (
         if (isEffectCliValidationError(error)) {
           const message = formatEffectCliError(error)
           console.error(`\nError: ${message}`)
-          console.error('\nRun "mdcontext --help" for usage information.')
+          console.error('\nRun "mdm --help" for usage information.')
           process.exit(1)
         }
         // Handle all other unexpected errors instead of rethrowing

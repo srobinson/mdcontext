@@ -230,7 +230,7 @@ describe('Config Schema', () => {
         new Map([
           ['root', '/home/user/docs'],
           ['configFile', './custom.config.json'],
-          ['cacheDir', '.cache/mdcontext'],
+          ['cacheDir', '.cache/mdm'],
         ]),
       )
 
@@ -242,7 +242,7 @@ describe('Config Schema', () => {
       expect(Option.getOrThrow(result.root)).toBe('/home/user/docs')
       expect(Option.isSome(result.configFile)).toBe(true)
       expect(Option.getOrThrow(result.configFile)).toBe('./custom.config.json')
-      expect(result.cacheDir).toBe('.cache/mdcontext')
+      expect(result.cacheDir).toBe('.cache/mdm')
     })
   })
 

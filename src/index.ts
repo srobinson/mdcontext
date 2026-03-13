@@ -1,5 +1,5 @@
 /**
- * mdcontext - Token-efficient markdown analysis for LLMs
+ * mdm - Token-efficient markdown analysis for LLMs
  */
 
 // Config utilities for user config files
@@ -10,11 +10,11 @@ export * from './parser/index.js'
 export * from './utils/index.js'
 
 /**
- * Type-safe configuration helper for mdcontext.config.ts files.
+ * Type-safe configuration helper for mdm.config.ts files.
  *
  * @example
  * ```typescript
- * import { defineConfig } from 'mdcontext'
+ * import { defineConfig } from 'markdown-matters'
  *
  * export default defineConfig({
  *   index: {

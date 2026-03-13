@@ -1,5 +1,5 @@
 /**
- * Keyword search for mdcontext
+ * Keyword search for mdm
  */
 
 import * as fs from 'node:fs/promises'

@@ -64,7 +64,7 @@ const makeEntry = (id: string, seed: number): VectorEntry => ({
 // ============================================================================
 
 beforeAll(async () => {
-  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'mdcontext-vs-'))
+  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'mdm-vs-'))
 })
 
 afterAll(async () => {

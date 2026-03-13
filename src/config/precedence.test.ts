@@ -23,7 +23,7 @@ describe('Config Precedence Chain', () => {
   let tempDir: string
 
   beforeEach(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdcontext-precedence-'))
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-precedence-'))
     // Clear any MDM env vars
     for (const key of Object.keys(process.env)) {
       if (key.startsWith('MDM_') || key.startsWith('CUSTOM_')) {

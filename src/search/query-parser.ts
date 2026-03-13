@@ -1,5 +1,5 @@
 /**
- * Query Parser for mdcontext search
+ * Query Parser for mdm search
  *
  * Supports:
  * - Boolean operators: AND, OR, NOT (case-insensitive)

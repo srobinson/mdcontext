@@ -1,6 +1,6 @@
 // cspell:words jsno limt xyznonexistent123
 /**
- * E2E tests for mdcontext CLI commands
+ * E2E tests for mdm CLI commands
  * Tests actual CLI execution against dynamically generated test fixtures
  *
  * Test fixture setup:
@@ -50,7 +50,7 @@ const run = async (
   }
 }
 
-describe.concurrent('mdcontext CLI e2e', () => {
+describe.concurrent('mdm CLI e2e', () => {
   beforeAll(async () => {
     if (REBUILD_TEST_INDEX) {
       // Build the index and embeddings only once for faster tests
@@ -111,7 +111,7 @@ describe.concurrent('mdcontext CLI e2e', () => {
         expect(output).toContain('USAGE')
         expect(output).toContain('EXAMPLES')
         expect(output).toContain('OPTIONS')
-        expect(output).toContain(`mdcontext ${cmd}`)
+        expect(output).toContain(`mdm ${cmd}`)
         expect(output).not.toContain('A true or false value')
         expect(output).not.toContain('This setting is optional')
       })
@@ -462,7 +462,7 @@ describe.concurrent('mdcontext CLI e2e', () => {
       // Create a temp file with invalid JSON
       const fs = await import('node:fs')
       const os = await import('node:os')
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdcontext-test-'))
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-test-'))
       const invalidConfigPath = path.join(tempDir, 'invalid.json')
       fs.writeFileSync(invalidConfigPath, 'not valid json { broken')
 
@@ -480,7 +480,7 @@ describe.concurrent('mdcontext CLI e2e', () => {
     it('shows error for JS config that exports non-object', async () => {
       const fs = await import('node:fs')
       const os = await import('node:os')
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdcontext-test-'))
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-test-'))
       const badConfigPath = path.join(tempDir, 'bad.config.mjs')
       fs.writeFileSync(badConfigPath, 'export default "not an object"')
 
@@ -500,7 +500,7 @@ describe.concurrent('mdcontext CLI e2e', () => {
     it('shows error for JS config that exports null', async () => {
       const fs = await import('node:fs')
       const os = await import('node:os')
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdcontext-test-'))
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-test-'))
       const nullConfigPath = path.join(tempDir, 'null.config.mjs')
       fs.writeFileSync(nullConfigPath, 'export default null')
 
@@ -520,7 +520,7 @@ describe.concurrent('mdcontext CLI e2e', () => {
     it('shows error for JS config that exports array', async () => {
       const fs = await import('node:fs')
       const os = await import('node:os')
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdcontext-test-'))
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-test-'))
       const arrayConfigPath = path.join(tempDir, 'array.config.mjs')
       fs.writeFileSync(
         arrayConfigPath,
@@ -543,7 +543,7 @@ describe.concurrent('mdcontext CLI e2e', () => {
     it('shows error for JS config with syntax error', async () => {
       const fs = await import('node:fs')
       const os = await import('node:os')
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdcontext-test-'))
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-test-'))
       const syntaxErrorPath = path.join(tempDir, 'syntax-error.config.mjs')
       fs.writeFileSync(
         syntaxErrorPath,
@@ -563,7 +563,7 @@ describe.concurrent('mdcontext CLI e2e', () => {
     it('shows error for JS config with no exports', async () => {
       const fs = await import('node:fs')
       const os = await import('node:os')
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdcontext-test-'))
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-test-'))
       const noExportPath = path.join(tempDir, 'no-export.config.mjs')
       fs.writeFileSync(
         noExportPath,
@@ -585,7 +585,7 @@ describe.concurrent('mdcontext CLI e2e', () => {
     it('loads valid JSON config file successfully', async () => {
       const fs = await import('node:fs')
       const os = await import('node:os')
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdcontext-test-'))
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-test-'))
       const validConfigPath = path.join(tempDir, 'valid.json')
       fs.writeFileSync(
         validConfigPath,
@@ -606,7 +606,7 @@ describe.concurrent('mdcontext CLI e2e', () => {
     it('loads valid MJS config file successfully', async () => {
       const fs = await import('node:fs')
       const os = await import('node:os')
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdcontext-test-'))
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-test-'))
       const validConfigPath = path.join(tempDir, 'valid.config.mjs')
       fs.writeFileSync(
         validConfigPath,

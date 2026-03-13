@@ -3,8 +3,8 @@
  *
  * Effect CLI requires flags before positional args, but users expect
  * to be able to do either:
- *   mdcontext search "query" --limit 5
- *   mdcontext search --limit 5 "query"
+ *   mdm search "query" --limit 5
+ *   mdm search --limit 5 "query"
  *
  * This preprocessor reorders argv so flags always come first for each
  * subcommand, while preserving the user's intended positional arg order.
@@ -98,7 +98,7 @@ export const preprocessArgv = (argv: string[]): string[] => {
   if (result.error) {
     // Print error and exit
     console.error(`\nError: ${result.error}`)
-    console.error('\nRun "mdcontext <command> --help" for usage information.')
+    console.error('\nRun "mdm <command> --help" for usage information.')
     process.exit(1)
   }
 

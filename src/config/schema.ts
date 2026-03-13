@@ -513,7 +513,7 @@ export type PathsConfig = Config.Config.Success<typeof PathsConfig>
 // ============================================================================
 
 /**
- * Complete mdcontext configuration
+ * Complete mdm configuration
  *
  * Combines all configuration sections into a single nested config.
  * Use with Effect's ConfigProvider to load from various sources.

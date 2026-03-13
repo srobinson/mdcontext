@@ -34,7 +34,7 @@ describe('Config Integration Tests', () => {
   const savedEnv: Record<string, string | undefined> = {}
 
   beforeEach(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdcontext-integration-'))
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-integration-'))
     // Save and clear MDM_ env vars
     for (const key of Object.keys(process.env)) {
       if (key.startsWith('MDM_')) {

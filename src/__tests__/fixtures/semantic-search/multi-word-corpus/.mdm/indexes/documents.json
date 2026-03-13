@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "rootPath": "/Users/alphab/Dev/LLM/DEV/mdcontext-worktrees/nancy-ALP-34/src/__tests__/fixtures/semantic-search/multi-word-corpus",
+  "rootPath": "/Users/alphab/Dev/LLM/DEV/mdm-worktrees/nancy-ALP-34/src/__tests__/fixtures/semantic-search/multi-word-corpus",
   "documents": {
     "configuration-management.md": {
       "id": "7af8c1a9f31c",

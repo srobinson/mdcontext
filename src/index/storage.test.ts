@@ -56,7 +56,7 @@ const runExit = <A, E>(effect: Effect.Effect<A, E>): Promise<Exit.Exit<A, E>> =>
 // ============================================================================
 
 beforeAll(async () => {
-  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'mdcontext-storage-'))
+  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'mdm-storage-'))
 })
 
 afterAll(async () => {

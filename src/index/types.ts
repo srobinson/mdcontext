@@ -1,5 +1,5 @@
 /**
- * Index data types for mdcontext
+ * Index data types for mdm
  */
 
 import * as path from 'node:path'

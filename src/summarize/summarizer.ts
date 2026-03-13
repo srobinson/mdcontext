@@ -1,5 +1,5 @@
 /**
- * Summarization engine for mdcontext
+ * Summarization engine for mdm
  *
  * Provides hierarchical summarization and multi-document context assembly
  */

@@ -32,7 +32,7 @@ describe('Provider Integration Tests', () => {
   const savedEnv: Record<string, string | undefined> = {}
 
   beforeEach(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdcontext-provider-int-'))
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-provider-int-'))
 
     // Save and clear relevant env vars
     const envKeys = [

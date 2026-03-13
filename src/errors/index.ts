@@ -1,5 +1,5 @@
 /**
- * Centralized error types for mdcontext
+ * Centralized error types for mdm
  *
  * This module defines all domain errors using Effect's Data.TaggedError pattern.
  * Each error has a unique `_tag` discriminant that enables:
@@ -417,7 +417,7 @@ export class EmbeddingsNotFoundError extends Data.TaggedError(
     return ErrorCode.EMBEDDINGS_NOT_FOUND
   }
   get message(): string {
-    return `Embeddings not found at ${this.path}. Run 'mdcontext index --embed' first.`
+    return `Embeddings not found at ${this.path}. Run 'mdm index --embed' first.`
   }
 }
 
@@ -525,7 +525,7 @@ export type SearchError =
   | DimensionMismatchError
 
 /**
- * Union of all mdcontext errors
+ * Union of all mdm errors
  * Use this for exhaustive error handling at the CLI boundary
  */
 export type MdmError =

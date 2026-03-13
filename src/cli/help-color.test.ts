@@ -16,7 +16,7 @@ describe('peekConfigColor', () => {
   let originalArgv: string[]
 
   beforeEach(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdcontext-color-test-'))
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-color-test-'))
     originalArgv = process.argv
   })
 
@@ -103,7 +103,7 @@ describe('showMainHelp color suppression', () => {
       // Verify no ANSI escape sequences
       expect(output).not.toContain(ESC)
       // Verify content is still present
-      expect(output).toContain('mdcontext')
+      expect(output).toContain('mdm')
       expect(output).toContain('COMMANDS')
     } finally {
       consoleSpy.mockRestore()

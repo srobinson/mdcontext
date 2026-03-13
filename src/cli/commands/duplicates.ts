@@ -42,7 +42,7 @@ export const duplicatesCommand = Command.make(
       if (!indexInfo.exists && !json) {
         yield* Console.log('No index found.')
         yield* Console.log('')
-        yield* Console.log('Run: mdcontext index /path/to/docs')
+        yield* Console.log('Run: mdm index /path/to/docs')
         return
       }
 

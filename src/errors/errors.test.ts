@@ -412,7 +412,7 @@ describe('Error Types', () => {
     it('generates dynamic message with instructions', () => {
       const error = new EmbeddingsNotFoundError({ path: '/embeddings' })
       expect(error.message).toBe(
-        "Embeddings not found at /embeddings. Run 'mdcontext index --embed' first.",
+        "Embeddings not found at /embeddings. Run 'mdm index --embed' first.",
       )
     })
   })
@@ -470,9 +470,9 @@ describe('Error Types', () => {
       const error = new ConfigError({
         message: 'Invalid value',
         field: 'index.maxDepth',
-        sourceFile: '/path/to/mdcontext.config.json',
+        sourceFile: '/path/to/mdm.config.json',
       })
-      expect(error.sourceFile).toBe('/path/to/mdcontext.config.json')
+      expect(error.sourceFile).toBe('/path/to/mdm.config.json')
     })
 
     it('supports expectedType field', () => {
@@ -721,7 +721,7 @@ describe('ConfigError Formatting', () => {
     expect(formatted.exitCode).toBe(EXIT_CODE.USER_ERROR)
     expect(formatted.suggestions).toContain('Check your config file syntax')
     expect(formatted.suggestions).toContain(
-      "Run 'mdcontext config check' to validate configuration",
+      "Run 'mdm config check' to validate configuration",
     )
   })
 
@@ -739,13 +739,11 @@ describe('ConfigError Formatting', () => {
     const error = new ConfigError({
       field: 'index.maxDepth',
       message: 'Invalid value',
-      sourceFile: '/path/to/mdcontext.config.json',
+      sourceFile: '/path/to/mdm.config.json',
     })
     const formatted = formatError(error)
 
-    expect(formatted.details).toContain(
-      'Source: /path/to/mdcontext.config.json',
-    )
+    expect(formatted.details).toContain('Source: /path/to/mdm.config.json')
   })
 
   it('formats config error with expectedType and actualValue', () => {
@@ -789,7 +787,7 @@ describe('ConfigError Formatting', () => {
     const error = new ConfigError({
       field: 'index.maxDepth',
       message: 'Value must be a positive integer',
-      sourceFile: '/path/to/mdcontext.config.json',
+      sourceFile: '/path/to/mdm.config.json',
       expectedType: 'number',
       actualValue: 'ten',
       validValues: ['Any positive integer'],
@@ -798,9 +796,7 @@ describe('ConfigError Formatting', () => {
 
     expect(formatted.code).toBe('E700')
     expect(formatted.message).toBe('Invalid configuration: index.maxDepth')
-    expect(formatted.details).toContain(
-      'Source: /path/to/mdcontext.config.json',
-    )
+    expect(formatted.details).toContain('Source: /path/to/mdm.config.json')
     expect(formatted.details).toContain('Expected: number')
     expect(formatted.details).toContain('Got: "ten"')
     expect(formatted.details).toContain('Valid values: Any positive integer')
@@ -839,7 +835,7 @@ describe('ConfigError Formatting', () => {
     expect(formatted.suggestions).toHaveLength(2)
     expect(formatted.suggestions).toContain('Check your config file syntax')
     expect(formatted.suggestions).toContain(
-      "Run 'mdcontext config check' to validate configuration",
+      "Run 'mdm config check' to validate configuration",
     )
   })
 })

@@ -115,7 +115,7 @@ const formatConfigError = (e: ConfigError): FormattedError => {
 
   const suggestions: string[] = []
   suggestions.push('Check your config file syntax')
-  suggestions.push("Run 'mdcontext config check' to validate configuration")
+  suggestions.push("Run 'mdm config check' to validate configuration")
 
   return {
     code: e.code,
@@ -412,7 +412,7 @@ export const formatError = (error: MdmError): FormattedError =>
         e.argument && e.expected
           ? `Expected ${e.expected}${e.received ? `, got ${e.received}` : ''}`
           : undefined,
-      suggestions: ["Run 'mdcontext --help' for usage information"] as const,
+      suggestions: ["Run 'mdm --help' for usage information"] as const,
       exitCode: EXIT_CODE.USER_ERROR,
     })),
 
@@ -423,7 +423,7 @@ export const formatError = (error: MdmError): FormattedError =>
       details: e.provider ? `Provider: ${e.provider}` : undefined,
       suggestions: [
         'Try a different provider with --provider',
-        "Run 'mdcontext search' without --summarize",
+        "Run 'mdm search' without --summarize",
       ] as const,
       exitCode: EXIT_CODE.SYSTEM_ERROR,
     })),

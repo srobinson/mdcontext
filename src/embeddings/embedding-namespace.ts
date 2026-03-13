@@ -501,7 +501,7 @@ export const switchNamespace = (
         new EmbeddingNamespaceError({
           operation: 'switchNamespace',
           message:
-            'No embedding namespaces found. Run "mdcontext index --embed" first.',
+            'No embedding namespaces found. Run "mdm index --embed" first.',
         }),
       )
     }

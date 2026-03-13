@@ -69,7 +69,7 @@ export const makeCliConfigLayer = (
  *
  * This loads configuration from:
  * - Environment variables (MDM_*)
- * - Config file (mdcontext.config.ts/json)
+ * - Config file (mdm.config.ts/json)
  * - Built-in defaults
  *
  * No CLI flags are applied at this level - commands handle their own flag overrides.

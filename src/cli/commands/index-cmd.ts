@@ -434,7 +434,7 @@ export const indexCommand = Command.make(
               yield* Console.log('    LM Studio: Start the server GUI')
               yield* Console.log('')
               yield* Console.log(
-                'Then run: mdcontext index --embed [--provider <name>]',
+                'Then run: mdm index --embed [--provider <name>]',
               )
               yield* Console.log('See CONFIG.md for detailed setup.')
             } else {
