@@ -10,8 +10,8 @@ import {
   calculateFileImportanceBoost,
   calculateHeadingBoost,
   calculateRankingBoost,
-  type SemanticSearchOptions,
-} from './types.js'
+} from './ranking.js'
+import type { SemanticSearchOptions } from './types.js'
 
 describe('Heading Match Boost', () => {
   describe('calculateHeadingBoost function', () => {
@@ -196,8 +196,8 @@ describe('File Importance Boost', () => {
 })
 
 describe('Export verification', () => {
-  it('should export calculateHeadingBoost from types module', async () => {
-    const { calculateHeadingBoost } = await import('./types.js')
+  it('should export calculateHeadingBoost from ranking module', async () => {
+    const { calculateHeadingBoost } = await import('./ranking.js')
     expect(calculateHeadingBoost).toBeDefined()
     expect(typeof calculateHeadingBoost).toBe('function')
   })
@@ -208,8 +208,8 @@ describe('Export verification', () => {
     expect(typeof calculateHeadingBoost).toBe('function')
   })
 
-  it('should export calculateFileImportanceBoost from types module', async () => {
-    const { calculateFileImportanceBoost } = await import('./types.js')
+  it('should export calculateFileImportanceBoost from ranking module', async () => {
+    const { calculateFileImportanceBoost } = await import('./ranking.js')
     expect(calculateFileImportanceBoost).toBeDefined()
     expect(typeof calculateFileImportanceBoost).toBe('function')
   })

@@ -43,9 +43,11 @@ import {
 import {
   calculateFileImportanceBoost,
   calculateHeadingBoost,
+  preprocessQuery,
+} from './ranking.js'
+import {
   type EmbeddingProvider,
   hasProviderMetadata,
-  preprocessQuery,
   QUALITY_EF_SEARCH,
   type SemanticSearchOptions,
   type SemanticSearchResult,

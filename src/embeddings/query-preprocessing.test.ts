@@ -6,7 +6,8 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { preprocessQuery, type SemanticSearchOptions } from './types.js'
+import { preprocessQuery } from './ranking.js'
+import type { SemanticSearchOptions } from './types.js'
 
 describe('Query Preprocessing', () => {
   describe('preprocessQuery function', () => {
@@ -173,8 +174,8 @@ describe('Query Preprocessing', () => {
 })
 
 describe('Export verification', () => {
-  it('should export preprocessQuery from types module', async () => {
-    const { preprocessQuery } = await import('./types.js')
+  it('should export preprocessQuery from ranking module', async () => {
+    const { preprocessQuery } = await import('./ranking.js')
     expect(preprocessQuery).toBeDefined()
     expect(typeof preprocessQuery).toBe('function')
   })
