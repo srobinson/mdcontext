@@ -239,6 +239,12 @@ export interface IndexOptions {
   readonly followSymlinks?: boolean | undefined
   /** Callback for progress updates during file indexing */
   readonly onProgress?: ((progress: IndexProgress) => void) | undefined
+  /**
+   * When provided, skip full directory walk and process only these paths.
+   * Used by the watcher to pass accumulated changed file paths during the
+   * debounce window. Absolute paths expected.
+   */
+  readonly changedPaths?: readonly string[] | undefined
 }
 
 export const buildIndex = (
@@ -288,21 +294,36 @@ export const buildIndex = (
       honorMdcontextignore: options.honorMdcontextignore ?? true,
     })
 
-    // Discover files using the ignore filter
-    const walkResult = yield* Effect.tryPromise({
-      try: () =>
-        walkDirectory(storage.rootPath, storage.rootPath, ignoreResult.filter, {
-          followSymlinks: options.followSymlinks,
-        }),
-      catch: (e) =>
-        new DirectoryWalkError({
-          path: storage.rootPath,
-          message: `Failed to traverse directory: ${e instanceof Error ? e.message : String(e)}`,
-          cause: e,
-        }),
-    })
+    // Discover files: use changedPaths if provided (watcher mode),
+    // otherwise do a full directory walk
+    let files: string[]
+    let walkSkipped: { excluded: number; hidden: number }
 
-    const { files, skipped: walkSkipped } = walkResult
+    if (options.changedPaths && options.changedPaths.length > 0) {
+      // Watcher mode: process only the changed files
+      files = options.changedPaths.filter((p) => isMarkdownFile(p)) as string[]
+      walkSkipped = { excluded: 0, hidden: 0 }
+    } else {
+      const walkResult = yield* Effect.tryPromise({
+        try: () =>
+          walkDirectory(
+            storage.rootPath,
+            storage.rootPath,
+            ignoreResult.filter,
+            {
+              followSymlinks: options.followSymlinks,
+            },
+          ),
+        catch: (e) =>
+          new DirectoryWalkError({
+            path: storage.rootPath,
+            message: `Failed to traverse directory: ${e instanceof Error ? e.message : String(e)}`,
+            cause: e,
+          }),
+      })
+      files = walkResult.files
+      walkSkipped = walkResult.skipped
+    }
 
     // Process each file
     let documentsIndexed = 0

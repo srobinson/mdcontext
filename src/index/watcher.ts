@@ -108,11 +108,13 @@ export const watchDirectory = (
       debounceTimer = setTimeout(async () => {
         if (pendingPaths.size === 0) return
 
+        // Capture and clear changed paths before async work
+        const changedPaths = [...pendingPaths]
         pendingPaths.clear()
 
         try {
           const result = await Effect.runPromise(
-            buildIndex(resolvedRoot, options),
+            buildIndex(resolvedRoot, { ...options, changedPaths }),
           )
           options.onIndex?.({
             documentsIndexed: result.documentsIndexed,
