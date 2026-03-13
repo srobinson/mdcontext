@@ -153,10 +153,27 @@ export const indexCommand = Command.make(
     pretty,
   }) =>
     Effect.gen(function* () {
+      // --all + --watch is unsupported: watch blocks on the first directory,
+      // so subsequent sources would never be reached.
+      if (all && watchMode) {
+        yield* Console.log(
+          'Cannot combine --all and --watch. Watch a single directory instead.',
+        )
+        return
+      }
+
       // --all: resolve source directories from global config
       const dirsToIndex: string[] = []
       if (all) {
-        const sources = readGlobalSources()
+        let sources: ReturnType<typeof readGlobalSources>
+        try {
+          sources = readGlobalSources()
+        } catch (err) {
+          yield* Console.log(
+            `Failed to read global config (~/.mdm/.mdm.toml): ${err instanceof Error ? err.message : String(err)}`,
+          )
+          return
+        }
         if (sources.length === 0) {
           yield* Console.log(
             'No global sources registered. Run "mdm init --global" first.',
@@ -164,7 +181,20 @@ export const indexCommand = Command.make(
           return
         }
         for (const source of sources) {
-          dirsToIndex.push(path.resolve(source.path))
+          const resolved = path.resolve(source.path)
+          if (!fs.existsSync(resolved)) {
+            yield* Console.log(
+              `Warning: source "${source.name ?? source.path}" not found at ${resolved}, skipping.`,
+            )
+            continue
+          }
+          dirsToIndex.push(resolved)
+        }
+        if (dirsToIndex.length === 0) {
+          yield* Console.log(
+            'All registered sources are missing. Check paths in ~/.mdm/.mdm.toml.',
+          )
+          return
         }
       } else {
         dirsToIndex.push(path.resolve(dirPath))

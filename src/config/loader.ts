@@ -450,24 +450,21 @@ export interface GlobalSource {
 /**
  * Read registered sources from the global config file (~/.mdm/.mdm.toml).
  * Returns an empty array if the file does not exist or has no [[sources]].
+ * Throws on malformed TOML so callers can distinguish "no config" from "broken config".
  */
 export const readGlobalSources = (): GlobalSource[] => {
   const globalPath = path.join(os.homedir(), '.mdm', '.mdm.toml')
-  try {
-    if (!fs.existsSync(globalPath)) return []
-    const content = fs.readFileSync(globalPath, 'utf-8')
-    const parsed = parseToml(content) as Record<string, unknown>
-    const sources = parsed.sources
-    if (!Array.isArray(sources)) return []
-    return sources
-      .filter(
-        (s): s is { path: string; name?: string } =>
-          typeof s === 'object' &&
-          s !== null &&
-          typeof (s as Record<string, unknown>).path === 'string',
-      )
-      .map((s) => ({ path: s.path, name: s.name }))
-  } catch {
-    return []
-  }
+  if (!fs.existsSync(globalPath)) return []
+  const content = fs.readFileSync(globalPath, 'utf-8')
+  const parsed = parseToml(content) as Record<string, unknown>
+  const sources = parsed.sources
+  if (!Array.isArray(sources)) return []
+  return sources
+    .filter(
+      (s): s is { path: string; name?: string } =>
+        typeof s === 'object' &&
+        s !== null &&
+        typeof (s as Record<string, unknown>).path === 'string',
+    )
+    .map((s) => ({ path: s.path, name: s.name }))
 }

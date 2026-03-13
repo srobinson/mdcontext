@@ -172,4 +172,37 @@ describe('index --all flag', () => {
     // With --force, no files should be skipped as unchanged
     expect(result.stdout).not.toContain('unchanged')
   })
+
+  it('--all --watch rejects with clear error', async () => {
+    writeGlobalConfig([{ path: tempDir }])
+    const result = await runIndex(tempDir, '--all --watch')
+    expect(result.stdout).toContain('Cannot combine --all and --watch')
+  })
+
+  it('--all skips non-existent source directories', async () => {
+    const missingDir = path.join(
+      fakeHome,
+      'no-such-source-' + Date.now().toString(36),
+    )
+    writeGlobalConfig([
+      { path: tempDir, name: 'exists' },
+      { path: missingDir, name: 'missing' },
+    ])
+    const result = await runIndex(tempDir, '--all --no-embed')
+    expect(result.code).toBe(0)
+    expect(result.stdout).toContain('not found')
+    expect(result.stdout).toContain(tempDir)
+  })
+
+  it('--all surfaces malformed TOML errors', async () => {
+    const globalDir = path.join(fakeHome, '.mdm')
+    fs.mkdirSync(globalDir, { recursive: true })
+    fs.writeFileSync(
+      path.join(globalDir, '.mdm.toml'),
+      '[[sources]\npath = broken toml',
+      'utf-8',
+    )
+    const result = await runIndex(tempDir, '--all')
+    expect(result.stdout).toContain('Failed to read global config')
+  })
 })
