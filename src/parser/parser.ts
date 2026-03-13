@@ -19,9 +19,8 @@ import type {
   MdDocument,
   MdLink,
   MdSection,
-  ParseError,
 } from '../core/types.js'
-import { FileReadError } from '../errors/index.js'
+import { FileReadError, type ParseError } from '../errors/index.js'
 import { countTokensApprox, countWords } from '../utils/tokens.js'
 
 // ============================================================================

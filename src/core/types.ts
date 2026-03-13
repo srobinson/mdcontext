@@ -102,35 +102,3 @@ export interface ContextLine {
    */
   readonly isMatch: boolean
 }
-
-// ============================================================================
-// Error Types
-// ============================================================================
-
-/**
- * Parse error from markdown parsing
- *
- * Note: This interface is used by parser.ts. For the TaggedError version
- * that works with Effect's error handling, see src/errors/index.ts ParseError.
- */
-export interface ParseError {
-  readonly _tag: 'ParseError'
-  readonly message: string
-  readonly line?: number | undefined
-  readonly column?: number | undefined
-}
-
-// ============================================================================
-// Constructor Functions
-// ============================================================================
-
-export const ParseError = (
-  message: string,
-  line?: number,
-  column?: number,
-): ParseError => ({
-  _tag: 'ParseError',
-  message,
-  line,
-  column,
-})
