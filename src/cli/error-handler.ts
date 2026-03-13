@@ -28,6 +28,7 @@ import type {
   ApiKeyMissingError,
   CliValidationError,
   ConfigError,
+  DimensionMismatchError,
   DirectoryCreateError,
   DirectoryWalkError,
   DocumentNotFoundError,
@@ -543,6 +544,8 @@ export const createErrorHandler = (options: { debug?: boolean } = {}) => ({
   IndexBuildError: (e: IndexBuildError) => handleError(e, options),
   DocumentNotFoundError: (e: DocumentNotFoundError) => handleError(e, options),
   EmbeddingsNotFoundError: (e: EmbeddingsNotFoundError) =>
+    handleError(e, options),
+  DimensionMismatchError: (e: DimensionMismatchError) =>
     handleError(e, options),
   VectorStoreError: (e: VectorStoreError) => handleError(e, options),
   WatchError: (e: WatchError) => handleError(e, options),
