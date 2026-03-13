@@ -5,7 +5,7 @@
 import * as crypto from 'node:crypto'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { Effect } from 'effect'
+import { Effect, Schema } from 'effect'
 
 import {
   DirectoryCreateError,
@@ -20,6 +20,75 @@ import type {
   SectionIndex,
 } from './types.js'
 import { getIndexPaths, INDEX_VERSION } from './types.js'
+
+// ============================================================================
+// Runtime Schemas for Index Validation
+// ============================================================================
+
+const DocumentEntrySchema = Schema.Struct({
+  id: Schema.String,
+  path: Schema.String,
+  title: Schema.String,
+  mtime: Schema.Number,
+  hash: Schema.String,
+  tokenCount: Schema.Number,
+  sectionCount: Schema.Number,
+})
+
+const DocumentIndexSchema = Schema.Struct({
+  version: Schema.Number,
+  rootPath: Schema.String,
+  documents: Schema.Record({ key: Schema.String, value: DocumentEntrySchema }),
+})
+
+const SectionEntrySchema = Schema.Struct({
+  id: Schema.String,
+  documentId: Schema.String,
+  documentPath: Schema.String,
+  heading: Schema.String,
+  level: Schema.Number,
+  startLine: Schema.Number,
+  endLine: Schema.Number,
+  tokenCount: Schema.Number,
+  hasCode: Schema.Boolean,
+  hasList: Schema.Boolean,
+  hasTable: Schema.Boolean,
+})
+
+const SectionIndexSchema = Schema.Struct({
+  version: Schema.Number,
+  sections: Schema.Record({ key: Schema.String, value: SectionEntrySchema }),
+  byHeading: Schema.Record({
+    key: Schema.String,
+    value: Schema.Array(Schema.String),
+  }),
+  byDocument: Schema.Record({
+    key: Schema.String,
+    value: Schema.Array(Schema.String),
+  }),
+})
+
+const LinkIndexSchema = Schema.Struct({
+  version: Schema.Number,
+  forward: Schema.Record({
+    key: Schema.String,
+    value: Schema.Array(Schema.String),
+  }),
+  backward: Schema.Record({
+    key: Schema.String,
+    value: Schema.Array(Schema.String),
+  }),
+  broken: Schema.Array(Schema.String),
+})
+
+const IndexConfigSchema = Schema.Struct({
+  version: Schema.Number,
+  rootPath: Schema.String,
+  include: Schema.Array(Schema.String),
+  exclude: Schema.Array(Schema.String),
+  createdAt: Schema.String,
+  updatedAt: Schema.String,
+})
 
 // ============================================================================
 // File System Helpers
@@ -38,9 +107,10 @@ const ensureDir = (
       }),
   }).pipe(Effect.map(() => undefined))
 
-const readJsonFile = <T>(
+const readJsonFile = <A, I>(
   filePath: string,
-): Effect.Effect<T | null, FileReadError | IndexCorruptedError> =>
+  schema: Schema.Schema<A, I>,
+): Effect.Effect<A | null, FileReadError | IndexCorruptedError> =>
   Effect.gen(function* () {
     // Try to read file content
     const contentResult = yield* Effect.tryPromise({
@@ -75,8 +145,8 @@ const readJsonFile = <T>(
     }
 
     // Parse JSON - corrupted files should fail with IndexCorruptedError
-    return yield* Effect.try({
-      try: () => JSON.parse(contentResult.content) as T,
+    const parsed = yield* Effect.try({
+      try: () => JSON.parse(contentResult.content) as unknown,
       catch: (e) =>
         new IndexCorruptedError({
           path: filePath,
@@ -84,6 +154,18 @@ const readJsonFile = <T>(
           details: e instanceof Error ? e.message : String(e),
         }),
     })
+
+    // Validate against schema
+    return yield* Schema.decodeUnknown(schema)(parsed).pipe(
+      Effect.mapError(
+        (parseError) =>
+          new IndexCorruptedError({
+            path: filePath,
+            reason: 'MissingData',
+            details: `Schema validation failed: ${String(parseError)}`,
+          }),
+      ),
+    )
   })
 
 const writeJsonFile = <T>(
@@ -159,7 +241,7 @@ export const initializeIndex = (
 export const loadConfig = (
   storage: IndexStorage,
 ): Effect.Effect<IndexConfig | null, FileReadError | IndexCorruptedError> =>
-  readJsonFile<IndexConfig>(storage.paths.config)
+  readJsonFile(storage.paths.config, IndexConfigSchema)
 
 export const saveConfig = (
   storage: IndexStorage,
@@ -177,7 +259,7 @@ export const saveConfig = (
 export const loadDocumentIndex = (
   storage: IndexStorage,
 ): Effect.Effect<DocumentIndex | null, FileReadError | IndexCorruptedError> =>
-  readJsonFile<DocumentIndex>(storage.paths.documents)
+  readJsonFile(storage.paths.documents, DocumentIndexSchema)
 
 export const saveDocumentIndex = (
   storage: IndexStorage,
@@ -198,7 +280,7 @@ export const createEmptyDocumentIndex = (rootPath: string): DocumentIndex => ({
 export const loadSectionIndex = (
   storage: IndexStorage,
 ): Effect.Effect<SectionIndex | null, FileReadError | IndexCorruptedError> =>
-  readJsonFile<SectionIndex>(storage.paths.sections)
+  readJsonFile(storage.paths.sections, SectionIndexSchema)
 
 export const saveSectionIndex = (
   storage: IndexStorage,
@@ -220,7 +302,7 @@ export const createEmptySectionIndex = (): SectionIndex => ({
 export const loadLinkIndex = (
   storage: IndexStorage,
 ): Effect.Effect<LinkIndex | null, FileReadError | IndexCorruptedError> =>
-  readJsonFile<LinkIndex>(storage.paths.links)
+  readJsonFile(storage.paths.links, LinkIndexSchema)
 
 export const saveLinkIndex = (
   storage: IndexStorage,
