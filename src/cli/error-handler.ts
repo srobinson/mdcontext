@@ -41,6 +41,7 @@ import type {
   IndexNotFoundError,
   MdContextError,
   ParseError,
+  SummarizationError,
   VectorStoreError,
   WatchError,
 } from '../errors/index.js'
@@ -415,7 +416,26 @@ export const formatError = (error: MdContextError): FormattedError =>
       exitCode: EXIT_CODE.USER_ERROR,
     })),
 
-    Match.exhaustive,
+    // Summarization errors
+    Match.tag('SummarizationError', (e) => ({
+      code: e.code,
+      message: e.message,
+      details: e.provider ? `Provider: ${e.provider}` : undefined,
+      suggestions: [
+        'Try a different provider with --provider',
+        "Run 'mdcontext search' without --summarize",
+      ] as const,
+      exitCode: EXIT_CODE.SYSTEM_ERROR,
+    })),
+
+    // Fallback for any unmatched error types
+    Match.orElse((e) => ({
+      code: 'E999' as string,
+      message: (e as { message?: string }).message ?? 'Unknown error',
+      details: undefined,
+      suggestions: [] as readonly string[],
+      exitCode: EXIT_CODE.SYSTEM_ERROR,
+    })),
   )
 
 // ============================================================================
@@ -551,6 +571,7 @@ export const createErrorHandler = (options: { debug?: boolean } = {}) => ({
   WatchError: (e: WatchError) => handleError(e, options),
   ConfigError: (e: ConfigError) => handleError(e, options),
   CliValidationError: (e: CliValidationError) => handleError(e, options),
+  SummarizationError: (e: SummarizationError) => handleError(e, options),
 })
 
 // ============================================================================

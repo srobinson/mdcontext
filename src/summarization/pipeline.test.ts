@@ -344,7 +344,10 @@ describe('runSummarizationPipeline', () => {
 
   it('should handle errors from createSummarizer gracefully', async () => {
     mockedCreateSummarizer.mockRejectedValue(
-      new SummarizationError('Provider not found', 'PROVIDER_NOT_FOUND'),
+      new SummarizationError({
+        message: 'Provider not found',
+        code: 'PROVIDER_NOT_FOUND',
+      }),
     )
 
     const options: PipelineOptions = {

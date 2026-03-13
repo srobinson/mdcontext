@@ -134,29 +134,29 @@ export const runSummarizationPipeline = (
           catch: (e) =>
             e instanceof SummarizationError
               ? e
-              : new SummarizationError(
-                  `Failed to create summarizer: ${e}`,
-                  'PROVIDER_NOT_FOUND',
-                ),
+              : new SummarizationError({
+                  message: `Failed to create summarizer: ${e}`,
+                  code: 'PROVIDER_NOT_FOUND',
+                }),
         })
       : yield* Effect.tryPromise({
           try: async () => {
             const result = await getBestAvailableSummarizer()
             if (!result) {
-              throw new SummarizationError(
-                'No summarization providers available',
-                'PROVIDER_NOT_AVAILABLE',
-              )
+              throw new SummarizationError({
+                message: 'No summarization providers available',
+                code: 'PROVIDER_NOT_AVAILABLE',
+              })
             }
             return result.summarizer
           },
           catch: (e) =>
             e instanceof SummarizationError
               ? e
-              : new SummarizationError(
-                  `Failed to find summarizer: ${e}`,
-                  'PROVIDER_NOT_FOUND',
-                ),
+              : new SummarizationError({
+                  message: `Failed to find summarizer: ${e}`,
+                  code: 'PROVIDER_NOT_FOUND',
+                }),
         })
 
     const mode = options.config?.mode ?? 'cli'
@@ -174,18 +174,18 @@ export const runSummarizationPipeline = (
         const consented = yield* Effect.tryPromise({
           try: () => options.onConsentPrompt!(costEstimate),
           catch: () =>
-            new SummarizationError(
-              'Consent prompt failed',
-              'CLI_EXECUTION_FAILED',
-            ),
+            new SummarizationError({
+              message: 'Consent prompt failed',
+              code: 'CLI_EXECUTION_FAILED',
+            }),
         })
 
         if (!consented) {
           return yield* Effect.fail(
-            new SummarizationError(
-              'User declined summarization',
-              'CLI_EXECUTION_FAILED',
-            ),
+            new SummarizationError({
+              message: 'User declined summarization',
+              code: 'CLI_EXECUTION_FAILED',
+            }),
           )
         }
       }
@@ -200,10 +200,10 @@ export const runSummarizationPipeline = (
       catch: (e) =>
         e instanceof SummarizationError
           ? e
-          : new SummarizationError(
-              `Summarization failed: ${e}`,
-              'CLI_EXECUTION_FAILED',
-            ),
+          : new SummarizationError({
+              message: `Summarization failed: ${e}`,
+              code: 'CLI_EXECUTION_FAILED',
+            }),
     })
 
     return {

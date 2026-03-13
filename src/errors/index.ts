@@ -63,6 +63,7 @@
  */
 
 import { Data } from 'effect'
+import type { SummarizationError } from '../summarization/types.js'
 
 // ============================================================================
 // Error Codes
@@ -531,3 +532,7 @@ export type MdContextError =
   | ConfigError
   | WatchError
   | CliValidationError
+  | SummarizationError
+
+// Re-export SummarizationError for centralized error handling
+export { SummarizationError } from '../summarization/types.js'
