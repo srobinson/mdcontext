@@ -469,6 +469,17 @@ describe('MCP Server', () => {
       )
     })
 
+    it('should reject wildcard alternation under quantifier', async () => {
+      const result = await client.callTool({
+        name: 'md_keyword_search',
+        arguments: { heading: '(.|\\s)+' },
+      })
+      expect(result.isError).toBe(true)
+      expect((result.content as Array<{ text: string }>)[0]?.text).toMatch(
+        /catastrophic backtracking/,
+      )
+    })
+
     it('should allow safe regex patterns', async () => {
       const result = await client.callTool({
         name: 'md_keyword_search',

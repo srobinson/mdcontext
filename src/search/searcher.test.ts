@@ -298,6 +298,12 @@ Set the configuration options carefully.
       ).rejects.toThrow(/catastrophic backtracking/)
     })
 
+    it('rejects wildcard alternation under quantifier (.|\\s)+', async () => {
+      await expect(
+        runEffect(searchContent(TEST_DIR, { heading: '(.|\\s)+' })),
+      ).rejects.toThrow(/catastrophic backtracking/)
+    })
+
     it('allows safe regex patterns', async () => {
       // Simple patterns without nested quantifiers should pass
       const results = await runEffect(

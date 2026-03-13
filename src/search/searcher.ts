@@ -48,7 +48,9 @@ const MAX_REGEX_LENGTH = 200
  * - Nested quantifiers: a quantified group whose body contains a quantifier
  *   e.g. (a+)+, (a*)+, ([a-z]+)*, (?:a+){2,}
  * - Overlapping alternation under a quantifier
- *   e.g. (a|a)+, (.|\\s)+
+ *   e.g. (a|a)+, (a|ab)+
+ * - Wildcard alternation under a quantifier
+ *   e.g. (.|\\s)+, (.|x)+ -- '.' matches any char, guaranteeing overlap
  *
  * This is a conservative heuristic. It will reject some safe patterns that
  * happen to match the shape, which is acceptable for a user-facing search
@@ -73,6 +75,11 @@ const isCatastrophicPattern = (pattern: string): boolean => {
     if (groupMatch?.[1]) {
       const branches = groupMatch[1].split('|')
       if (branches.length >= 2) {
+        // '.' is a regex wildcard matching any character. Any alternation
+        // containing '.' under a quantifier has overlap by definition,
+        // since '.' matches whatever the other branches match.
+        if (branches.some((b) => b.includes('.'))) return true
+
         const charSets = branches.map(
           (b) => new Set(b.replace(/[^a-zA-Z0-9]/g, '')),
         )

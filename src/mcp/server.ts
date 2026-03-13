@@ -241,13 +241,17 @@ export const resolveAndValidatePath = async (
   }
 
   // Canonicalize via realpath to detect symlinks pointing outside root.
+  // Both the root and the target must be canonicalized: if the workspace
+  // root itself is a symlink, comparing a canonicalized target against
+  // the non-canonical root rejects every valid path.
   // If the target does not exist (e.g. index creation on a new directory),
   // realpath throws ENOENT and the lexical check above is sufficient.
   try {
     const canonical = await fs.realpath(resolved)
+    const canonicalRoot = await fs.realpath(normalizedRoot)
     if (
-      !canonical.startsWith(normalizedRoot + path.sep) &&
-      canonical !== normalizedRoot
+      !canonical.startsWith(canonicalRoot + path.sep) &&
+      canonical !== canonicalRoot
     ) {
       return pathTraversalError(filePath)
     }
