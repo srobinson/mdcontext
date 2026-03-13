@@ -267,11 +267,19 @@ export const buildIndex = (
         ? createEmptyDocumentIndex(storage.rootPath)
         : existingDocIndex
 
-    // Load existing section and link indexes to preserve data for unchanged files
+    // Load existing section and link indexes to preserve data for unchanged files.
+    // When force is true, start from empty indexes to avoid stale byHeading entries
+    // accumulating (the document index is empty so cleanup cannot find old entries).
     const existingSectionIndex = yield* loadSectionIndex(storage)
     const existingLinkIndex = yield* loadLinkIndex(storage)
-    const sectionIndex = existingSectionIndex ?? createEmptySectionIndex()
-    const linkIndex = existingLinkIndex ?? createEmptyLinkIndex()
+    const sectionIndex =
+      options.force
+        ? createEmptySectionIndex()
+        : (existingSectionIndex ?? createEmptySectionIndex())
+    const linkIndex =
+      options.force
+        ? createEmptyLinkIndex()
+        : (existingLinkIndex ?? createEmptyLinkIndex())
 
     // Build ignore filter with proper precedence:
     // CLI/config patterns > .mdcontextignore > .gitignore > defaults
