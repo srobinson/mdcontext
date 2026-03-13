@@ -11,8 +11,6 @@
  *   4. output.color config value (when available via resolveColorEnabled)
  */
 
-import * as fs from 'node:fs'
-import * as path from 'node:path'
 
 // ============================================================================
 // Color Support
@@ -25,83 +23,11 @@ import * as path from 'node:path'
  *   1. NO_COLOR env var (always wins per no-color.org spec)
  *   2. --no-color CLI flag
  *   3. Non-TTY stdout (piped output)
- *   4. output.color from config file (if --config is specified)
- *
- * The config peek is a lightweight sync read that extracts only the
- * output.color field. This runs before the full config loading pipeline
- * so help output can honor the setting.
  */
 export const shouldUseColor = (): boolean => {
   if (process.env.NO_COLOR !== undefined) return false
   if (process.argv.includes('--no-color')) return false
   if (!process.stdout.isTTY) return false
-
-  // Peek at config file for output.color if --config is specified
-  const configColor = peekConfigColor()
-  if (configColor === false) return false
-
-  return true
-}
-
-/**
- * Extract --config path from process.argv without full preprocessing.
- * Returns undefined if no --config flag is present.
- */
-const extractConfigPathFromArgv = (): string | undefined => {
-  const argv = process.argv
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i]
-    if (arg === undefined) continue
-
-    if (arg.startsWith('--config=')) {
-      const value = arg.slice('--config='.length)
-      return value.length > 0 ? value : undefined
-    }
-    if (arg.startsWith('-c=')) {
-      const value = arg.slice('-c='.length)
-      return value.length > 0 ? value : undefined
-    }
-    if (
-      (arg === '--config' || arg === '-c') &&
-      argv[i + 1] &&
-      !argv[i + 1]!.startsWith('-')
-    ) {
-      return argv[i + 1]
-    }
-  }
-  return undefined
-}
-
-/**
- * Lightweight sync peek at a config file's output.color value.
- * Returns false if config explicitly disables color, true otherwise.
- * Silently returns true on any read/parse error (fail open for color).
- *
- * Exported for testing. Not part of the public API.
- */
-export const peekConfigColor = (): boolean => {
-  const configPath = extractConfigPathFromArgv()
-  if (!configPath) return true
-
-  try {
-    const resolved = path.resolve(configPath)
-    const content = fs.readFileSync(resolved, 'utf-8')
-    const parsed = JSON.parse(content) as Record<string, unknown>
-    if (
-      parsed &&
-      typeof parsed === 'object' &&
-      'output' in parsed &&
-      parsed.output &&
-      typeof parsed.output === 'object' &&
-      'color' in (parsed.output as Record<string, unknown>) &&
-      (parsed.output as Record<string, unknown>).color === false
-    ) {
-      return false
-    }
-  } catch {
-    // Fail open: if we can't read the config, allow color
-  }
-
   return true
 }
 
@@ -130,6 +56,36 @@ interface CommandHelp {
 // ============================================================================
 
 export const helpContent: Record<string, CommandHelp> = {
+  init: {
+    description: 'Initialize mdm in a directory',
+    usage: 'mdm init [options]',
+    examples: [
+      'mdm init                     # Interactive setup',
+      'mdm init --local             # Initialize locally in current directory',
+      'mdm init --global            # Initialize globally in ~/.mdm/',
+      'mdm init -y                  # Accept all defaults',
+    ],
+    options: [
+      {
+        name: '-l, --local',
+        description: 'Initialize locally in current directory (.mdm/)',
+      },
+      {
+        name: '-g, --global',
+        description: 'Initialize globally in ~/.mdm/',
+      },
+      {
+        name: '-y, --yes',
+        description: 'Accept all defaults without prompting',
+      },
+    ],
+    notes: [
+      'Creates .mdm/ directory and .mdm.toml config file.',
+      'Local init: project-specific index in PWD/.mdm/',
+      'Global init: shared index in ~/.mdm/ with source tracking.',
+      'Config resolution: PWD/.mdm.toml > ~/.mdm/.mdm.toml > defaults.',
+    ],
+  },
   index: {
     description: 'Index markdown files for fast searching',
     usage: 'mdm index [path] [options]',
@@ -468,31 +424,27 @@ export const helpContent: Record<string, CommandHelp> = {
     description: 'Configuration management',
     usage: 'mdm config <command> [options]',
     examples: [
-      'mdm config init              # Create a starter config file',
-      'mdm config init --format json  # Create JSON config instead of JS',
+      'mdm config init              # Create a .mdm.toml config file',
+      'mdm config init --force      # Overwrite existing config',
       'mdm config show              # Show config file location',
       'mdm config check             # Validate and show effective config',
       'mdm config check --json      # Output config as JSON',
     ],
     options: [
-      { name: 'init', description: 'Create a starter config file' },
+      { name: 'init', description: 'Create a .mdm.toml config file' },
       { name: 'show', description: 'Display config file location' },
       {
         name: 'check',
         description: 'Validate and show effective configuration',
-      },
-      {
-        name: '-f, --format <format>',
-        description: 'Config format: js or json (init only)',
       },
       { name: '--force', description: 'Overwrite existing config (init only)' },
       { name: '--json', description: 'Output as JSON' },
       { name: '--pretty', description: 'Pretty-print JSON output' },
     ],
     notes: [
-      'Config files set persistent defaults for all commands.',
-      'Precedence: CLI flags > environment > config file > defaults.',
-      'See docs/CONFIG.md for full configuration reference.',
+      'Config file: .mdm.toml (TOML format).',
+      'Resolution: PWD/.mdm.toml > ~/.mdm/.mdm.toml > defaults.',
+      'Precedence: CLI flags > environment (MDM_*) > config file > defaults.',
     ],
   },
   duplicates: {
@@ -620,6 +572,7 @@ export const showMainHelp = (color: boolean = shouldUseColor()): void => {
 ${c.bold('mdm')} - Token-efficient markdown analysis for LLMs
 
 ${c.yellow('COMMANDS')}
+  init                      Initialize mdm in a directory
   index [path]              Index markdown files (default: .)
   search <query> [path]     Search by meaning or structure
   context <files>...        Get LLM-ready summary
@@ -660,11 +613,10 @@ ${c.yellow('WORKFLOWS')}
   ${c.dim('# Build semantic search')}
   mdm index --embed && mdm search "authentication flow"
 
-  ${c.dim('# Set up project configuration')}
-  mdm config init && mdm config check
+  ${c.dim('# Set up project')}
+  mdm init && mdm index
 
 ${c.yellow('GLOBAL OPTIONS')}
-  -c, --config <file>  Use specified config file
   --json               Output as JSON
   --pretty             Pretty-print JSON
   --help, -h           Show help

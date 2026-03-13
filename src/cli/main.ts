@@ -3,6 +3,9 @@
 /**
  * mdm CLI - Token-efficient markdown analysis
  *
+ * SETUP
+ *   mdm init                   Initialize mdm in a directory
+ *
  * CORE COMMANDS
  *   mdm index [path]           Index markdown files (default: .)
  *   mdm search <query> [path]  Search by meaning or structure
@@ -37,6 +40,7 @@ import {
   duplicatesCommand,
   embeddingsCommand,
   indexCommand,
+  initCommand,
   linksCommand,
   searchCommand,
   statsCommand,
@@ -61,6 +65,7 @@ import {
 const mainCommand = Command.make('mdm').pipe(
   Command.withDescription('Token-efficient markdown analysis for LLMs'),
   Command.withSubcommands([
+    initCommand,
     indexCommand,
     searchCommand,
     contextCommand,

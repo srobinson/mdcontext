@@ -6,6 +6,7 @@
 
 export { backlinksCommand } from './backlinks.js'
 export { configCommand } from './config-cmd.js'
+export { initCommand } from './init-cmd.js'
 export { contextCommand } from './context.js'
 export { duplicatesCommand } from './duplicates.js'
 export { embeddingsCommand } from './embeddings.js'
