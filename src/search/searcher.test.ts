@@ -280,27 +280,37 @@ Set the configuration options carefully.
 
   // Security: ReDoS protection (ALP-1237 / ALP-1196)
   describe('security: ReDoS protection', () => {
-    it('catastrophic backtracking regex resolves within timeout', async () => {
-      const start = Date.now()
-      // (a+)+$ is a classic ReDoS pattern. safeRegex should either reject
-      // it or the search should complete promptly regardless of input.
+    it('rejects classic catastrophic backtracking pattern (a+)+$', async () => {
+      await expect(
+        runEffect(searchContent(TEST_DIR, { heading: '(a+)+$' })),
+      ).rejects.toThrow(/catastrophic backtracking/)
+    })
+
+    it('rejects nested quantifier pattern (.*a){20}', async () => {
+      await expect(
+        runEffect(searchContent(TEST_DIR, { heading: '(.*a){20}' })),
+      ).rejects.toThrow(/catastrophic backtracking/)
+    })
+
+    it('rejects overlapping alternation under quantifier (a|a)+', async () => {
+      await expect(
+        runEffect(searchContent(TEST_DIR, { heading: '(a|a)+' })),
+      ).rejects.toThrow(/catastrophic backtracking/)
+    })
+
+    it('allows safe regex patterns', async () => {
+      // Simple patterns without nested quantifiers should pass
       const results = await runEffect(
-        searchContent(TEST_DIR, { heading: '(a+)+$' }),
+        searchContent(TEST_DIR, { heading: 'test.*file' }),
       )
-      const elapsed = Date.now() - start
-      // Should complete well under 5 seconds (the ReDoS pattern would take
-      // exponential time on vulnerable implementations)
-      expect(elapsed).toBeLessThan(5000)
       expect(results).toBeDefined()
     })
 
-    it('nested quantifier regex does not hang', async () => {
-      const start = Date.now()
+    it('allows quantifiers outside groups', async () => {
+      // a+ is safe because there is no nesting
       const results = await runEffect(
-        searchContent(TEST_DIR, { heading: '(.*a){20}' }),
+        searchContent(TEST_DIR, { heading: 'a+' }),
       )
-      const elapsed = Date.now() - start
-      expect(elapsed).toBeLessThan(5000)
       expect(results).toBeDefined()
     })
   })

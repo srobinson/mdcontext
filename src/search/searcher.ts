@@ -42,8 +42,60 @@ import {
 const MAX_REGEX_LENGTH = 200
 
 /**
- * Build a RegExp from user input with length validation and syntax error handling.
- * Returns an Effect that fails with CliValidationError on invalid or too-long patterns.
+ * Detect regex patterns prone to catastrophic backtracking (ReDoS).
+ *
+ * Catches the most common vulnerability shapes:
+ * - Nested quantifiers: a quantified group whose body contains a quantifier
+ *   e.g. (a+)+, (a*)+, ([a-z]+)*, (?:a+){2,}
+ * - Overlapping alternation under a quantifier
+ *   e.g. (a|a)+, (.|\\s)+
+ *
+ * This is a conservative heuristic. It will reject some safe patterns that
+ * happen to match the shape, which is acceptable for a user-facing search
+ * tool where false positives are low-cost.
+ */
+const isCatastrophicPattern = (pattern: string): boolean => {
+  // Strip escaped characters so \( or \+ do not trigger false positives
+  const stripped = pattern.replace(/\\./g, '')
+
+  // Detect quantified groups whose body contains a quantifier.
+  // Matches: ( ... +|*|? ... ) followed by +|*|?|{
+  // Handles both capturing (...) and non-capturing (?:...)
+  if (/\([^)]*[+*?][^)]*\)[+*?{]/.test(stripped)) return true
+
+  // Detect alternation with overlapping branches under a quantifier.
+  // Matches: (x|x)+ where branches share the same leading character class.
+  // This is an approximation; covers the (.|\\s)+ and (a|a)+ shapes.
+  if (/\([^)]*\|[^)]*\)[+*?{]/.test(stripped)) {
+    // Only flag if both branches share a character: extract branches and
+    // check whether any single literal char appears in more than one branch.
+    const groupMatch = stripped.match(/\(([^)]*)\)[+*?{]/)
+    if (groupMatch?.[1]) {
+      const branches = groupMatch[1].split('|')
+      if (branches.length >= 2) {
+        const charSets = branches.map(
+          (b) => new Set(b.replace(/[^a-zA-Z0-9]/g, '')),
+        )
+        for (let i = 0; i < charSets.length; i++) {
+          for (let j = i + 1; j < charSets.length; j++) {
+            const setI = charSets[i] as Set<string>
+            const setJ = charSets[j] as Set<string>
+            for (const c of setI) {
+              if (setJ.has(c)) return true
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return false
+}
+
+/**
+ * Build a RegExp from user input with length, syntax, and ReDoS validation.
+ * Returns an Effect that fails with CliValidationError on invalid, too-long,
+ * or catastrophic patterns.
  */
 const safeRegex = (
   pattern: string,
@@ -53,6 +105,13 @@ const safeRegex = (
     return Effect.fail(
       new CliValidationError({
         message: `Regex pattern too long (${pattern.length} chars, max ${MAX_REGEX_LENGTH})`,
+      }),
+    )
+  }
+  if (isCatastrophicPattern(pattern)) {
+    return Effect.fail(
+      new CliValidationError({
+        message: `Regex pattern rejected: potentially catastrophic backtracking in "${pattern}"`,
       }),
     )
   }

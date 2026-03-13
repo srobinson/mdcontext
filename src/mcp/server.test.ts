@@ -445,36 +445,37 @@ describe('MCP Server', () => {
   // ==========================================================================
 
   describe('security: ReDoS protection', () => {
-    it('should handle catastrophic regex in heading filter within 100ms', async () => {
-      // Classic ReDoS pattern: (a+)+ against 'aaa...!'
-      const evilPattern = '(a+)+$'
-      const start = Date.now()
-
+    it('should reject catastrophic backtracking regex with explicit error', async () => {
+      // Classic ReDoS pattern: (a+)+ causes exponential backtracking
       const result = await client.callTool({
         name: 'md_keyword_search',
-        arguments: { heading: evilPattern },
+        arguments: { heading: '(a+)+$' },
       })
-
-      const elapsed = Date.now() - start
-      // Should complete (with error or empty results) without hanging
-      expect(elapsed).toBeLessThan(5000)
-      // The result should be a proper response, not a timeout
-      expect(result.content).toBeDefined()
+      expect(result.isError).toBe(true)
+      expect((result.content as Array<{ text: string }>)[0]?.text).toMatch(
+        /catastrophic backtracking/,
+      )
     })
 
-    it('should handle exponential backtracking regex pattern', async () => {
-      // Another ReDoS vector
-      const evilPattern = '(.*a){20}'
-      const start = Date.now()
-
+    it('should reject nested quantifier regex pattern', async () => {
+      // (.*a){20} contains a quantified group with internal quantifier
       const result = await client.callTool({
         name: 'md_keyword_search',
-        arguments: { heading: evilPattern },
+        arguments: { heading: '(.*a){20}' },
       })
+      expect(result.isError).toBe(true)
+      expect((result.content as Array<{ text: string }>)[0]?.text).toMatch(
+        /catastrophic backtracking/,
+      )
+    })
 
-      const elapsed = Date.now() - start
-      expect(elapsed).toBeLessThan(5000)
-      expect(result.content).toBeDefined()
+    it('should allow safe regex patterns', async () => {
+      const result = await client.callTool({
+        name: 'md_keyword_search',
+        arguments: { heading: 'test.*file' },
+      })
+      // Should not be an error (may return empty results, that's fine)
+      expect(result.isError).toBeFalsy()
     })
   })
 

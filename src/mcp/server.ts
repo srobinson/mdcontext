@@ -126,7 +126,8 @@ const tools: Tool[] = [
       properties: {
         heading: {
           type: 'string',
-          description: 'Filter by heading pattern (regex, max 200 chars)',
+          description:
+            'Filter by heading pattern (regex, max 200 chars; nested quantifiers rejected)',
         },
         path_filter: {
           type: 'string',
