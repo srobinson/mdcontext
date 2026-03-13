@@ -427,6 +427,11 @@ export const buildIndex = (
       }
       delete mutableForward[relativePath]
 
+      // Remove backward entry for this path (other files linking here).
+      // The broken-link scan at the end of Phase 2 will re-flag these
+      // targets since the document no longer exists in mutableDocuments.
+      delete mutableBackward[relativePath]
+
       // Remove document entry
       delete mutableDocuments[relativePath]
     }

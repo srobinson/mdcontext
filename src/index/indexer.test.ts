@@ -303,6 +303,13 @@ describe('buildIndex', () => {
         path.join(dir, 'guide.md'),
       )
       expect(linksAfter).toEqual([])
+
+      // guide.md's backward entry should also be cleaned up
+      const incomingAfter = await runGetIncomingLinks(
+        dir,
+        path.join(dir, 'guide.md'),
+      )
+      expect(incomingAfter).toEqual([])
     })
 
     it('should handle rename as delete + add without stale entries', async () => {
