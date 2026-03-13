@@ -12,6 +12,15 @@ import type { EmbeddingProvider } from '../config/schema.js'
 // ============================================================================
 
 /**
+ * Conservative per-request token budget for OpenAI-compatible embedding APIs.
+ *
+ * mdcontext uses approximate token counting when batching. Keeping a safety
+ * margin below the observed 300k hard cap avoids oversize requests on large
+ * corpora while still allowing efficient batching.
+ */
+export const OPENAI_COMPATIBLE_SAFE_BATCH_TOKENS = 250_000
+
+/**
  * Native embedding dimensions for each model.
  *
  * OpenAI models support Matryoshka Representation Learning (MRL) which allows

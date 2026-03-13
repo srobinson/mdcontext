@@ -445,7 +445,7 @@ const handleMdIndex = async (
     content: [
       {
         type: 'text',
-        text: `Indexed ${result.documentsIndexed} documents, ${result.sectionsIndexed} sections, ${result.linksIndexed} links in ${result.duration}ms`,
+        text: `Indexed ${result.totalDocuments} documents, ${result.totalSections} sections, ${result.totalLinks} links in ${result.duration}ms${result.documentsIndexed < result.totalDocuments ? ` (${result.documentsIndexed} updated)` : ''}`,
       },
     ],
   }

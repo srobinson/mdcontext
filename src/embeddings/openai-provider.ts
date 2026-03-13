@@ -10,9 +10,11 @@ import {
   EmbeddingError,
 } from '../errors/index.js'
 import pricingData from './pricing.json' with { type: 'json' }
+import { batchTexts } from './batching.js'
 import {
   getRecommendedDimensions,
   inferProviderFromUrl,
+  OPENAI_COMPATIBLE_SAFE_BATCH_TOKENS,
   supportsMatryoshka,
   validateModelDimensions,
 } from './provider-constants.js'
@@ -230,13 +232,17 @@ export class OpenAIProvider implements EmbeddingProvider {
 
     const allEmbeddings: number[][] = []
     let totalTokens = 0
-    const totalBatches = Math.ceil(texts.length / this.batchSize)
+    const batches = batchTexts(texts, {
+      maxTextsPerBatch: this.batchSize,
+      maxTokensPerBatch: OPENAI_COMPATIBLE_SAFE_BATCH_TOKENS,
+    })
+    const totalBatches = batches.length
+    let processedTexts = 0
 
     try {
       // Process in batches
-      for (let i = 0; i < texts.length; i += this.batchSize) {
-        const batch = texts.slice(i, i + this.batchSize)
-        const batchIndex = Math.floor(i / this.batchSize)
+      for (const [batchIndex, batchInfo] of batches.entries()) {
+        const batch = [...batchInfo.texts]
 
         // Only pass dimensions parameter for models that support it (Matryoshka)
         // Non-Matryoshka models will use their native dimensions automatically
@@ -257,13 +263,14 @@ export class OpenAIProvider implements EmbeddingProvider {
         }
 
         totalTokens += response.usage?.total_tokens ?? 0
+        processedTexts += batch.length
 
         // Report batch progress
         if (options?.onBatchProgress) {
           options.onBatchProgress({
             batchIndex: batchIndex + 1,
             totalBatches,
-            processedTexts: Math.min(i + this.batchSize, texts.length),
+            processedTexts,
             totalTexts: texts.length,
           })
         }
