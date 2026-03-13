@@ -273,7 +273,7 @@ describe('SectionIndex round-trip', () => {
 
     expect(loaded).not.toBeNull()
     expect(loaded!.sections['sec-1']!.heading).toBe('Introduction')
-    expect(loaded!.byHeading['introduction']).toEqual(['sec-1'])
+    expect(loaded!.byHeading.introduction).toEqual(['sec-1'])
     expect(loaded!.byDocument['doc-1']).toEqual(['sec-1'])
   })
 
