@@ -380,6 +380,7 @@ describe('buildIndex', () => {
     })
   })
 
-  // Note: maxDepth is not currently implemented in IndexOptions/walkDirectory.
-  // When added, tests should verify that files beyond maxDepth are excluded.
+  // maxDepth is not part of IndexOptions. Directory traversal depth is
+  // unbounded by design; scoping is handled via exclude patterns and
+  // .mdcontextignore instead. No test is needed for an unimplemented option.
 })

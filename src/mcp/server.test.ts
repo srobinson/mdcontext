@@ -547,6 +547,78 @@ describe('MCP Server', () => {
       )
     })
   })
+
+  // ==========================================================================
+  // Input Validation: Wrong Argument Types
+  // ==========================================================================
+
+  describe('wrong argument types', () => {
+    it('md_context with numeric path should return validation error', async () => {
+      const result = await client.callTool({
+        name: 'md_context',
+        arguments: { path: 12345 },
+      })
+      expect(result.isError).toBe(true)
+      expect((result.content as Array<{ text: string }>)[0]?.text).toContain(
+        'Invalid arguments',
+      )
+    })
+
+    it('md_search with numeric query should return validation error', async () => {
+      const result = await client.callTool({
+        name: 'md_search',
+        arguments: { query: 42 },
+      })
+      expect(result.isError).toBe(true)
+      expect((result.content as Array<{ text: string }>)[0]?.text).toContain(
+        'Invalid arguments',
+      )
+    })
+
+    it('md_keyword_search with numeric heading should return validation error', async () => {
+      const result = await client.callTool({
+        name: 'md_keyword_search',
+        arguments: { heading: 999 },
+      })
+      expect(result.isError).toBe(true)
+      expect((result.content as Array<{ text: string }>)[0]?.text).toContain(
+        'Invalid arguments',
+      )
+    })
+
+    it('md_context with invalid level enum should return validation error', async () => {
+      const result = await client.callTool({
+        name: 'md_context',
+        arguments: { path: 'README.md', level: 'invalid' },
+      })
+      expect(result.isError).toBe(true)
+      expect((result.content as Array<{ text: string }>)[0]?.text).toContain(
+        'Invalid arguments',
+      )
+    })
+
+    it('md_search with string limit should return validation error', async () => {
+      const result = await client.callTool({
+        name: 'md_search',
+        arguments: { query: 'test', limit: 'five' },
+      })
+      expect(result.isError).toBe(true)
+      expect((result.content as Array<{ text: string }>)[0]?.text).toContain(
+        'Invalid arguments',
+      )
+    })
+
+    it('md_keyword_search with string has_code should return validation error', async () => {
+      const result = await client.callTool({
+        name: 'md_keyword_search',
+        arguments: { has_code: 'yes' },
+      })
+      expect(result.isError).toBe(true)
+      expect((result.content as Array<{ text: string }>)[0]?.text).toContain(
+        'Invalid arguments',
+      )
+    })
+  })
 })
 
 // ============================================================================

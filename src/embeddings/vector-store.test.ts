@@ -442,6 +442,57 @@ describe('corrupted metadata validation', () => {
 })
 
 // ============================================================================
+// removeEntries (markDeleted)
+// ============================================================================
+
+describe('removeEntries', () => {
+  it('removes a vector from search results', async () => {
+    const dir = await createTempDir()
+    const store = createVectorStore(dir, DIMS)
+
+    await run(store.add([makeEntry('keep', 1), makeEntry('remove', 2)]))
+
+    // Both should appear before removal
+    const before = await run(store.search(makeVector(2), 10))
+    const idsBefore = before.map((r) => r.id)
+    expect(idsBefore).toContain('remove')
+    expect(idsBefore).toContain('keep')
+
+    // Remove one entry
+    await run(store.removeEntries(['remove']))
+
+    // After removal, 'remove' should not appear in results
+    const after = await run(store.search(makeVector(2), 10))
+    const idsAfter = after.map((r) => r.id)
+    expect(idsAfter).not.toContain('remove')
+    expect(idsAfter).toContain('keep')
+  })
+
+  it('updates getEmbeddedIds after removal', async () => {
+    const dir = await createTempDir()
+    const store = createVectorStore(dir, DIMS)
+
+    await run(store.add([makeEntry('x', 1), makeEntry('y', 2)]))
+    expect(store.getEmbeddedIds()).toContain('x')
+    expect(store.getEmbeddedIds()).toContain('y')
+
+    await run(store.removeEntries(['x']))
+    expect(store.getEmbeddedIds()).not.toContain('x')
+    expect(store.getEmbeddedIds()).toContain('y')
+  })
+
+  it('is a no-op for non-existent IDs', async () => {
+    const dir = await createTempDir()
+    const store = createVectorStore(dir, DIMS)
+
+    await run(store.add([makeEntry('only', 1)]))
+    await run(store.removeEntries(['nonexistent']))
+
+    expect(store.getStats().count).toBe(1)
+  })
+})
+
+// ============================================================================
 // getStats
 // ============================================================================
 
