@@ -6,7 +6,16 @@
 import * as crypto from 'node:crypto'
 import { Effect } from 'effect'
 import matter from 'gray-matter'
-import type { Code, Heading, Image, Link, Parent, Root, Text } from 'mdast'
+import type {
+  Code,
+  Heading,
+  Image,
+  Link,
+  Parent,
+  Root,
+  RootContent,
+  Text,
+} from 'mdast'
 import remarkGfm from 'remark-gfm'
 import remarkParse from 'remark-parse'
 import { unified } from 'unified'
@@ -82,7 +91,7 @@ interface RawSection {
   startLine: number
   endLine: number
   contentStartLine: number
-  contentNodes: unknown[]
+  contentNodes: RootContent[]
 }
 
 const extractRawSections = (tree: Root): RawSection[] => {
@@ -141,17 +150,11 @@ const buildSectionHierarchy = (
   for (const raw of rawSections) {
     const contentLines = lines.slice(raw.startLine - 1, raw.endLine)
     const content = contentLines.join('\n')
-    const plainText = extractSectionPlainText(raw.contentNodes as Parent[])
+    const plainText = extractSectionPlainText(raw.contentNodes)
 
-    const hasCode = (raw.contentNodes as { type: string }[]).some(
-      (n) => n.type === 'code',
-    )
-    const hasList = (raw.contentNodes as { type: string }[]).some(
-      (n) => n.type === 'list',
-    )
-    const hasTable = (raw.contentNodes as { type: string }[]).some(
-      (n) => n.type === 'table',
-    )
+    const hasCode = raw.contentNodes.some((n) => n.type === 'code')
+    const hasList = raw.contentNodes.some((n) => n.type === 'list')
+    const hasTable = raw.contentNodes.some((n) => n.type === 'table')
 
     const section: MdSection = {
       id: `${docId}-${slugify(raw.heading)}`,
@@ -189,7 +192,7 @@ const buildSectionHierarchy = (
   return result
 }
 
-const extractSectionPlainText = (nodes: Parent[]): string => {
+const extractSectionPlainText = (nodes: RootContent[]): string => {
   const texts: string[] = []
   for (const node of nodes) {
     if ('value' in node && typeof node.value === 'string') {
