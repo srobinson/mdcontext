@@ -20,6 +20,7 @@ import {
   semanticSearchWithStats,
 } from '../../embeddings/semantic-search.js'
 import type { SearchQuality } from '../../embeddings/types.js'
+import { CliValidationError } from '../../errors/index.js'
 import { createStorage, loadSectionIndex } from '../../index/storage.js'
 import { INDEX_DIR } from '../../index/types.js'
 import { initializeReranker } from '../../search/cross-encoder.js'
@@ -335,6 +336,28 @@ export const searchCommand = Command.make(
   }) =>
     Effect.gen(function* () {
       const resolvedDir = path.resolve(dirPath)
+
+      // Validate bounded CLI options
+      if (threshold < 0 || threshold > 1) {
+        return yield* Effect.fail(
+          new CliValidationError({
+            message: '--threshold must be between 0.0 and 1.0',
+            argument: '--threshold',
+            expected: '0.0..1.0',
+            received: String(threshold),
+          }),
+        )
+      }
+      if (Option.isSome(fuzzyDistance) && fuzzyDistance.value < 1) {
+        return yield* Effect.fail(
+          new CliValidationError({
+            message: '--fuzzy-distance must be >= 1',
+            argument: '--fuzzy-distance',
+            expected: '>= 1',
+            received: String(fuzzyDistance.value),
+          }),
+        )
+      }
 
       // Handle --rerank-init: pre-download model and exit
       if (rerankInit) {

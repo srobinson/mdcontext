@@ -87,6 +87,18 @@ export const contextCommand = Command.make(
     pretty,
   }) =>
     Effect.gen(function* () {
+      // Validate bounded CLI options
+      if (tokens <= 0) {
+        yield* Effect.fail(
+          new CliValidationError({
+            message: '--tokens must be greater than 0',
+            argument: '--tokens',
+            expected: '> 0',
+            received: String(tokens),
+          }),
+        )
+      }
+
       // Effect CLI Args.repeated returns an array
       const fileList: string[] = Array.isArray(files) ? files : []
 
