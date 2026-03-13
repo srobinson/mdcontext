@@ -317,4 +317,47 @@ describe('File-based ConfigProvider', () => {
       }
     })
   })
+
+  // Security: config traversal boundary (ALP-1237 / ALP-1198)
+  describe('security: config search respects git root boundary', () => {
+    it('stops searching at .git boundary and does not traverse above it', () => {
+      // Create a nested directory structure with a .git marker
+      const gitRoot = path.join(tempDir, 'project')
+      const subDir = path.join(gitRoot, 'src', 'deep')
+      const aboveGit = tempDir
+
+      fs.mkdirSync(path.join(gitRoot, '.git'), { recursive: true })
+      fs.mkdirSync(subDir, { recursive: true })
+
+      // Place a config file ABOVE the git root (should not be found)
+      fs.writeFileSync(
+        path.join(aboveGit, 'mdcontext.config.json'),
+        JSON.stringify({ search: { defaultLimit: 999 } }),
+      )
+
+      // Search starting from deep inside the project
+      const result = findConfigFile(subDir)
+
+      // Should NOT find the config above .git
+      expect(result).toBeNull()
+    })
+
+    it('finds config at git root level', () => {
+      const gitRoot = path.join(tempDir, 'project2')
+      const subDir = path.join(gitRoot, 'src')
+
+      fs.mkdirSync(path.join(gitRoot, '.git'), { recursive: true })
+      fs.mkdirSync(subDir, { recursive: true })
+
+      // Place config at the git root itself
+      fs.writeFileSync(
+        path.join(gitRoot, 'mdcontext.config.json'),
+        JSON.stringify({ index: { maxDepth: 5 } }),
+      )
+
+      const result = findConfigFile(subDir)
+      expect(result).not.toBeNull()
+      expect(result!.path).toBe(path.join(gitRoot, 'mdcontext.config.json'))
+    })
+  })
 })

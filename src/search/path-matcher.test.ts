@@ -272,5 +272,31 @@ describe('path-matcher', () => {
         expect(matchPath('.eslintrc.json', '*.json')).toBe(true)
       })
     })
+
+    // Security: glob special character escaping (ALP-1237 / ALP-1197)
+    describe('security: glob escaping', () => {
+      it('escapes dots so they do not match arbitrary characters', () => {
+        // "docs/v2.0/*.md" must NOT match "docs/v2X0/file.md"
+        expect(matchPath('docs/v2.0/file.md', 'docs/v2.0/*.md')).toBe(true)
+        expect(matchPath('docs/v2X0/file.md', 'docs/v2.0/*.md')).toBe(false)
+      })
+
+      it('escapes plus signs in path patterns', () => {
+        expect(matchPath('docs/c++/guide.md', 'docs/c++/*.md')).toBe(true)
+        expect(matchPath('docs/cxx/guide.md', 'docs/c++/*.md')).toBe(false)
+      })
+
+      it('escapes square brackets in path patterns', () => {
+        expect(matchPath('docs/[draft]/notes.md', 'docs/[draft]/*.md')).toBe(
+          true,
+        )
+        expect(matchPath('docs/d/notes.md', 'docs/[draft]/*.md')).toBe(false)
+      })
+
+      it('escapes parentheses in path patterns', () => {
+        expect(matchPath('docs/(v1)/readme.md', 'docs/(v1)/*.md')).toBe(true)
+        expect(matchPath('docs/v1/readme.md', 'docs/(v1)/*.md')).toBe(false)
+      })
+    })
   })
 })

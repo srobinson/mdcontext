@@ -3,7 +3,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { formatEffectCliError } from './error-handler.js'
+import { EmbeddingError } from '../errors/index.js'
+import { formatEffectCliError, formatError } from './error-handler.js'
 
 describe('formatEffectCliError', () => {
   let originalArgv: string[]
@@ -231,5 +232,44 @@ describe('formatEffectCliError', () => {
       const result = formatEffectCliError(error)
       expect(result).toBe('[object Object]')
     })
+  })
+})
+
+// ============================================================================
+// Security: API key redaction (ALP-1237 / ALP-1201)
+// ============================================================================
+
+describe('security: API key redaction in formatError output', () => {
+  it('formatError does not include raw API key in formatted output', () => {
+    const error = new EmbeddingError({
+      reason: 'Unknown',
+      message: 'Request failed',
+      cause: { apiKey: 'sk-live-SUPERSECRETKEY123' },
+    })
+
+    const formatted = formatError(error)
+    const output = JSON.stringify(formatted)
+
+    expect(output).not.toContain('sk-live-SUPERSECRETKEY123')
+  })
+
+  it('formatError result does not leak sensitive fields from error details', () => {
+    const error = new EmbeddingError({
+      reason: 'Network',
+      message: 'Connection refused',
+      cause: {
+        authorization: 'Bearer sk-secret-token',
+        password: 'my-password',
+        url: 'https://api.openai.com/v1/embeddings',
+      },
+    })
+
+    const formatted = formatError(error)
+    // The formatted output should contain user-facing info but not raw secrets
+    expect(formatted.message).toBeDefined()
+    // Suggestions should not contain the secret values
+    const suggestionsStr = JSON.stringify(formatted.suggestions)
+    expect(suggestionsStr).not.toContain('sk-secret-token')
+    expect(suggestionsStr).not.toContain('my-password')
   })
 })
