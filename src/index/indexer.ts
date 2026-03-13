@@ -58,22 +58,29 @@ interface WalkResult {
   }
 }
 
+interface WalkOptions {
+  readonly followSymlinks?: boolean | undefined
+}
+
 /**
  * Walk directory using ignore filter for pattern matching.
  *
  * @param dir - Directory to walk
  * @param rootPath - Root path for computing relative paths
  * @param filter - Ignore filter instance
+ * @param options - Walk options (e.g. followSymlinks)
  * @returns Walk result with files and skip counts
  */
 const walkDirectory = async (
   dir: string,
   rootPath: string,
   filter: Ignore,
+  options: WalkOptions = {},
 ): Promise<WalkResult> => {
   const files: string[] = []
   let hiddenCount = 0
   let excludedCount = 0
+  const normalizedRoot = path.resolve(rootPath)
   const entries = await fs.readdir(dir, { withFileTypes: true })
 
   for (const entry of entries) {
@@ -98,8 +105,39 @@ const walkDirectory = async (
       continue
     }
 
+    // Handle symbolic links when followSymlinks is enabled
+    if (entry.isSymbolicLink() && options.followSymlinks) {
+      try {
+        const realPath = await fs.realpath(fullPath)
+        if (
+          !realPath.startsWith(normalizedRoot + path.sep) &&
+          realPath !== normalizedRoot
+        ) {
+          // Symlink target escapes the root boundary; skip it
+          continue
+        }
+        const stat = await fs.stat(realPath)
+        if (stat.isDirectory()) {
+          const subResult = await walkDirectory(
+            fullPath,
+            rootPath,
+            filter,
+            options,
+          )
+          files.push(...subResult.files)
+          hiddenCount += subResult.skipped.hidden
+          excludedCount += subResult.skipped.excluded
+        } else if (stat.isFile() && isMarkdownFile(entry.name)) {
+          files.push(fullPath)
+        }
+      } catch {
+        // Broken symlink or permission error; skip silently
+      }
+      continue
+    }
+
     if (entry.isDirectory()) {
-      const subResult = await walkDirectory(fullPath, rootPath, filter)
+      const subResult = await walkDirectory(fullPath, rootPath, filter, options)
       files.push(...subResult.files)
       hiddenCount += subResult.skipped.hidden
       excludedCount += subResult.skipped.excluded
@@ -197,6 +235,8 @@ export interface IndexOptions {
   readonly honorGitignore?: boolean | undefined
   /** Whether to honor .mdcontextignore (default: true) */
   readonly honorMdcontextignore?: boolean | undefined
+  /** Whether to follow symbolic links during directory traversal (default: false) */
+  readonly followSymlinks?: boolean | undefined
   /** Callback for progress updates during file indexing */
   readonly onProgress?: ((progress: IndexProgress) => void) | undefined
 }
@@ -245,7 +285,9 @@ export const buildIndex = (
     // Discover files using the ignore filter
     const walkResult = yield* Effect.tryPromise({
       try: () =>
-        walkDirectory(storage.rootPath, storage.rootPath, ignoreResult.filter),
+        walkDirectory(storage.rootPath, storage.rootPath, ignoreResult.filter, {
+          followSymlinks: options.followSymlinks,
+        }),
       catch: (e) =>
         new DirectoryWalkError({
           path: storage.rootPath,
