@@ -16,14 +16,9 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js'
-import { type ConfigError, Effect } from 'effect'
-
-import { createConfigProvider } from '../config/precedence.js'
+import { load } from '../config/loader.js'
 import type { MdmConfig } from '../config/schema.js'
-import {
-  defaultConfig,
-  MdmConfig as MdmConfigSchema,
-} from '../config/schema.js'
+import { defaultConfig } from '../config/schema.js'
 
 import {
   handleMdBacklinks,
@@ -108,24 +103,13 @@ export const createServer = (rootPath: string, config: MdmConfig) => {
  * Falls back to defaults on any config loading error to keep the
  * server operational even with a missing or malformed config file.
  */
-export const loadConfig = async (rootPath: string): Promise<MdmConfig> => {
-  const program = Effect.gen(function* () {
-    const provider = yield* createConfigProvider({
-      workingDir: rootPath,
-    })
-    return yield* (
-      MdmConfigSchema as Effect.Effect<MdmConfig, ConfigError.ConfigError>
-    ).pipe(Effect.withConfigProvider(provider))
-  })
-
-  return Effect.runPromise(
-    program.pipe(
-      Effect.catchAll((error) => {
-        console.error(`[mdm] Config loading failed, using defaults: ${error}`)
-        return Effect.succeed(defaultConfig)
-      }),
-    ),
-  )
+export const loadConfig = (rootPath: string): MdmConfig => {
+  try {
+    return load({ workingDir: rootPath })
+  } catch (error) {
+    console.error(`[mdm] Config loading failed, using defaults: ${error}`)
+    return defaultConfig
+  }
 }
 
 const main = async () => {

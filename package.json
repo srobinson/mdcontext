@@ -65,6 +65,7 @@
     "remark": "^15.0.1",
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
+    "smol-toml": "^1.6.0",
     "stemmer": "^2.0.1",
     "tiktoken": "^1.0.22",
     "unified": "^11.0.5",

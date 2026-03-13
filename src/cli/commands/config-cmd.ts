@@ -9,13 +9,11 @@ import * as path from 'node:path'
 import { Command, Options } from '@effect/cli'
 import { Console, Effect, Option } from 'effect'
 import {
-  CONFIG_FILE_NAMES,
   defaultConfig,
-  findConfigFile,
   loadConfigFile,
-  readEnvConfig,
+  type PartialMdmConfig,
+  readEnvVarsMap,
 } from '../../config/index.js'
-import type { PartialMdmConfig } from '../../config/service.js'
 import { jsonOption, prettyOption } from '../options.js'
 import { formatJson } from '../utils.js'
 
@@ -217,7 +215,7 @@ const initCommand = Command.make(
       const cwd = process.cwd()
 
       // Check if a config file already exists
-      const existingConfig = findConfigFile(cwd)
+      const existingConfig = loadConfigFile(cwd)
 
       if (existingConfig && !force) {
         if (json) {
@@ -299,16 +297,16 @@ const showCommand = Command.make(
       const cwd = process.cwd()
 
       // Find existing config file
-      const configPath = findConfigFile(cwd)
+      const configResult = loadConfigFile(cwd)
 
-      if (!configPath) {
+      if (!configResult) {
         if (json) {
           yield* Console.log(
             formatJson(
               {
                 error: 'No config file found',
                 searchedIn: cwd,
-                searchedFor: CONFIG_FILE_NAMES,
+                searchedFor: ['.mdm.toml'],
               },
               pretty,
             ),
@@ -317,9 +315,8 @@ const showCommand = Command.make(
           yield* Console.log('No config file found.')
           yield* Console.log('')
           yield* Console.log('Searched for:')
-          for (const name of CONFIG_FILE_NAMES) {
-            yield* Console.log(`  - ${name}`)
-          }
+          yield* Console.log('  - .mdm.toml (project-local)')
+          yield* Console.log('  - ~/.mdm/.mdm.toml (global)')
           yield* Console.log('')
           yield* Console.log("Run 'mdm config init' to create one.")
         }
@@ -330,13 +327,13 @@ const showCommand = Command.make(
         yield* Console.log(
           formatJson(
             {
-              configFile: configPath.path,
+              configFile: configResult.path,
             },
             pretty,
           ),
         )
       } else {
-        yield* Console.log(`Config file: ${configPath.path}`)
+        yield* Console.log(`Config file: ${configResult.path}`)
       }
     }),
 ).pipe(Command.withDescription('Show config file location'))
@@ -426,17 +423,19 @@ const getEffectiveValue = <T>(
 /**
  * Build config section with source annotations.
  */
-const buildSectionWithSources = <T extends Record<string, unknown>>(
+const buildSectionWithSources = <T extends object>(
   sectionName: string,
   defaultSection: T,
   fileSection: Partial<T> | undefined,
   envConfig: Map<string, string>,
 ): ConfigSectionWithSources<T> => {
   const result: Record<string, ConfigValueWithSource<unknown>> = {}
+  const defaults = defaultSection as unknown as Record<string, unknown>
+  const file = fileSection as unknown as Record<string, unknown> | undefined
 
-  for (const [key, defaultValue] of Object.entries(defaultSection)) {
+  for (const [key, defaultValue] of Object.entries(defaults)) {
     const envKey = `${sectionName}.${key}`
-    const fileValue = fileSection?.[key as keyof T]
+    const fileValue = file?.[key]
 
     result[key] = {
       value: getEffectiveValue(envKey, envConfig, fileValue, defaultValue),
@@ -523,20 +522,15 @@ const checkCommand = Command.make(
       const errors: string[] = []
 
       // Load config file if present
-      const configResult = yield* loadConfigFile(cwd).pipe(
-        Effect.catchTag('ConfigError', (e) => {
-          errors.push(e.message)
-          return Effect.succeed({ found: false, searched: [] } as const)
-        }),
-      )
+      const configFileResult = loadConfigFile(cwd)
 
-      const sourceFile = configResult.found ? configResult.path : null
-      const fileConfig: PartialMdmConfig = configResult.found
-        ? configResult.config
+      const sourceFile = configFileResult ? configFileResult.path : null
+      const fileConfig: PartialMdmConfig = configFileResult
+        ? configFileResult.config
         : {}
 
       // Read environment variables
-      const envConfig = readEnvConfig('MDM')
+      const envConfig = readEnvVarsMap('MDM')
 
       // Build config with source annotations
       const configWithSources: ConfigWithSources = {
@@ -555,7 +549,9 @@ const checkCommand = Command.make(
         embeddings: buildSectionWithSources(
           'embeddings',
           defaultConfig.embeddings,
-          fileConfig.embeddings,
+          fileConfig.embeddings as
+            | Partial<typeof defaultConfig.embeddings>
+            | undefined,
           envConfig,
         ),
         summarization: buildSectionWithSources(
@@ -573,7 +569,7 @@ const checkCommand = Command.make(
         paths: buildSectionWithSources(
           'paths',
           defaultConfig.paths,
-          fileConfig.paths,
+          fileConfig.paths as Partial<typeof defaultConfig.paths> | undefined,
           envConfig,
         ),
       }
