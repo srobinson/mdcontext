@@ -64,8 +64,31 @@ export type ConfigFileFormat = 'ts' | 'js' | 'json'
 // ============================================================================
 
 /**
+ * Find the git repository root by walking up from startDir looking for a .git
+ * directory. Returns null if no git root is found.
+ */
+const findGitRoot = (startDir: string): string | null => {
+  let dir = path.resolve(startDir)
+  const root = path.parse(dir).root
+
+  while (dir !== root) {
+    if (fs.existsSync(path.join(dir, '.git'))) {
+      return dir
+    }
+    const parent = path.dirname(dir)
+    if (parent === dir) break
+    dir = parent
+  }
+
+  return null
+}
+
+/**
  * Find a config file starting from the given directory.
- * Searches up the directory tree until a config file is found or root is reached.
+ * Searches up the directory tree until a config file is found or the boundary
+ * is reached. The boundary is the git repository root when inside a repo, or
+ * the filesystem root otherwise. This prevents a malicious config file in an
+ * ancestor directory outside the project from being executed via dynamic import.
  *
  * @param startDir - Directory to start searching from
  * @returns The path to the config file if found, or null
@@ -74,9 +97,11 @@ export const findConfigFile = (
   startDir: string,
 ): { path: string; format: ConfigFileFormat } | null => {
   let currentDir = path.resolve(startDir)
-  const root = path.parse(currentDir).root
+  const gitRoot = findGitRoot(currentDir)
+  const boundary = gitRoot ?? path.parse(currentDir).root
 
-  while (currentDir !== root) {
+  // Walk up until we pass the boundary
+  while (true) {
     for (const fileName of CONFIG_FILE_NAMES) {
       const configPath = path.join(currentDir, fileName)
       if (fs.existsSync(configPath)) {
@@ -84,6 +109,10 @@ export const findConfigFile = (
         return { path: configPath, format }
       }
     }
+
+    // Stop if we've reached or passed the boundary
+    if (currentDir === boundary) break
+
     const parentDir = path.dirname(currentDir)
     if (parentDir === currentDir) break
     currentDir = parentDir
@@ -186,6 +215,8 @@ export const loadConfigFile = (
         searched: CONFIG_FILE_NAMES.map((name) => path.join(startDir, name)),
       } as LoadConfigResult
     }
+
+    yield* Effect.logInfo(`Loading config from ${found.path}`)
 
     const config = yield* loadConfigFromFile(found.path, found.format)
 
