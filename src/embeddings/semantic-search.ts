@@ -22,13 +22,14 @@ import {
   loadSectionIndex,
 } from '../index/storage.js'
 import type { SectionEntry } from '../index/types.js'
+import { matchPath } from '../search/path-matcher.js'
 import {
   type ActiveProvider,
   generateNamespace,
   getActiveNamespace,
   writeActiveProvider,
 } from './embedding-namespace.js'
-import { generateHypotheticalDocument, type HydeResult } from './hyde.js'
+import { generateHypotheticalDocument } from './hyde.js'
 import {
   checkPricingFreshness,
   getPricingDate,
@@ -42,9 +43,11 @@ import {
 import {
   calculateFileImportanceBoost,
   calculateHeadingBoost,
+  preprocessQuery,
+} from './ranking.js'
+import {
   type EmbeddingProvider,
   hasProviderMetadata,
-  preprocessQuery,
   QUALITY_EF_SEARCH,
   type SemanticSearchOptions,
   type SemanticSearchResult,
@@ -55,10 +58,45 @@ import {
   createNamespacedVectorStore,
   type HnswBuildOptions,
   type HnswMismatchWarning,
-  type HnswVectorStore,
   type VectorSearchResult,
+  type VectorStore,
   type VectorStoreLoadResult,
 } from './vector-store.js'
+
+// ============================================================================
+// HNSW Singleton Cache
+// ============================================================================
+
+/**
+ * Module-level cache for loaded HNSW vector stores, keyed by
+ * `${resolvedRoot}::${namespace}`. Avoids re-reading the HNSW binary
+ * on every search request in long-lived processes (MCP server).
+ *
+ * Invalidated per-key when buildEmbeddings completes for that namespace.
+ * Per-process only, not persisted.
+ */
+const hnswCache = new Map<string, VectorStore>()
+
+const hnswCacheKey = (resolvedRoot: string, namespace: string): string =>
+  `${resolvedRoot}::${namespace}`
+
+/**
+ * Invalidate the HNSW cache entry for a given root and namespace.
+ * Called after buildEmbeddings writes new vectors to disk.
+ */
+export const invalidateHnswCache = (
+  resolvedRoot: string,
+  namespace: string,
+): void => {
+  hnswCache.delete(hnswCacheKey(resolvedRoot, namespace))
+}
+
+/**
+ * Clear the entire HNSW cache. Useful for testing.
+ */
+export const clearHnswCache = (): void => {
+  hnswCache.clear()
+}
 
 // ============================================================================
 // HNSW Parameter Warning
@@ -175,12 +213,9 @@ export const estimateEmbeddingCost = (
 
       // Check exclude patterns
       if (options.excludePatterns?.length) {
-        const excluded = options.excludePatterns.some((pattern) => {
-          const regex = new RegExp(
-            `^${pattern.replace(/\*/g, '.*').replace(/\?/g, '.')}$`,
-          )
-          return regex.test(section.documentPath)
-        })
+        const excluded = options.excludePatterns.some((pattern) =>
+          matchPath(section.documentPath, pattern),
+        )
         if (excluded) continue
       }
 
@@ -344,7 +379,7 @@ export const buildEmbeddings = (
       providerModel,
       dimensions,
       options.hnswOptions,
-    ) as HnswVectorStore
+    )
 
     // Set provider metadata
     if (hasProviderMetadata(provider)) {
@@ -353,40 +388,21 @@ export const buildEmbeddings = (
       vectorStore.setProvider(providerName, providerModel, undefined)
     }
 
-    // Load existing if not forcing
+    // Load existing vectors for delta computation (skip on --force)
+    let embeddedIds = new Set<string>()
     if (!options.force) {
       const loadResult = yield* vectorStore.load()
       if (loadResult.loaded) {
-        const stats = vectorStore.getStats()
-        // Skip if any embeddings exist
-        if (stats.count > 0) {
-          const duration = Date.now() - startTime
-          // Estimate savings based on existing tokens
-          const estimatedSavings =
-            (stats.totalTokens / 1_000_000) * EMBEDDING_PRICE_PER_MILLION
-          return {
-            sectionsEmbedded: 0,
-            tokensUsed: 0,
-            cost: 0,
-            duration,
-            filesProcessed: 0,
-            cacheHit: true,
-            existingVectors: stats.count,
-            estimatedSavings,
-          }
-        }
+        embeddedIds = vectorStore.getEmbeddedIds()
       }
     }
 
     // Helper to check if a path matches exclude patterns
     const isExcluded = (docPath: string): boolean => {
       if (!options.excludePatterns?.length) return false
-      return options.excludePatterns.some((pattern) => {
-        const regex = new RegExp(
-          `^${pattern.replace(/\*/g, '.*').replace(/\?/g, '.')}$`,
-        )
-        return regex.test(docPath)
-      })
+      return options.excludePatterns.some((pattern) =>
+        matchPath(docPath, pattern),
+      )
     }
 
     // Group sections by document for efficient file reading
@@ -428,7 +444,36 @@ export const buildEmbeddings = (
       sectionsByDoc.get(docPath)!.push({ section, parentHeading })
     }
 
+    // Collect all eligible section IDs for delta computation
+    const currentSectionIds = new Set<string>()
+    for (const sections of sectionsByDoc.values()) {
+      for (const { section } of sections) {
+        currentSectionIds.add(section.id)
+      }
+    }
+
+    // Remove stale entries: sections that were embedded but no longer exist
+    // in the current index (deleted or restructured files).
+    if (embeddedIds.size > 0) {
+      const staleIds = [...embeddedIds].filter(
+        (id) => !currentSectionIds.has(id),
+      )
+      if (staleIds.length > 0) {
+        yield* vectorStore.removeEntries(staleIds)
+      }
+    }
+
     if (sectionsByDoc.size === 0) {
+      // Still save if we removed stale entries
+      if (embeddedIds.size > 0) {
+        yield* vectorStore.save()
+        const namespace = generateNamespace(
+          providerName,
+          providerModel,
+          dimensions,
+        )
+        invalidateHnswCache(resolvedRoot, namespace)
+      }
       const duration = Date.now() - startTime
       return {
         sectionsEmbedded: 0,
@@ -483,6 +528,9 @@ export const buildEmbeddings = (
       const lines = fileContentResult.content.split('\n')
 
       for (const { section, parentHeading } of sections) {
+        // Delta: skip sections that already have embeddings
+        if (embeddedIds.has(section.id)) continue
+
         // Extract section content from file
         const content = lines
           .slice(section.startLine - 1, section.endLine)
@@ -499,13 +547,32 @@ export const buildEmbeddings = (
     }
 
     if (sectionsToEmbed.length === 0) {
+      // All sections already embedded (or stale ones were cleaned up)
+      if (embeddedIds.size > 0) {
+        yield* vectorStore.save()
+        const namespace = generateNamespace(
+          providerName,
+          providerModel,
+          dimensions,
+        )
+        invalidateHnswCache(resolvedRoot, namespace)
+      }
       const duration = Date.now() - startTime
+      const estimatedSavings =
+        embeddedIds.size > 0
+          ? (vectorStore.getStats().totalTokens / 1_000_000) *
+            EMBEDDING_PRICE_PER_MILLION
+          : 0
       return {
         sectionsEmbedded: 0,
         tokensUsed: 0,
         cost: 0,
         duration,
         filesProcessed,
+        cacheHit: embeddedIds.size > 0,
+        existingVectors:
+          embeddedIds.size > 0 ? vectorStore.getStats().count : undefined,
+        estimatedSavings: estimatedSavings > 0 ? estimatedSavings : undefined,
       }
     }
 
@@ -546,11 +613,12 @@ export const buildEmbeddings = (
     yield* vectorStore.add(entries)
     vectorStore.addCost(result.cost, result.tokensUsed)
 
-    // Save
+    // Save and invalidate cache so next search picks up new vectors
     yield* vectorStore.save()
+    const namespace = generateNamespace(providerName, providerModel, dimensions)
+    invalidateHnswCache(resolvedRoot, namespace)
 
     // Set this namespace as the active provider
-    const namespace = generateNamespace(providerName, providerModel, dimensions)
     yield* writeActiveProvider(resolvedRoot, {
       namespace,
       provider: providerName,
@@ -670,33 +738,35 @@ const addContextLinesToResults = (
   })
 
 // ============================================================================
-// Semantic Search
+// Shared Search Pipeline
 // ============================================================================
 
+/** Prepared state from the shared search pipeline setup steps. */
+interface SearchPipelineContext {
+  readonly resolvedRoot: string
+  readonly vectorStore: VectorStore
+  readonly queryVector: number[]
+  readonly limit: number
+  readonly threshold: number
+  readonly efSearch: number | undefined
+}
+
 /**
- * Perform semantic search over embedded sections.
+ * Shared setup for semantic search: resolves the root path, loads the active
+ * embedding namespace, creates the embedding provider, verifies dimension
+ * compatibility, loads the vector store, handles HyDE if enabled, and embeds
+ * the query.
  *
- * @param rootPath - Root directory containing embeddings
- * @param query - Natural language search query
- * @param options - Search options (limit, threshold, path filter)
- * @returns Ranked list of matching sections by similarity
- *
- * @throws EmbeddingsNotFoundError - No embeddings exist (run index --embed first)
- * @throws ApiKeyMissingError - API key not set (check provider config)
- * @throws ApiKeyInvalidError - API key rejected by provider
- * @throws EmbeddingError - Embedding API failure (rate limit, quota, network)
- * @throws VectorStoreError - Cannot load or search vector index
- * @throws DimensionMismatchError - Corpus has different dimensions than current provider
+ * Both `semanticSearch` and `semanticSearchWithStats` delegate here to avoid
+ * duplicating the 10-step preparation sequence.
  */
-export const semanticSearch = (
+const prepareSearchPipeline = (
   rootPath: string,
   query: string,
-  options: SemanticSearchOptions = {},
+  options: SemanticSearchOptions,
 ): Effect.Effect<
-  readonly SemanticSearchResult[],
+  SearchPipelineContext,
   | EmbeddingsNotFoundError
-  | FileReadError
-  | IndexCorruptedError
   | ApiKeyMissingError
   | ApiKeyInvalidError
   | EmbeddingError
@@ -739,32 +809,44 @@ export const semanticSearch = (
       )
     }
 
-    // Load vector store from the active namespace
-    const vectorStore = createNamespacedVectorStore(
-      resolvedRoot,
+    // Load vector store from cache or disk
+    const namespace = generateNamespace(
       activeProvider.provider,
       activeProvider.model,
       activeProvider.dimensions,
     )
-    const loadResult = yield* vectorStore.load()
+    const cacheKey = hnswCacheKey(resolvedRoot, namespace)
+    let vectorStore = hnswCache.get(cacheKey)
 
-    if (!loadResult.loaded) {
-      return yield* Effect.fail(
-        new EmbeddingsNotFoundError({ path: resolvedRoot }),
+    if (!vectorStore) {
+      const freshStore = createNamespacedVectorStore(
+        resolvedRoot,
+        activeProvider.provider,
+        activeProvider.model,
+        activeProvider.dimensions,
       )
-    }
+      const loadResult = yield* freshStore.load()
 
-    // Check for HNSW parameter mismatch
-    yield* checkHnswMismatch(loadResult.hnswMismatch)
+      if (!loadResult.loaded) {
+        return yield* Effect.fail(
+          new EmbeddingsNotFoundError({ path: resolvedRoot }),
+        )
+      }
+
+      // Check for HNSW parameter mismatch
+      yield* checkHnswMismatch(loadResult.hnswMismatch)
+
+      hnswCache.set(cacheKey, freshStore)
+      vectorStore = freshStore
+    }
 
     // Determine the text to embed
     // If HyDE is enabled, generate a hypothetical document first
     let textToEmbed: string
-    let hydeResult: HydeResult | undefined
 
     if (options.hyde) {
       // Generate hypothetical document using LLM
-      hydeResult = yield* generateHypotheticalDocument(query, {
+      const hydeResult = yield* generateHypotheticalDocument(query, {
         model: options.hydeOptions?.model,
         maxTokens: options.hydeOptions?.maxTokens,
         temperature: options.hydeOptions?.temperature,
@@ -795,30 +877,44 @@ export const semanticSearch = (
       )
     }
 
-    // Search
     const limit = options.limit ?? 10
     const threshold = options.threshold ?? 0
-
-    // Convert quality mode to efSearch value
     const efSearch = options.quality
       ? QUALITY_EF_SEARCH[options.quality]
       : undefined
 
-    const searchResults = yield* vectorStore.search(
+    return {
+      resolvedRoot,
+      vectorStore,
       queryVector,
-      limit * 2,
+      limit,
       threshold,
-      { efSearch },
-    )
+      efSearch,
+    }
+  })
 
+/**
+ * Shared post-search processing: applies path filtering, heading/file
+ * importance boost, re-sorts by boosted similarity, applies limit, and
+ * optionally loads context lines.
+ */
+const postProcessResults = (
+  rawResults: readonly VectorSearchResult[],
+  query: string,
+  options: SemanticSearchOptions,
+  resolvedRoot: string,
+  limit: number,
+): Effect.Effect<
+  { results: readonly SemanticSearchResult[]; totalAvailable: number },
+  FileReadError | IndexCorruptedError
+> =>
+  Effect.gen(function* () {
     // Apply path filter if specified
-    let filteredResults = searchResults
+    let filteredResults = rawResults
     if (options.pathPattern) {
-      const pattern = options.pathPattern
-        .replace(/\./g, '\\.')
-        .replace(/\*/g, '.*')
-      const regex = new RegExp(`^${pattern}$`, 'i')
-      filteredResults = searchResults.filter((r) => regex.test(r.documentPath))
+      filteredResults = rawResults.filter((r) =>
+        matchPath(r.documentPath, options.pathPattern!),
+      )
     }
 
     // Apply ranking boost (heading + file importance, enabled by default)
@@ -836,9 +932,11 @@ export const semanticSearch = (
       : filteredResults
 
     // Re-sort by boosted similarity
-    const sortedResults = boostedResults.sort(
-      (a, b) => b.similarity - a.similarity,
+    const sortedResults = [...boostedResults].sort(
+      (a: VectorSearchResult, b: VectorSearchResult) =>
+        b.similarity - a.similarity,
     )
+    const totalAvailable = sortedResults.length
     const limitedResults = sortedResults.slice(0, limit)
 
     // If context lines are requested, load section content
@@ -858,7 +956,7 @@ export const semanticSearch = (
           options,
         )
       } else {
-        results = limitedResults.map((r) => ({
+        results = limitedResults.map((r: VectorSearchResult) => ({
           sectionId: r.sectionId,
           documentPath: r.documentPath,
           heading: r.heading,
@@ -866,13 +964,68 @@ export const semanticSearch = (
         }))
       }
     } else {
-      results = limitedResults.map((r) => ({
+      results = limitedResults.map((r: VectorSearchResult) => ({
         sectionId: r.sectionId,
         documentPath: r.documentPath,
         heading: r.heading,
         similarity: r.similarity,
       }))
     }
+
+    return { results, totalAvailable }
+  })
+
+// ============================================================================
+// Public API
+// ============================================================================
+
+/**
+ * Perform semantic search over embedded sections.
+ *
+ * @param rootPath - Root directory containing embeddings
+ * @param query - Natural language search query
+ * @param options - Search options (limit, threshold, path filter)
+ * @returns Ranked list of matching sections by similarity
+ *
+ * @throws EmbeddingsNotFoundError - No embeddings exist (run index --embed first)
+ * @throws ApiKeyMissingError - API key not set (check provider config)
+ * @throws ApiKeyInvalidError - API key rejected by provider
+ * @throws EmbeddingError - Embedding API failure (rate limit, quota, network)
+ * @throws VectorStoreError - Cannot load or search vector index
+ * @throws DimensionMismatchError - Corpus has different dimensions than current provider
+ */
+export const semanticSearch = (
+  rootPath: string,
+  query: string,
+  options: SemanticSearchOptions = {},
+): Effect.Effect<
+  readonly SemanticSearchResult[],
+  | EmbeddingsNotFoundError
+  | FileReadError
+  | IndexCorruptedError
+  | ApiKeyMissingError
+  | ApiKeyInvalidError
+  | EmbeddingError
+  | VectorStoreError
+  | DimensionMismatchError
+> =>
+  Effect.gen(function* () {
+    const ctx = yield* prepareSearchPipeline(rootPath, query, options)
+
+    const searchResults = yield* ctx.vectorStore.search(
+      ctx.queryVector,
+      ctx.limit * 2,
+      ctx.threshold,
+      { efSearch: ctx.efSearch },
+    )
+
+    const { results } = yield* postProcessResults(
+      searchResults,
+      query,
+      options,
+      ctx.resolvedRoot,
+      ctx.limit,
+    )
 
     return results
   })
@@ -910,178 +1063,22 @@ export const semanticSearchWithStats = (
   | DimensionMismatchError
 > =>
   Effect.gen(function* () {
-    const resolvedRoot = path.resolve(rootPath)
+    const ctx = yield* prepareSearchPipeline(rootPath, query, options)
 
-    // Get active namespace to determine which embedding index to use
-    const activeProvider = yield* getActiveNamespace(resolvedRoot).pipe(
-      Effect.catchAll(() => Effect.succeed(null as ActiveProvider | null)),
+    const searchResultWithStats = yield* ctx.vectorStore.searchWithStats(
+      ctx.queryVector,
+      ctx.limit * 2,
+      ctx.threshold,
+      { efSearch: ctx.efSearch },
     )
 
-    if (!activeProvider) {
-      return yield* Effect.fail(
-        new EmbeddingsNotFoundError({ path: resolvedRoot }),
-      )
-    }
-
-    // Create provider for query embedding
-    const provider = yield* createEmbeddingProviderDirect(
-      options.providerConfig ?? { provider: 'openai' },
+    const { results, totalAvailable } = yield* postProcessResults(
+      searchResultWithStats.results,
+      query,
+      options,
+      ctx.resolvedRoot,
+      ctx.limit,
     )
-    const dimensions = provider.dimensions
-
-    // Get current provider name for error messages
-    const currentProviderName = options.providerConfig?.provider ?? 'openai'
-
-    // Verify dimensions match the active namespace
-    if (dimensions !== activeProvider.dimensions) {
-      return yield* Effect.fail(
-        new DimensionMismatchError({
-          corpusDimensions: activeProvider.dimensions,
-          providerDimensions: dimensions,
-          corpusProvider: `${activeProvider.provider}:${activeProvider.model}`,
-          currentProvider: currentProviderName,
-          path: resolvedRoot,
-        }),
-      )
-    }
-
-    // Load vector store from the active namespace
-    const vectorStore = createNamespacedVectorStore(
-      resolvedRoot,
-      activeProvider.provider,
-      activeProvider.model,
-      activeProvider.dimensions,
-    )
-    const loadResult = yield* vectorStore.load()
-
-    if (!loadResult.loaded) {
-      return yield* Effect.fail(
-        new EmbeddingsNotFoundError({ path: resolvedRoot }),
-      )
-    }
-
-    // Check for HNSW parameter mismatch
-    yield* checkHnswMismatch(loadResult.hnswMismatch)
-
-    // Determine the text to embed
-    // If HyDE is enabled, generate a hypothetical document first
-    let textToEmbed: string
-    let hydeResult: HydeResult | undefined
-
-    if (options.hyde) {
-      // Generate hypothetical document using LLM
-      hydeResult = yield* generateHypotheticalDocument(query, {
-        model: options.hydeOptions?.model,
-        maxTokens: options.hydeOptions?.maxTokens,
-        temperature: options.hydeOptions?.temperature,
-      })
-      textToEmbed = hydeResult.hypotheticalDocument
-      yield* Effect.logDebug(
-        `HyDE generated ${hydeResult.tokensUsed} tokens ($${hydeResult.cost.toFixed(6)})`,
-      )
-    } else {
-      // Preprocess query for better recall (unless disabled)
-      textToEmbed = options.skipPreprocessing ? query : preprocessQuery(query)
-    }
-
-    // Embed the query (or hypothetical document)
-    const queryResult = yield* wrapEmbedding(
-      provider.embed([textToEmbed]),
-      currentProviderName,
-    )
-
-    const queryVector = queryResult.embeddings[0]
-    if (!queryVector) {
-      return yield* Effect.fail(
-        new EmbeddingError({
-          reason: 'Unknown',
-          message: 'Failed to generate query embedding',
-          provider: currentProviderName,
-        }),
-      )
-    }
-
-    // Search with stats
-    const limit = options.limit ?? 10
-    const threshold = options.threshold ?? 0
-
-    // Convert quality mode to efSearch value
-    const efSearch = options.quality
-      ? QUALITY_EF_SEARCH[options.quality]
-      : undefined
-
-    const searchResultWithStats = yield* vectorStore.searchWithStats(
-      queryVector,
-      limit * 2,
-      threshold,
-      { efSearch },
-    )
-
-    // Apply path filter if specified
-    let filteredResults = searchResultWithStats.results
-    if (options.pathPattern) {
-      const pattern = options.pathPattern
-        .replace(/\./g, '\\.')
-        .replace(/\*/g, '.*')
-      const regex = new RegExp(`^${pattern}$`, 'i')
-      filteredResults = searchResultWithStats.results.filter((r) =>
-        regex.test(r.documentPath),
-      )
-    }
-
-    // Apply ranking boost (heading + file importance, enabled by default)
-    const applyBoost = options.headingBoost !== false
-    const boostedResults = applyBoost
-      ? filteredResults.map((r) => ({
-          ...r,
-          similarity: Math.min(
-            1,
-            r.similarity +
-              calculateHeadingBoost(r.heading, query) +
-              calculateFileImportanceBoost(r.documentPath),
-          ),
-        }))
-      : filteredResults
-
-    // Re-sort by boosted similarity and convert to SemanticSearchResult
-    const sortedResults = boostedResults.sort(
-      (a, b) => b.similarity - a.similarity,
-    )
-    const totalAvailable = sortedResults.length
-    const limitedResults = sortedResults.slice(0, limit)
-
-    // If context lines are requested, load section content
-    let results: readonly SemanticSearchResult[]
-    if (
-      options.contextBefore !== undefined ||
-      options.contextAfter !== undefined
-    ) {
-      const storage = createStorage(resolvedRoot)
-      const sectionIndex = yield* loadSectionIndex(storage)
-
-      if (sectionIndex) {
-        results = yield* addContextLinesToResults(
-          limitedResults,
-          sectionIndex,
-          resolvedRoot,
-          options,
-        )
-      } else {
-        results = limitedResults.map((r) => ({
-          sectionId: r.sectionId,
-          documentPath: r.documentPath,
-          heading: r.heading,
-          similarity: r.similarity,
-        }))
-      }
-    } else {
-      results = limitedResults.map((r) => ({
-        sectionId: r.sectionId,
-        documentPath: r.documentPath,
-        heading: r.heading,
-        similarity: r.similarity,
-      }))
-    }
 
     return {
       results,
@@ -1229,31 +1226,44 @@ export const getEmbeddingStats = (
       }
     }
 
-    // Load the namespaced vector store to get stats
-    const vectorStore = createNamespacedVectorStore(
-      resolvedRoot,
+    // Load the namespaced vector store from cache or disk
+    const namespace = generateNamespace(
       activeProvider.provider,
       activeProvider.model,
       activeProvider.dimensions,
     )
+    const cacheKey = hnswCacheKey(resolvedRoot, namespace)
+    let vectorStore = hnswCache.get(cacheKey)
 
-    const loadResult = yield* vectorStore
-      .load()
-      .pipe(
-        Effect.catchAll(() =>
-          Effect.succeed({ loaded: false } as VectorStoreLoadResult),
-        ),
+    if (!vectorStore) {
+      const freshStore = createNamespacedVectorStore(
+        resolvedRoot,
+        activeProvider.provider,
+        activeProvider.model,
+        activeProvider.dimensions,
       )
 
-    if (!loadResult.loaded) {
-      return {
-        hasEmbeddings: false,
-        count: 0,
-        provider: 'none',
-        dimensions: 0,
-        totalCost: 0,
-        totalTokens: 0,
+      const loadResult = yield* freshStore
+        .load()
+        .pipe(
+          Effect.catchAll(() =>
+            Effect.succeed({ loaded: false } as VectorStoreLoadResult),
+          ),
+        )
+
+      if (!loadResult.loaded) {
+        return {
+          hasEmbeddings: false,
+          count: 0,
+          provider: 'none',
+          dimensions: 0,
+          totalCost: 0,
+          totalTokens: 0,
+        }
       }
+
+      hnswCache.set(cacheKey, freshStore)
+      vectorStore = freshStore
     }
 
     const stats = vectorStore.getStats()

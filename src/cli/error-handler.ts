@@ -17,7 +17,7 @@
  */
 
 import { Console, Effect, Match } from 'effect'
-import type { EmbeddingProvider } from '../config/schema.js'
+import type { EmbeddingProviderName } from '../config/schema.js'
 import {
   detectProviderError,
   getProviderErrorTitle,
@@ -28,6 +28,7 @@ import type {
   ApiKeyMissingError,
   CliValidationError,
   ConfigError,
+  DimensionMismatchError,
   DirectoryCreateError,
   DirectoryWalkError,
   DocumentNotFoundError,
@@ -40,6 +41,7 @@ import type {
   IndexNotFoundError,
   MdContextError,
   ParseError,
+  SummarizationError,
   VectorStoreError,
   WatchError,
 } from '../errors/index.js'
@@ -213,7 +215,7 @@ export const formatError = (error: MdContextError): FormattedError =>
     // Embedding errors - enhanced with provider-specific detection
     Match.tag('EmbeddingError', (e) => {
       // Try to detect provider-specific error for better messaging
-      const provider = (e.provider ?? 'openai') as EmbeddingProvider
+      const provider = (e.provider ?? 'openai') as EmbeddingProviderName
       const providerError = detectProviderError(provider, e.cause)
 
       if (providerError) {
@@ -414,7 +416,26 @@ export const formatError = (error: MdContextError): FormattedError =>
       exitCode: EXIT_CODE.USER_ERROR,
     })),
 
-    Match.exhaustive,
+    // Summarization errors
+    Match.tag('SummarizationError', (e) => ({
+      code: e.code,
+      message: e.message,
+      details: e.provider ? `Provider: ${e.provider}` : undefined,
+      suggestions: [
+        'Try a different provider with --provider',
+        "Run 'mdcontext search' without --summarize",
+      ] as const,
+      exitCode: EXIT_CODE.SYSTEM_ERROR,
+    })),
+
+    // Fallback for any unmatched error types
+    Match.orElse((e) => ({
+      code: 'E999' as string,
+      message: (e as { message?: string }).message ?? 'Unknown error',
+      details: undefined,
+      suggestions: [] as readonly string[],
+      exitCode: EXIT_CODE.SYSTEM_ERROR,
+    })),
   )
 
 // ============================================================================
@@ -447,6 +468,29 @@ export const displayError = (
   })
 
 /**
+ * Sensitive field patterns that should be redacted from debug output.
+ * Matches keys containing these substrings (case-insensitive).
+ */
+const SENSITIVE_KEY_PATTERN =
+  /api[_-]?key|authorization|token|secret|password|credential/i
+
+/**
+ * JSON.stringify replacer that redacts sensitive fields from error objects.
+ * Prevents API keys from leaking when the error cause chain contains HTTP
+ * request context (e.g. from the OpenAI SDK).
+ */
+const sensitiveFieldReplacer = (_key: string, value: unknown): unknown => {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const sanitized: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      sanitized[k] = SENSITIVE_KEY_PATTERN.test(k) ? '[REDACTED]' : v
+    }
+    return sanitized
+  }
+  return value
+}
+
+/**
  * Display error with debug information (stack trace, full context)
  */
 export const displayErrorDebug = (
@@ -459,7 +503,9 @@ export const displayErrorDebug = (
     yield* Console.error('--- Debug Info ---')
     yield* Console.error(`Code: ${formatted.code}`)
     yield* Console.error(`Tag: ${error._tag}`)
-    yield* Console.error(`Error: ${JSON.stringify(error, null, 2)}`)
+    yield* Console.error(
+      `Error: ${JSON.stringify(error, sensitiveFieldReplacer, 2)}`,
+    )
 
     // Show cause/stack if available
     if ('cause' in error && error.cause) {
@@ -519,10 +565,13 @@ export const createErrorHandler = (options: { debug?: boolean } = {}) => ({
   DocumentNotFoundError: (e: DocumentNotFoundError) => handleError(e, options),
   EmbeddingsNotFoundError: (e: EmbeddingsNotFoundError) =>
     handleError(e, options),
+  DimensionMismatchError: (e: DimensionMismatchError) =>
+    handleError(e, options),
   VectorStoreError: (e: VectorStoreError) => handleError(e, options),
   WatchError: (e: WatchError) => handleError(e, options),
   ConfigError: (e: ConfigError) => handleError(e, options),
   CliValidationError: (e: CliValidationError) => handleError(e, options),
+  SummarizationError: (e: SummarizationError) => handleError(e, options),
 })
 
 // ============================================================================

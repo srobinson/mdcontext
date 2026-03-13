@@ -6,31 +6,21 @@
  * API-based providers (pay-per-use via Vercel AI SDK).
  */
 
+import { Data } from 'effect'
+
+// Re-export provider name types from canonical location
+export type {
+  APIProviderName,
+  CLIProviderName,
+} from '../config/schema.js'
+
+// Import for local use
+import type { APIProviderName, CLIProviderName } from '../config/schema.js'
+
 /**
  * Summarization mode - CLI providers are free, API providers cost money
  */
 export type SummarizationMode = 'cli' | 'api'
-
-/**
- * Known CLI tools that can be used for summarization
- */
-export type CLIProviderName =
-  | 'claude'
-  | 'copilot'
-  | 'cline'
-  | 'aider'
-  | 'opencode'
-  | 'amp'
-
-/**
- * Known API providers for summarization
- */
-export type APIProviderName =
-  | 'deepseek'
-  | 'anthropic'
-  | 'openai'
-  | 'gemini'
-  | 'qwen'
 
 /**
  * Information about a detected CLI tool
@@ -159,20 +149,8 @@ export type SummarizerFactory = (
 ) => Promise<Summarizer>
 
 /**
- * Error types specific to summarization
+ * Error codes specific to summarization
  */
-export class SummarizationError extends Error {
-  constructor(
-    message: string,
-    public readonly code: SummarizationErrorCode,
-    public readonly provider?: string,
-    public readonly cause?: Error,
-  ) {
-    super(message)
-    this.name = 'SummarizationError'
-  }
-}
-
 export type SummarizationErrorCode =
   | 'PROVIDER_NOT_FOUND'
   | 'PROVIDER_NOT_AVAILABLE'
@@ -182,3 +160,16 @@ export type SummarizationErrorCode =
   | 'INVALID_RESPONSE'
   | 'TIMEOUT'
   | 'NO_API_KEY'
+
+/**
+ * Summarization error as Data.TaggedError for Effect integration.
+ *
+ * Can be caught with Effect.catchTag('SummarizationError', ...) and
+ * is part of the MdContextError union.
+ */
+export class SummarizationError extends Data.TaggedError('SummarizationError')<{
+  readonly message: string
+  readonly code: SummarizationErrorCode
+  readonly provider?: string
+  readonly cause?: Error
+}> {}

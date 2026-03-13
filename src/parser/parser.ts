@@ -6,7 +6,16 @@
 import * as crypto from 'node:crypto'
 import { Effect } from 'effect'
 import matter from 'gray-matter'
-import type { Code, Heading, Image, Link, Parent, Root, Text } from 'mdast'
+import type {
+  Code,
+  Heading,
+  Image,
+  Link,
+  Parent,
+  Root,
+  RootContent,
+  Text,
+} from 'mdast'
 import remarkGfm from 'remark-gfm'
 import remarkParse from 'remark-parse'
 import { unified } from 'unified'
@@ -19,9 +28,8 @@ import type {
   MdDocument,
   MdLink,
   MdSection,
-  ParseError,
 } from '../core/types.js'
-import { FileReadError } from '../errors/index.js'
+import { FileReadError, type ParseError } from '../errors/index.js'
 import { countTokensApprox, countWords } from '../utils/tokens.js'
 
 // ============================================================================
@@ -83,7 +91,7 @@ interface RawSection {
   startLine: number
   endLine: number
   contentStartLine: number
-  contentNodes: unknown[]
+  contentNodes: RootContent[]
 }
 
 const extractRawSections = (tree: Root): RawSection[] => {
@@ -142,20 +150,14 @@ const buildSectionHierarchy = (
   for (const raw of rawSections) {
     const contentLines = lines.slice(raw.startLine - 1, raw.endLine)
     const content = contentLines.join('\n')
-    const plainText = extractSectionPlainText(raw.contentNodes as Parent[])
+    const plainText = extractSectionPlainText(raw.contentNodes)
 
-    const hasCode = (raw.contentNodes as { type: string }[]).some(
-      (n) => n.type === 'code',
-    )
-    const hasList = (raw.contentNodes as { type: string }[]).some(
-      (n) => n.type === 'list',
-    )
-    const hasTable = (raw.contentNodes as { type: string }[]).some(
-      (n) => n.type === 'table',
-    )
+    const hasCode = raw.contentNodes.some((n) => n.type === 'code')
+    const hasList = raw.contentNodes.some((n) => n.type === 'list')
+    const hasTable = raw.contentNodes.some((n) => n.type === 'table')
 
     const section: MdSection = {
-      id: `${docId}-${slugify(raw.heading)}`,
+      id: `${docId}-${slugify(raw.heading)}-L${raw.startLine}`,
       heading: raw.heading,
       level: raw.level,
       content,
@@ -190,7 +192,7 @@ const buildSectionHierarchy = (
   return result
 }
 
-const extractSectionPlainText = (nodes: Parent[]): string => {
+const extractSectionPlainText = (nodes: RootContent[]): string => {
   const texts: string[] = []
   for (const node of nodes) {
     if ('value' in node && typeof node.value === 'string') {
@@ -221,7 +223,7 @@ const extractLinks = (tree: Root, docId: string): MdLink[] => {
 
   visit(tree, (node) => {
     if (node.type === 'heading') {
-      currentSectionId = `${docId}-${slugify(extractPlainText(node as Heading))}`
+      currentSectionId = `${docId}-${slugify(extractPlainText(node as Heading))}-L${getNodeStartLine(node)}`
     }
 
     if (node.type === 'link') {
@@ -261,7 +263,7 @@ const extractCodeBlocks = (tree: Root, docId: string): MdCodeBlock[] => {
 
   visit(tree, (node) => {
     if (node.type === 'heading') {
-      currentSectionId = `${docId}-${slugify(extractPlainText(node as Heading))}`
+      currentSectionId = `${docId}-${slugify(extractPlainText(node as Heading))}-L${getNodeStartLine(node)}`
     }
 
     if (node.type === 'code') {
@@ -308,8 +310,8 @@ export const parse = (
     } catch (error) {
       // Malformed frontmatter - treat entire content as markdown
       const msg = error instanceof Error ? error.message : String(error)
-      console.warn(
-        `Warning: Malformed frontmatter in ${path}, skipping: ${msg.split('\n')[0]}`,
+      yield* Effect.logWarning(
+        `Malformed frontmatter in ${path}, skipping: ${msg.split('\n')[0]}`,
       )
     }
 

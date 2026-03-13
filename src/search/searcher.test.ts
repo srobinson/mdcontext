@@ -277,4 +277,47 @@ Set the configuration options carefully.
       expect(results.length).toBeGreaterThanOrEqual(1)
     })
   })
+
+  // Security: ReDoS protection (ALP-1237 / ALP-1196)
+  describe('security: ReDoS protection', () => {
+    it('rejects classic catastrophic backtracking pattern (a+)+$', async () => {
+      await expect(
+        runEffect(searchContent(TEST_DIR, { heading: '(a+)+$' })),
+      ).rejects.toThrow(/catastrophic backtracking/)
+    })
+
+    it('rejects nested quantifier pattern (.*a){20}', async () => {
+      await expect(
+        runEffect(searchContent(TEST_DIR, { heading: '(.*a){20}' })),
+      ).rejects.toThrow(/catastrophic backtracking/)
+    })
+
+    it('rejects overlapping alternation under quantifier (a|a)+', async () => {
+      await expect(
+        runEffect(searchContent(TEST_DIR, { heading: '(a|a)+' })),
+      ).rejects.toThrow(/catastrophic backtracking/)
+    })
+
+    it('rejects wildcard alternation under quantifier (.|\\s)+', async () => {
+      await expect(
+        runEffect(searchContent(TEST_DIR, { heading: '(.|\\s)+' })),
+      ).rejects.toThrow(/catastrophic backtracking/)
+    })
+
+    it('allows safe regex patterns', async () => {
+      // Simple patterns without nested quantifiers should pass
+      const results = await runEffect(
+        searchContent(TEST_DIR, { heading: 'test.*file' }),
+      )
+      expect(results).toBeDefined()
+    })
+
+    it('allows quantifiers outside groups', async () => {
+      // a+ is safe because there is no nesting
+      const results = await runEffect(
+        searchContent(TEST_DIR, { heading: 'a+' }),
+      )
+      expect(results).toBeDefined()
+    })
+  })
 })

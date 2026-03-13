@@ -5,7 +5,7 @@
  * and maintain a single source of truth.
  */
 
-import type { EmbeddingProvider } from '../config/schema.js'
+import type { EmbeddingProviderName } from '../config/schema.js'
 
 // ============================================================================
 // Model Dimension Defaults
@@ -136,14 +136,16 @@ export const validateModelDimensions = (
  * - openrouter: OpenRouter API gateway
  * - voyage: Voyage AI API (uses native SDK, not OpenAI-compatible)
  */
-export const PROVIDER_BASE_URLS: Record<EmbeddingProvider, string | undefined> =
-  {
-    openai: undefined, // Use OpenAI SDK default
-    ollama: 'http://localhost:11434/v1',
-    'lm-studio': 'http://localhost:1234/v1',
-    openrouter: 'https://openrouter.ai/api/v1',
-    voyage: 'https://api.voyageai.com/v1', // Native API, handled by VoyageProvider
-  } as const
+export const PROVIDER_BASE_URLS: Record<
+  EmbeddingProviderName,
+  string | undefined
+> = {
+  openai: undefined, // Use OpenAI SDK default
+  ollama: 'http://localhost:11434/v1',
+  'lm-studio': 'http://localhost:1234/v1',
+  openrouter: 'https://openrouter.ai/api/v1',
+  voyage: 'https://api.voyageai.com/v1', // Native API, handled by VoyageProvider
+} as const
 
 // ============================================================================
 // Port Detection Utilities
@@ -187,13 +189,13 @@ export const PROVIDER_PORTS: Record<string, number> = (() => {
  */
 export const inferProviderFromUrl = (
   baseURL: string | undefined,
-): EmbeddingProvider => {
+): EmbeddingProviderName => {
   if (!baseURL) return 'openai'
 
   // Check each provider's base URL
   for (const [provider, providerUrl] of Object.entries(PROVIDER_BASE_URLS)) {
     if (providerUrl && baseURL.includes(providerUrl.replace('/v1', ''))) {
-      return provider as EmbeddingProvider
+      return provider as EmbeddingProviderName
     }
   }
 

@@ -63,6 +63,7 @@
  */
 
 import { Data } from 'effect'
+import type { SummarizationError } from '../summarization/types.js'
 
 // ============================================================================
 // Error Codes
@@ -389,7 +390,13 @@ export class ConfigError extends Data.TaggedError('ConfigError')<{
  * Error with vector store operations (HNSW index)
  */
 export class VectorStoreError extends Data.TaggedError('VectorStoreError')<{
-  readonly operation: 'init' | 'add' | 'search' | 'save' | 'load'
+  readonly operation:
+    | 'init'
+    | 'add'
+    | 'search'
+    | 'save'
+    | 'load'
+    | 'removeEntries'
   readonly message: string
   readonly cause?: unknown
 }> {
@@ -531,3 +538,7 @@ export type MdContextError =
   | ConfigError
   | WatchError
   | CliValidationError
+  | SummarizationError
+
+// Re-export SummarizationError for centralized error handling
+export { SummarizationError } from '../summarization/types.js'

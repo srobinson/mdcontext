@@ -6,7 +6,7 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { Effect } from 'effect'
 import type { Ignore } from 'ignore'
-import type { MdSection } from '../core/types.js'
+import type { MdDocument, MdSection } from '../core/types.js'
 import {
   type DirectoryCreateError,
   DirectoryWalkError,
@@ -58,22 +58,29 @@ interface WalkResult {
   }
 }
 
+interface WalkOptions {
+  readonly followSymlinks?: boolean | undefined
+}
+
 /**
  * Walk directory using ignore filter for pattern matching.
  *
  * @param dir - Directory to walk
  * @param rootPath - Root path for computing relative paths
  * @param filter - Ignore filter instance
+ * @param options - Walk options (e.g. followSymlinks)
  * @returns Walk result with files and skip counts
  */
 const walkDirectory = async (
   dir: string,
   rootPath: string,
   filter: Ignore,
+  options: WalkOptions = {},
 ): Promise<WalkResult> => {
   const files: string[] = []
   let hiddenCount = 0
   let excludedCount = 0
+  const normalizedRoot = path.resolve(rootPath)
   const entries = await fs.readdir(dir, { withFileTypes: true })
 
   for (const entry of entries) {
@@ -98,8 +105,39 @@ const walkDirectory = async (
       continue
     }
 
+    // Handle symbolic links when followSymlinks is enabled
+    if (entry.isSymbolicLink() && options.followSymlinks) {
+      try {
+        const realPath = await fs.realpath(fullPath)
+        if (
+          !realPath.startsWith(normalizedRoot + path.sep) &&
+          realPath !== normalizedRoot
+        ) {
+          // Symlink target escapes the root boundary; skip it
+          continue
+        }
+        const stat = await fs.stat(realPath)
+        if (stat.isDirectory()) {
+          const subResult = await walkDirectory(
+            fullPath,
+            rootPath,
+            filter,
+            options,
+          )
+          files.push(...subResult.files)
+          hiddenCount += subResult.skipped.hidden
+          excludedCount += subResult.skipped.excluded
+        } else if (stat.isFile() && isMarkdownFile(entry.name)) {
+          files.push(fullPath)
+        }
+      } catch {
+        // Broken symlink or permission error; skip silently
+      }
+      continue
+    }
+
     if (entry.isDirectory()) {
-      const subResult = await walkDirectory(fullPath, rootPath, filter)
+      const subResult = await walkDirectory(fullPath, rootPath, filter, options)
       files.push(...subResult.files)
       hiddenCount += subResult.skipped.hidden
       excludedCount += subResult.skipped.excluded
@@ -197,8 +235,16 @@ export interface IndexOptions {
   readonly honorGitignore?: boolean | undefined
   /** Whether to honor .mdcontextignore (default: true) */
   readonly honorMdcontextignore?: boolean | undefined
+  /** Whether to follow symbolic links during directory traversal (default: false) */
+  readonly followSymlinks?: boolean | undefined
   /** Callback for progress updates during file indexing */
   readonly onProgress?: ((progress: IndexProgress) => void) | undefined
+  /**
+   * When provided, skip full directory walk and process only these paths.
+   * Used by the watcher to pass accumulated changed file paths during the
+   * debounce window. Absolute paths expected.
+   */
+  readonly changedPaths?: readonly string[] | undefined
 }
 
 export const buildIndex = (
@@ -227,11 +273,17 @@ export const buildIndex = (
         ? createEmptyDocumentIndex(storage.rootPath)
         : existingDocIndex
 
-    // Load existing section and link indexes to preserve data for unchanged files
+    // Load existing section and link indexes to preserve data for unchanged files.
+    // When force is true, start from empty indexes to avoid stale byHeading entries
+    // accumulating (the document index is empty so cleanup cannot find old entries).
     const existingSectionIndex = yield* loadSectionIndex(storage)
     const existingLinkIndex = yield* loadLinkIndex(storage)
-    const sectionIndex = existingSectionIndex ?? createEmptySectionIndex()
-    const linkIndex = existingLinkIndex ?? createEmptyLinkIndex()
+    const sectionIndex = options.force
+      ? createEmptySectionIndex()
+      : (existingSectionIndex ?? createEmptySectionIndex())
+    const linkIndex = options.force
+      ? createEmptyLinkIndex()
+      : (existingLinkIndex ?? createEmptyLinkIndex())
 
     // Build ignore filter with proper precedence:
     // CLI/config patterns > .mdcontextignore > .gitignore > defaults
@@ -242,19 +294,63 @@ export const buildIndex = (
       honorMdcontextignore: options.honorMdcontextignore ?? true,
     })
 
-    // Discover files using the ignore filter
-    const walkResult = yield* Effect.tryPromise({
-      try: () =>
-        walkDirectory(storage.rootPath, storage.rootPath, ignoreResult.filter),
-      catch: (e) =>
-        new DirectoryWalkError({
-          path: storage.rootPath,
-          message: `Failed to traverse directory: ${e instanceof Error ? e.message : String(e)}`,
-          cause: e,
-        }),
-    })
+    // Discover files: use changedPaths if provided (watcher mode),
+    // otherwise do a full directory walk
+    let files: string[]
+    let walkSkipped: { excluded: number; hidden: number }
 
-    const { files, skipped: walkSkipped } = walkResult
+    // Track paths that were deleted (watcher mode only). Populated during
+    // file discovery, consumed after mutable indexes are initialized.
+    const deletedPaths: string[] = []
+
+    if (options.changedPaths && options.changedPaths.length > 0) {
+      // Watcher mode: separate deleted files from changed/added files.
+      // Deleted paths arrive from chokidar's unlink event and no longer
+      // exist on disk. Attempting fs.readFile on them would ENOENT, leaving
+      // stale entries in the index.
+      const markdownPaths = options.changedPaths.filter((p) =>
+        isMarkdownFile(p),
+      ) as string[]
+      const existResults = yield* Effect.promise(() =>
+        Promise.all(
+          markdownPaths.map((p) =>
+            fs
+              .stat(p)
+              .then(() => true)
+              .catch(() => false),
+          ),
+        ),
+      )
+      files = []
+      for (let i = 0; i < markdownPaths.length; i++) {
+        if (existResults[i]) {
+          files.push(markdownPaths[i]!)
+        } else {
+          deletedPaths.push(markdownPaths[i]!)
+        }
+      }
+      walkSkipped = { excluded: 0, hidden: 0 }
+    } else {
+      const walkResult = yield* Effect.tryPromise({
+        try: () =>
+          walkDirectory(
+            storage.rootPath,
+            storage.rootPath,
+            ignoreResult.filter,
+            {
+              followSymlinks: options.followSymlinks,
+            },
+          ),
+        catch: (e) =>
+          new DirectoryWalkError({
+            path: storage.rootPath,
+            message: `Failed to traverse directory: ${e instanceof Error ? e.message : String(e)}`,
+            cause: e,
+          }),
+      })
+      files = walkResult.files
+      walkSkipped = walkResult.skipped
+    }
 
     // Process each file
     let documentsIndexed = 0
@@ -293,25 +389,71 @@ export const buildIndex = (
         Object.entries(linkIndex.backward).map(([k, v]) => [k, [...v]]),
       ),
     )
-    const brokenLinks: string[] = [...linkIndex.broken]
+    const brokenLinks = new Set<string>(linkIndex.broken)
+
+    // Remove deleted files from all indexes before the parse phase.
+    // In watcher mode, chokidar's unlink events produce paths that no longer
+    // exist on disk. Without this cleanup, stale document/section/link entries
+    // persist in the stored index after a file is deleted or renamed.
+    for (const deletedPath of deletedPaths) {
+      const relativePath = path.relative(storage.rootPath, deletedPath)
+      const existingEntry = mutableDocuments[relativePath]
+      if (!existingEntry) continue
+
+      // Remove sections belonging to this document
+      const oldSectionIds = mutableByDocument[existingEntry.id] ?? []
+      for (const sectionId of oldSectionIds) {
+        const oldSection = mutableSections[sectionId]
+        if (oldSection) {
+          const headingKey = oldSection.heading.toLowerCase()
+          const headingList = mutableByHeading[headingKey]
+          if (headingList) {
+            const idx = headingList.indexOf(sectionId)
+            if (idx !== -1) headingList.splice(idx, 1)
+          }
+        }
+        delete mutableSections[sectionId]
+      }
+      delete mutableByDocument[existingEntry.id]
+
+      // Remove forward links from this document and clean up backward refs
+      const forwardTargets = mutableForward[relativePath] ?? []
+      for (const target of forwardTargets) {
+        const backList = mutableBackward[target]
+        if (backList) {
+          const idx = backList.indexOf(relativePath)
+          if (idx !== -1) backList.splice(idx, 1)
+        }
+      }
+      delete mutableForward[relativePath]
+
+      // Remove backward entry for this path (other files linking here).
+      // The broken-link scan at the end of Phase 2 will re-flag these
+      // targets since the document no longer exists in mutableDocuments.
+      delete mutableBackward[relativePath]
+
+      // Remove document entry
+      delete mutableDocuments[relativePath]
+    }
+
     const totalFiles = files.length
 
-    for (let fileIndex = 0; fileIndex < files.length; fileIndex++) {
-      const filePath = files[fileIndex]!
+    // Phase 1: Read and parse files concurrently.
+    // I/O and parsing are the bottleneck; running them in parallel reduces
+    // build time from O(n * avg_io) to O(n * avg_io / concurrency).
+    type ParsedFile = {
+      filePath: string
+      relativePath: string
+      content: string
+      stats: { mtime: Date; mtimeMs: number }
+      hash: string
+      doc: MdDocument
+    }
+
+    const fileEffects = files.map((filePath) => {
       const relativePath = path.relative(storage.rootPath, filePath)
 
-      // Report progress
-      if (options.onProgress) {
-        options.onProgress({
-          current: fileIndex + 1,
-          total: totalFiles,
-          filePath: relativePath,
-        })
-      }
-
-      // Process each file, collecting errors instead of failing
-      const processFile = Effect.gen(function* () {
-        // Read file content and stats
+      return Effect.gen(function* () {
         const [content, stats] = yield* Effect.promise(() =>
           Promise.all([fs.readFile(filePath, 'utf-8'), fs.stat(filePath)]),
         )
@@ -326,8 +468,7 @@ export const buildIndex = (
           existingEntry.hash === hash &&
           existingEntry.mtime === stats.mtime.getTime()
         ) {
-          unchangedCount++
-          return // File unchanged, skip processing
+          return null // unchanged
         }
 
         // Parse document
@@ -346,112 +487,142 @@ export const buildIndex = (
           ),
         )
 
-        // Clean up old sections for this document before adding new ones
-        if (existingEntry) {
-          const oldSectionIds = mutableByDocument[existingEntry.id] ?? []
-          for (const sectionId of oldSectionIds) {
-            const oldSection = mutableSections[sectionId]
-            if (oldSection) {
-              // Remove from byHeading
-              const headingKey = oldSection.heading.toLowerCase()
-              const headingList = mutableByHeading[headingKey]
-              if (headingList) {
-                const idx = headingList.indexOf(sectionId)
-                if (idx !== -1) headingList.splice(idx, 1)
-              }
-            }
-            delete mutableSections[sectionId]
-          }
-          delete mutableByDocument[existingEntry.id]
-
-          // Clean up old links
-          delete mutableForward[relativePath]
-        }
-
-        // Update document index
-        mutableDocuments[relativePath] = {
-          id: doc.id,
-          path: relativePath,
-          title: doc.title,
-          mtime: stats.mtime.getTime(),
+        return {
+          filePath,
+          relativePath,
+          content,
+          stats: { mtime: stats.mtime, mtimeMs: stats.mtime.getTime() },
           hash,
-          tokenCount: doc.metadata.tokenCount,
-          sectionCount: doc.metadata.headingCount,
-        }
-
-        documentsIndexed++
-
-        // Update section index
-        const sections = flattenSections(doc.sections, doc.id, relativePath)
-        mutableByDocument[doc.id] = []
-
-        for (const section of sections) {
-          mutableSections[section.id] = section
-          mutableByDocument[doc.id]?.push(section.id)
-
-          // Index by heading
-          const headingKey = section.heading.toLowerCase()
-          if (!mutableByHeading[headingKey]) {
-            mutableByHeading[headingKey] = []
-          }
-          mutableByHeading[headingKey]?.push(section.id)
-
-          sectionsIndexed++
-        }
-
-        // Update link index
-        const internalLinks = doc.links.filter((l) => l.type === 'internal')
-        const outgoingLinks: string[] = []
-
-        for (const link of internalLinks) {
-          const target = resolveInternalLink(
-            link.href,
-            filePath,
-            storage.rootPath,
-          )
-
-          if (target) {
-            outgoingLinks.push(target)
-
-            // Add to backward links
-            if (!mutableBackward[target]) {
-              mutableBackward[target] = []
-            }
-            if (!mutableBackward[target]?.includes(relativePath)) {
-              mutableBackward[target]?.push(relativePath)
-            }
-
-            linksIndexed++
-          }
-        }
-
-        mutableForward[relativePath] = outgoingLinks
+          doc,
+        } as ParsedFile
       }).pipe(
         // Note: catchAll is intentional for batch file processing.
         // Individual file failures should be collected in errors array
         // rather than stopping the entire index build operation.
         Effect.catchAll((error) => {
-          // Extract message from typed errors or generic errors
           const message =
             'message' in error && typeof error.message === 'string'
               ? error.message
               : String(error)
-          errors.push({
-            path: relativePath,
-            message,
-          })
-          return Effect.void
+          errors.push({ path: relativePath, message })
+          return Effect.succeed(null)
         }),
       )
+    })
 
-      yield* processFile
+    const parsedFiles = yield* Effect.all(fileEffects, { concurrency: 50 })
+
+    // Phase 2: Merge results into indexes (synchronous, single-threaded).
+    // This section mutates shared index objects. It runs sequentially after
+    // all I/O completes, so no concurrent access concerns.
+    for (let fileIndex = 0; fileIndex < parsedFiles.length; fileIndex++) {
+      const result = parsedFiles[fileIndex]!
+      const filePath = files[fileIndex]!
+      const relativePath = path.relative(storage.rootPath, filePath)
+
+      // Report progress
+      if (options.onProgress) {
+        options.onProgress({
+          current: fileIndex + 1,
+          total: totalFiles,
+          filePath: relativePath,
+        })
+      }
+
+      if (result === null) {
+        // File was unchanged or errored during phase 1
+        const existingEntry = mutableDocuments[relativePath]
+        if (existingEntry && !errors.some((e) => e.path === relativePath)) {
+          unchangedCount++
+        }
+        continue
+      }
+
+      const { doc, hash } = result
+      const existingEntry = mutableDocuments[relativePath]
+
+      // Clean up old sections for this document before adding new ones
+      if (existingEntry) {
+        const oldSectionIds = mutableByDocument[existingEntry.id] ?? []
+        for (const sectionId of oldSectionIds) {
+          const oldSection = mutableSections[sectionId]
+          if (oldSection) {
+            const headingKey = oldSection.heading.toLowerCase()
+            const headingList = mutableByHeading[headingKey]
+            if (headingList) {
+              const idx = headingList.indexOf(sectionId)
+              if (idx !== -1) headingList.splice(idx, 1)
+            }
+          }
+          delete mutableSections[sectionId]
+        }
+        delete mutableByDocument[existingEntry.id]
+        delete mutableForward[relativePath]
+      }
+
+      // Update document index
+      mutableDocuments[relativePath] = {
+        id: doc.id,
+        path: relativePath,
+        title: doc.title,
+        mtime: result.stats.mtimeMs,
+        hash,
+        tokenCount: doc.metadata.tokenCount,
+        sectionCount: doc.metadata.headingCount,
+      }
+
+      documentsIndexed++
+
+      // Update section index
+      const sections = flattenSections(doc.sections, doc.id, relativePath)
+      mutableByDocument[doc.id] = []
+
+      for (const section of sections) {
+        mutableSections[section.id] = section
+        mutableByDocument[doc.id]?.push(section.id)
+
+        const headingKey = section.heading.toLowerCase()
+        if (!mutableByHeading[headingKey]) {
+          mutableByHeading[headingKey] = []
+        }
+        mutableByHeading[headingKey]?.push(section.id)
+
+        sectionsIndexed++
+      }
+
+      // Update link index
+      const internalLinks = doc.links.filter((l) => l.type === 'internal')
+      const outgoingLinks: string[] = []
+
+      for (const link of internalLinks) {
+        const target = resolveInternalLink(
+          link.href,
+          filePath,
+          storage.rootPath,
+        )
+
+        if (target) {
+          outgoingLinks.push(target)
+
+          if (!mutableBackward[target]) {
+            mutableBackward[target] = []
+          }
+          if (!mutableBackward[target]?.includes(relativePath)) {
+            mutableBackward[target]?.push(relativePath)
+          }
+
+          linksIndexed++
+        }
+      }
+
+      mutableForward[relativePath] = outgoingLinks
     }
 
     // Check for broken links
     for (const [_from, targets] of Object.entries(mutableForward)) {
       for (const target of targets) {
-        if (!mutableDocuments[target] && !brokenLinks.includes(target)) {
-          brokenLinks.push(target)
+        if (!mutableDocuments[target] && !brokenLinks.has(target)) {
+          brokenLinks.add(target)
         }
       }
     }
@@ -474,7 +645,7 @@ export const buildIndex = (
       version: linkIndex.version,
       forward: mutableForward,
       backward: mutableBackward,
-      broken: brokenLinks,
+      broken: [...brokenLinks],
     })
 
     const duration = Date.now() - startTime

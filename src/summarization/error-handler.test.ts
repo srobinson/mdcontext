@@ -12,11 +12,11 @@ import { SummarizationError } from './types.js'
 describe('formatSummarizationError', () => {
   describe('SummarizationError handling', () => {
     it('should format PROVIDER_NOT_AVAILABLE with install URL', () => {
-      const error = new SummarizationError(
-        'Claude not installed',
-        'PROVIDER_NOT_AVAILABLE',
-        'claude',
-      )
+      const error = new SummarizationError({
+        message: 'Claude not installed',
+        code: 'PROVIDER_NOT_AVAILABLE',
+        provider: 'claude',
+      })
       const message = formatSummarizationError(error)
 
       expect(message).toContain('not available')
@@ -24,11 +24,11 @@ describe('formatSummarizationError', () => {
     })
 
     it('should format NO_API_KEY with env var hint', () => {
-      const error = new SummarizationError(
-        'API key missing',
-        'NO_API_KEY',
-        'deepseek',
-      )
+      const error = new SummarizationError({
+        message: 'API key missing',
+        code: 'NO_API_KEY',
+        provider: 'deepseek',
+      })
       const message = formatSummarizationError(error)
 
       expect(message).toContain('API key')
@@ -36,11 +36,11 @@ describe('formatSummarizationError', () => {
     })
 
     it('should format RATE_LIMITED with CLI suggestion', () => {
-      const error = new SummarizationError(
-        'Rate limit hit',
-        'RATE_LIMITED',
-        'openai',
-      )
+      const error = new SummarizationError({
+        message: 'Rate limit hit',
+        code: 'RATE_LIMITED',
+        provider: 'openai',
+      })
       const message = formatSummarizationError(error)
 
       expect(message).toContain('Rate limit')
@@ -48,11 +48,11 @@ describe('formatSummarizationError', () => {
     })
 
     it('should format CLI_EXECUTION_FAILED with details', () => {
-      const error = new SummarizationError(
-        'Process exited with code 1',
-        'CLI_EXECUTION_FAILED',
-        'claude',
-      )
+      const error = new SummarizationError({
+        message: 'Process exited with code 1',
+        code: 'CLI_EXECUTION_FAILED',
+        provider: 'claude',
+      })
       const message = formatSummarizationError(error)
 
       expect(message).toContain('CLI error')
@@ -60,11 +60,11 @@ describe('formatSummarizationError', () => {
     })
 
     it('should handle TIMEOUT errors', () => {
-      const error = new SummarizationError(
-        'Something went wrong',
-        'TIMEOUT',
-        'claude',
-      )
+      const error = new SummarizationError({
+        message: 'Something went wrong',
+        code: 'TIMEOUT',
+        provider: 'claude',
+      })
       const message = formatSummarizationError(error)
 
       expect(message).toContain('timed out')
@@ -94,30 +94,38 @@ describe('formatSummarizationError', () => {
 
 describe('isRecoverableError', () => {
   it('should return true for API_REQUEST_FAILED', () => {
-    const error = new SummarizationError(
-      'Request failed',
-      'API_REQUEST_FAILED',
-      'deepseek',
-    )
+    const error = new SummarizationError({
+      message: 'Request failed',
+      code: 'API_REQUEST_FAILED',
+      provider: 'deepseek',
+    })
     expect(isRecoverableError(error)).toBe(true)
   })
 
   it('should return true for TIMEOUT', () => {
-    const error = new SummarizationError('Timed out', 'TIMEOUT', 'claude')
+    const error = new SummarizationError({
+      message: 'Timed out',
+      code: 'TIMEOUT',
+      provider: 'claude',
+    })
     expect(isRecoverableError(error)).toBe(true)
   })
 
   it('should return false for RATE_LIMITED', () => {
-    const error = new SummarizationError(
-      'Rate limited',
-      'RATE_LIMITED',
-      'openai',
-    )
+    const error = new SummarizationError({
+      message: 'Rate limited',
+      code: 'RATE_LIMITED',
+      provider: 'openai',
+    })
     expect(isRecoverableError(error)).toBe(false)
   })
 
   it('should return false for NO_API_KEY', () => {
-    const error = new SummarizationError('No key', 'NO_API_KEY', 'anthropic')
+    const error = new SummarizationError({
+      message: 'No key',
+      code: 'NO_API_KEY',
+      provider: 'anthropic',
+    })
     expect(isRecoverableError(error)).toBe(false)
   })
 

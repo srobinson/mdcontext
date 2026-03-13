@@ -81,33 +81,24 @@ export interface MdCodeBlock {
 }
 
 // ============================================================================
-// Error Types
+// Context Line Types
 // ============================================================================
 
 /**
- * Parse error from markdown parsing
- *
- * Note: This interface is used by parser.ts. For the TaggedError version
- * that works with Effect's error handling, see src/errors/index.ts ParseError.
+ * A single line of source text with its position and match status.
+ * Used across search, hybrid search, and semantic search for context display.
  */
-export interface ParseError {
-  readonly _tag: 'ParseError'
-  readonly message: string
-  readonly line?: number | undefined
-  readonly column?: number | undefined
+export interface ContextLine {
+  /** The line number (1-based) */
+  readonly lineNumber: number
+  /** The line text */
+  readonly line: string
+  /**
+   * Whether this line is part of the matched result.
+   *
+   * - For keyword search: true when the line directly matches the query.
+   * - For semantic/hybrid search: true when the line lies within the
+   *   selected/matched section span, even if it is not a direct text match.
+   */
+  readonly isMatch: boolean
 }
-
-// ============================================================================
-// Constructor Functions
-// ============================================================================
-
-export const ParseError = (
-  message: string,
-  line?: number,
-  column?: number,
-): ParseError => ({
-  _tag: 'ParseError',
-  message,
-  line,
-  column,
-})

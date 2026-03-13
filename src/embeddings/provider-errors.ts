@@ -28,7 +28,7 @@
  * ```
  */
 
-import type { EmbeddingProvider } from '../config/schema.js'
+import type { EmbeddingProviderName } from '../config/schema.js'
 import { PROVIDER_PORTS } from './provider-constants.js'
 
 // ============================================================================
@@ -62,7 +62,7 @@ export type ProviderErrorType =
  */
 export interface ProviderError {
   readonly type: ProviderErrorType
-  readonly provider: EmbeddingProvider
+  readonly provider: EmbeddingProviderName
   readonly message: string
   readonly model?: string | undefined
   readonly originalError: unknown
@@ -78,11 +78,11 @@ export interface ProviderError {
  */
 const detectProviderFromPort = (
   error: Error,
-): EmbeddingProvider | undefined => {
+): EmbeddingProviderName | undefined => {
   const message = error.message
   for (const [provider, port] of Object.entries(PROVIDER_PORTS)) {
     if (port && message.includes(String(port))) {
-      return provider as EmbeddingProvider
+      return provider as EmbeddingProviderName
     }
   }
   return undefined
@@ -283,7 +283,7 @@ const detectOpenRouterError = (error: unknown): ProviderError | null => {
  * Detect generic network errors
  */
 const detectNetworkError = (
-  provider: EmbeddingProvider,
+  provider: EmbeddingProviderName,
   error: unknown,
 ): ProviderError | null => {
   if (!(error instanceof Error)) return null
@@ -365,7 +365,7 @@ const extractModelName = (message: string): string | undefined => {
  * @returns Structured ProviderError or null if not a recognized provider error
  */
 export const detectProviderError = (
-  provider: EmbeddingProvider,
+  provider: EmbeddingProviderName,
   error: unknown,
 ): ProviderError | null => {
   // Try provider-specific detection first
@@ -389,7 +389,7 @@ export const detectProviderError = (
  */
 export const detectProviderFromError = (
   error: unknown,
-): EmbeddingProvider | undefined => {
+): EmbeddingProviderName | undefined => {
   if (error instanceof Error) {
     return detectProviderFromPort(error)
   }

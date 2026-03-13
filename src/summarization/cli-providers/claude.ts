@@ -13,7 +13,7 @@ import type {
   StreamOptions,
   SummaryResult,
 } from '../types.js'
-import { SummarizationError as SummarizationErrorClass } from '../types.js'
+import { SummarizationError } from '../types.js'
 
 /**
  * Claude CLI provider for summarization.
@@ -77,11 +77,11 @@ export class ClaudeCLISummarizer implements StreamingSummarizer {
 
         if (code !== 0) {
           reject(
-            new SummarizationErrorClass(
-              `Claude CLI exited with code ${code}: ${stderr}`,
-              'CLI_EXECUTION_FAILED',
-              'claude',
-            ),
+            new SummarizationError({
+              message: `Claude CLI exited with code ${code}: ${stderr}`,
+              code: 'CLI_EXECUTION_FAILED',
+              provider: 'claude',
+            }),
           )
           return
         }
@@ -97,12 +97,12 @@ export class ClaudeCLISummarizer implements StreamingSummarizer {
 
       proc.on('error', (error: Error) => {
         reject(
-          new SummarizationErrorClass(
-            `Failed to spawn Claude CLI: ${error.message}`,
-            'CLI_EXECUTION_FAILED',
-            'claude',
-            error,
-          ),
+          new SummarizationError({
+            message: `Failed to spawn Claude CLI: ${error.message}`,
+            code: 'CLI_EXECUTION_FAILED',
+            provider: 'claude',
+            cause: error,
+          }),
         )
       })
     })
@@ -143,11 +143,11 @@ export class ClaudeCLISummarizer implements StreamingSummarizer {
         const durationMs = Date.now() - startTime
 
         if (code !== 0) {
-          const error = new SummarizationErrorClass(
-            `Claude CLI exited with code ${code}: ${stderr}`,
-            'CLI_EXECUTION_FAILED',
-            'claude',
-          )
+          const error = new SummarizationError({
+            message: `Claude CLI exited with code ${code}: ${stderr}`,
+            code: 'CLI_EXECUTION_FAILED',
+            provider: 'claude',
+          })
           options.onError?.(error)
           reject(error)
           return
@@ -166,12 +166,12 @@ export class ClaudeCLISummarizer implements StreamingSummarizer {
       })
 
       proc.on('error', (error: Error) => {
-        const sumError = new SummarizationErrorClass(
-          `Failed to spawn Claude CLI: ${error.message}`,
-          'CLI_EXECUTION_FAILED',
-          'claude',
-          error,
-        )
+        const sumError = new SummarizationError({
+          message: `Failed to spawn Claude CLI: ${error.message}`,
+          code: 'CLI_EXECUTION_FAILED',
+          provider: 'claude',
+          cause: error,
+        })
         options.onError?.(sumError)
         reject(sumError)
       })

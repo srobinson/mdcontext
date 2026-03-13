@@ -25,11 +25,11 @@ const createCLISummarizer = async (
   const isInstalled = await isCLIInstalled(provider)
   if (!isInstalled) {
     const cliInfo = getCLIInfo(provider)
-    throw new SummarizationError(
-      `CLI tool '${cliInfo?.displayName ?? provider}' is not installed`,
-      'PROVIDER_NOT_AVAILABLE',
+    throw new SummarizationError({
+      message: `CLI tool '${cliInfo?.displayName ?? provider}' is not installed`,
+      code: 'PROVIDER_NOT_AVAILABLE',
       provider,
-    )
+    })
   }
 
   // Return appropriate summarizer based on provider
@@ -43,18 +43,18 @@ const createCLISummarizer = async (
     case 'aider':
     case 'cline':
     case 'amp':
-      throw new SummarizationError(
-        `CLI provider '${provider}' is not yet implemented`,
-        'PROVIDER_NOT_FOUND',
+      throw new SummarizationError({
+        message: `CLI provider '${provider}' is not yet implemented`,
+        code: 'PROVIDER_NOT_FOUND',
         provider,
-      )
+      })
 
     default:
-      throw new SummarizationError(
-        `Unknown CLI provider: ${provider}`,
-        'PROVIDER_NOT_FOUND',
+      throw new SummarizationError({
+        message: `Unknown CLI provider: ${provider}`,
+        code: 'PROVIDER_NOT_FOUND',
         provider,
-      )
+      })
   }
 }
 
@@ -70,10 +70,11 @@ const createAPISummarizer = async (
 ): Promise<Summarizer> => {
   // TODO: Implement API providers using Vercel AI SDK
   // This will be implemented in a later issue (ALP-220)
-  throw new SummarizationError(
-    'API providers are not yet implemented. Use CLI providers for now.',
-    'PROVIDER_NOT_FOUND',
-  )
+  throw new SummarizationError({
+    message:
+      'API providers are not yet implemented. Use CLI providers for now.',
+    code: 'PROVIDER_NOT_FOUND',
+  })
 }
 
 /**
@@ -106,30 +107,30 @@ export const createSummarizer = async (
 ): Promise<Summarizer> => {
   if (config.mode === 'cli') {
     if (!isCLIProvider(config.provider)) {
-      throw new SummarizationError(
-        `Invalid CLI provider: ${config.provider}`,
-        'PROVIDER_NOT_FOUND',
-        config.provider,
-      )
+      throw new SummarizationError({
+        message: `Invalid CLI provider: ${config.provider}`,
+        code: 'PROVIDER_NOT_FOUND',
+        provider: config.provider,
+      })
     }
     return createCLISummarizer(config.provider)
   }
 
   if (config.mode === 'api') {
     if (!isAPIProvider(config.provider)) {
-      throw new SummarizationError(
-        `Invalid API provider: ${config.provider}`,
-        'PROVIDER_NOT_FOUND',
-        config.provider,
-      )
+      throw new SummarizationError({
+        message: `Invalid API provider: ${config.provider}`,
+        code: 'PROVIDER_NOT_FOUND',
+        provider: config.provider,
+      })
     }
     return createAPISummarizer(config.provider, config)
   }
 
-  throw new SummarizationError(
-    `Unknown summarization mode: ${config.mode}`,
-    'PROVIDER_NOT_FOUND',
-  )
+  throw new SummarizationError({
+    message: `Unknown summarization mode: ${config.mode}`,
+    code: 'PROVIDER_NOT_FOUND',
+  })
 }
 
 /**

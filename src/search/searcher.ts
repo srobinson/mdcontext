@@ -4,11 +4,13 @@
 
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { Effect } from 'effect'
+import { Effect, Option } from 'effect'
+import type { ContextLine } from '../core/types.js'
 
 import {
+  CliValidationError,
   DocumentNotFoundError,
-  type FileReadError,
+  FileReadError,
   type IndexCorruptedError,
   IndexNotFoundError,
 } from '../errors/index.js'
@@ -32,6 +34,102 @@ import {
   type ParsedQuery,
   parseQuery,
 } from './query-parser.js'
+
+// ============================================================================
+// Regex Safety
+// ============================================================================
+
+const MAX_REGEX_LENGTH = 200
+
+/**
+ * Detect regex patterns prone to catastrophic backtracking (ReDoS).
+ *
+ * Catches the most common vulnerability shapes:
+ * - Nested quantifiers: a quantified group whose body contains a quantifier
+ *   e.g. (a+)+, (a*)+, ([a-z]+)*, (?:a+){2,}
+ * - Overlapping alternation under a quantifier
+ *   e.g. (a|a)+, (a|ab)+
+ * - Wildcard alternation under a quantifier
+ *   e.g. (.|\\s)+, (.|x)+ -- '.' matches any char, guaranteeing overlap
+ *
+ * This is a conservative heuristic. It will reject some safe patterns that
+ * happen to match the shape, which is acceptable for a user-facing search
+ * tool where false positives are low-cost.
+ */
+const isCatastrophicPattern = (pattern: string): boolean => {
+  // Strip escaped characters so \( or \+ do not trigger false positives
+  const stripped = pattern.replace(/\\./g, '')
+
+  // Detect quantified groups whose body contains a quantifier.
+  // Matches: ( ... +|*|? ... ) followed by +|*|?|{
+  // Handles both capturing (...) and non-capturing (?:...)
+  if (/\([^)]*[+*?][^)]*\)[+*?{]/.test(stripped)) return true
+
+  // Detect alternation with overlapping branches under a quantifier.
+  // Matches: (x|x)+ where branches share the same leading character class.
+  // This is an approximation; covers the (.|\\s)+ and (a|a)+ shapes.
+  if (/\([^)]*\|[^)]*\)[+*?{]/.test(stripped)) {
+    // Only flag if both branches share a character: extract branches and
+    // check whether any single literal char appears in more than one branch.
+    const groupMatch = stripped.match(/\(([^)]*)\)[+*?{]/)
+    if (groupMatch?.[1]) {
+      const branches = groupMatch[1].split('|')
+      if (branches.length >= 2) {
+        // '.' is a regex wildcard matching any character. Any alternation
+        // containing '.' under a quantifier has overlap by definition,
+        // since '.' matches whatever the other branches match.
+        if (branches.some((b) => b.includes('.'))) return true
+
+        const charSets = branches.map(
+          (b) => new Set(b.replace(/[^a-zA-Z0-9]/g, '')),
+        )
+        for (let i = 0; i < charSets.length; i++) {
+          for (let j = i + 1; j < charSets.length; j++) {
+            const setI = charSets[i] as Set<string>
+            const setJ = charSets[j] as Set<string>
+            for (const c of setI) {
+              if (setJ.has(c)) return true
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return false
+}
+
+/**
+ * Build a RegExp from user input with length, syntax, and ReDoS validation.
+ * Returns an Effect that fails with CliValidationError on invalid, too-long,
+ * or catastrophic patterns.
+ */
+const safeRegex = (
+  pattern: string,
+  flags: string,
+): Effect.Effect<RegExp, CliValidationError> => {
+  if (pattern.length > MAX_REGEX_LENGTH) {
+    return Effect.fail(
+      new CliValidationError({
+        message: `Regex pattern too long (${pattern.length} chars, max ${MAX_REGEX_LENGTH})`,
+      }),
+    )
+  }
+  if (isCatastrophicPattern(pattern)) {
+    return Effect.fail(
+      new CliValidationError({
+        message: `Regex pattern rejected: potentially catastrophic backtracking in "${pattern}"`,
+      }),
+    )
+  }
+  return Effect.try({
+    try: () => new RegExp(pattern, flags),
+    catch: (e) =>
+      new CliValidationError({
+        message: `Invalid regex pattern: ${e instanceof Error ? e.message : String(e)}`,
+      }),
+  })
+}
 
 // ============================================================================
 // Search Options
@@ -79,14 +177,7 @@ export interface ContentMatch {
   readonly contextLines?: readonly ContextLine[]
 }
 
-export interface ContextLine {
-  /** The line number (1-based) */
-  readonly lineNumber: number
-  /** The line text */
-  readonly line: string
-  /** Whether this is the matching line */
-  readonly isMatch: boolean
-}
+// ContextLine is re-exported from src/core/types.ts (canonical definition)
 
 export interface SearchResult {
   readonly section: SectionEntry
@@ -115,7 +206,7 @@ export const search = (
   options: SearchOptions = {},
 ): Effect.Effect<
   readonly SearchResult[],
-  FileReadError | IndexCorruptedError
+  FileReadError | IndexCorruptedError | CliValidationError
 > =>
   Effect.gen(function* () {
     const storage = createStorage(rootPath)
@@ -129,7 +220,7 @@ export const search = (
 
     const results: SearchResult[] = []
     const headingRegex = options.heading
-      ? new RegExp(options.heading, 'i')
+      ? yield* safeRegex(options.heading, 'i')
       : null
 
     for (const section of Object.values(sectionIndex.sections)) {
@@ -214,7 +305,7 @@ export const searchContent = (
   options: SearchOptions = {},
 ): Effect.Effect<
   readonly SearchResult[],
-  FileReadError | IndexCorruptedError
+  FileReadError | IndexCorruptedError | CliValidationError
 > =>
   Effect.gen(function* () {
     const storage = createStorage(rootPath)
@@ -254,7 +345,7 @@ export const searchContent = (
       } else {
         // Simple search - use regex for exact match, or fuzzy/stem matching
         if (!useFuzzyOrStem) {
-          contentRegex = new RegExp(options.content, 'gi')
+          contentRegex = yield* safeRegex(options.content, 'gi')
           highlightRegex = contentRegex
         } else {
           // For fuzzy/stem mode, build a highlight pattern
@@ -267,7 +358,7 @@ export const searchContent = (
     }
 
     const headingRegex = options.heading
-      ? new RegExp(options.heading, 'i')
+      ? yield* safeRegex(options.heading, 'i')
       : null
 
     const results: SearchResult[] = []
@@ -303,14 +394,21 @@ export const searchContent = (
       // - useFuzzyOrStem: fuzzy/stem matching
       if (parsedQuery || contentRegex || (useFuzzyOrStem && options.content)) {
         const filePath = path.join(storage.rootPath, docPath)
-        try {
-          fileContent = yield* Effect.promise(() =>
-            fs.readFile(filePath, 'utf-8'),
-          )
-          fileLines = fileContent.split('\n')
-        } catch {
-          continue // Skip files that can't be read
-        }
+        const readResult = yield* Effect.tryPromise({
+          try: () => fs.readFile(filePath, 'utf-8'),
+          catch: (e) =>
+            new FileReadError({
+              path: filePath,
+              message: `Failed to read file: ${filePath}`,
+              cause: e,
+            }),
+        }).pipe(
+          Effect.tapError((e) => Effect.logWarning(`Skipping file: ${e.path}`)),
+          Effect.option,
+        )
+        if (Option.isNone(readResult)) continue
+        fileContent = readResult.value
+        fileLines = fileContent.split('\n')
       }
 
       for (const section of sections) {
@@ -506,7 +604,7 @@ export const searchWithContent = (
   options: SearchOptions = {},
 ): Effect.Effect<
   readonly SearchResult[],
-  FileReadError | IndexCorruptedError
+  FileReadError | IndexCorruptedError | CliValidationError
 > =>
   Effect.gen(function* () {
     const storage = createStorage(rootPath)
@@ -517,12 +615,25 @@ export const searchWithContent = (
     for (const result of results) {
       const filePath = path.join(storage.rootPath, result.section.documentPath)
 
-      try {
-        const fileContent = yield* Effect.promise(() =>
-          fs.readFile(filePath, 'utf-8'),
-        )
+      const readResult = yield* Effect.tryPromise({
+        try: () => fs.readFile(filePath, 'utf-8'),
+        catch: (e) =>
+          new FileReadError({
+            path: filePath,
+            message: `Failed to read file: ${filePath}`,
+            cause: e,
+          }),
+      }).pipe(
+        Effect.tapError((e) =>
+          Effect.logWarning(
+            `searchWithContent: skipping content for ${e.path}`,
+          ),
+        ),
+        Effect.option,
+      )
 
-        const lines = fileContent.split('\n')
+      if (Option.isSome(readResult)) {
+        const lines = readResult.value.split('\n')
         const sectionContent = lines
           .slice(result.section.startLine - 1, result.section.endLine)
           .join('\n')
@@ -531,8 +642,8 @@ export const searchWithContent = (
           ...result,
           sectionContent,
         })
-      } catch {
-        // If file can't be read, include result without content
+      } else {
+        // File unreadable: include result without content
         resultsWithContent.push(result)
       }
     }
@@ -629,12 +740,22 @@ export const getContext = (
     // Read file content if needed
     let fileContent: string | null = null
     if (includeContent) {
-      try {
-        fileContent = yield* Effect.promise(() =>
-          fs.readFile(resolvedFile, 'utf-8'),
-        )
-      } catch {
-        // Continue without content
+      const readResult = yield* Effect.tryPromise({
+        try: () => fs.readFile(resolvedFile, 'utf-8'),
+        catch: (e) =>
+          new FileReadError({
+            path: resolvedFile,
+            message: `Failed to read file: ${resolvedFile}`,
+            cause: e,
+          }),
+      }).pipe(
+        Effect.tapError((e) =>
+          Effect.logWarning(`getContext: cannot read content for ${e.path}`),
+        ),
+        Effect.option,
+      )
+      if (Option.isSome(readResult)) {
+        fileContent = readResult.value
       }
     }
 

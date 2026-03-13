@@ -250,7 +250,7 @@ export class OpenAIProvider implements EmbeddingProvider {
           embedParams.dimensions = this.dimensions
         }
 
-        const response = await this.client.embeddings.create(embedParams)
+        const response = await this.embedBatchWithRetry(embedParams)
 
         for (const item of response.data) {
           allEmbeddings.push(item.embedding)
@@ -297,6 +297,46 @@ export class OpenAIProvider implements EmbeddingProvider {
       tokensUsed: totalTokens,
       cost,
     }
+  }
+
+  /**
+   * Call the embeddings API with retry on transient failures.
+   *
+   * Retries on RateLimit and Network errors with exponential backoff
+   * (1s, 2s, 4s, 8s, 16s) plus random jitter (0-1s). The OpenAI SDK
+   * already retries internally (maxRetries: 2), so this covers cases
+   * that slip through during long batch runs.
+   */
+  private async embedBatchWithRetry(
+    params: OpenAI.Embeddings.EmbeddingCreateParams,
+  ): Promise<OpenAI.Embeddings.CreateEmbeddingResponse> {
+    const maxAttempts = 5
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        return await this.client.embeddings.create(params)
+      } catch (error) {
+        const reason = this.classifyError(error)
+        const isRetryable = reason === 'RateLimit' || reason === 'Network'
+        const isLastAttempt = attempt === maxAttempts - 1
+
+        if (!isRetryable || isLastAttempt) {
+          throw error
+        }
+
+        const baseDelay = 2 ** attempt * 1000
+        const jitter = Math.random() * 1000
+        const delay = baseDelay + jitter
+
+        console.info(
+          `[mdcontext] Embedding API ${reason} error, retry ${attempt + 1}/${maxAttempts} after ${Math.round(delay)}ms`,
+        )
+
+        await new Promise((resolve) => setTimeout(resolve, delay))
+      }
+    }
+
+    // Unreachable: loop either returns or throws
+    throw new Error('embedBatchWithRetry: unreachable')
   }
 
   /**

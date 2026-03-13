@@ -3,7 +3,115 @@
  *
  * Provides beautiful, useful help output that matches the quality of
  * professional CLI tools like git and gh.
+ *
+ * Color output respects:
+ *   1. NO_COLOR environment variable (https://no-color.org/)
+ *   2. --no-color CLI flag
+ *   3. Non-TTY stdout (piped output)
+ *   4. output.color config value (when available via resolveColorEnabled)
  */
+
+import * as fs from 'node:fs'
+import * as path from 'node:path'
+
+// ============================================================================
+// Color Support
+// ============================================================================
+
+/**
+ * Determine whether ANSI color codes should be emitted.
+ *
+ * Checks in priority order:
+ *   1. NO_COLOR env var (always wins per no-color.org spec)
+ *   2. --no-color CLI flag
+ *   3. Non-TTY stdout (piped output)
+ *   4. output.color from config file (if --config is specified)
+ *
+ * The config peek is a lightweight sync read that extracts only the
+ * output.color field. This runs before the full config loading pipeline
+ * so help output can honor the setting.
+ */
+export const shouldUseColor = (): boolean => {
+  if (process.env.NO_COLOR !== undefined) return false
+  if (process.argv.includes('--no-color')) return false
+  if (!process.stdout.isTTY) return false
+
+  // Peek at config file for output.color if --config is specified
+  const configColor = peekConfigColor()
+  if (configColor === false) return false
+
+  return true
+}
+
+/**
+ * Extract --config path from process.argv without full preprocessing.
+ * Returns undefined if no --config flag is present.
+ */
+const extractConfigPathFromArgv = (): string | undefined => {
+  const argv = process.argv
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i]
+    if (arg === undefined) continue
+
+    if (arg.startsWith('--config=')) {
+      const value = arg.slice('--config='.length)
+      return value.length > 0 ? value : undefined
+    }
+    if (arg.startsWith('-c=')) {
+      const value = arg.slice('-c='.length)
+      return value.length > 0 ? value : undefined
+    }
+    if (
+      (arg === '--config' || arg === '-c') &&
+      argv[i + 1] &&
+      !argv[i + 1]!.startsWith('-')
+    ) {
+      return argv[i + 1]
+    }
+  }
+  return undefined
+}
+
+/**
+ * Lightweight sync peek at a config file's output.color value.
+ * Returns false if config explicitly disables color, true otherwise.
+ * Silently returns true on any read/parse error (fail open for color).
+ *
+ * Exported for testing. Not part of the public API.
+ */
+export const peekConfigColor = (): boolean => {
+  const configPath = extractConfigPathFromArgv()
+  if (!configPath) return true
+
+  try {
+    const resolved = path.resolve(configPath)
+    const content = fs.readFileSync(resolved, 'utf-8')
+    const parsed = JSON.parse(content) as Record<string, unknown>
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      'output' in parsed &&
+      parsed.output &&
+      typeof parsed.output === 'object' &&
+      'color' in (parsed.output as Record<string, unknown>) &&
+      (parsed.output as Record<string, unknown>).color === false
+    ) {
+      return false
+    }
+  } catch {
+    // Fail open: if we can't read the config, allow color
+  }
+
+  return true
+}
+
+/** ANSI escape helpers that respect a color flag. */
+const ansi = (color: boolean) => ({
+  bold: (s: string) => (color ? `\x1b[1m${s}\x1b[0m` : s),
+  yellow: (s: string) => (color ? `\x1b[33m${s}\x1b[0m` : s),
+  cyan: (s: string) => (color ? `\x1b[36m${s}\x1b[0m` : s),
+  dim: (s: string) => (color ? `\x1b[2m${s}\x1b[0m` : s),
+})
 
 // ============================================================================
 // Types
@@ -181,6 +289,10 @@ export const helpContent: Record<string, CommandHelp> = {
       {
         name: '-s, --summarize',
         description: 'Generate AI summary of search results',
+      },
+      {
+        name: '--refine',
+        description: 'Additional filter terms to narrow results',
       },
       {
         name: '-y, --yes',
@@ -383,6 +495,33 @@ export const helpContent: Record<string, CommandHelp> = {
       'See docs/CONFIG.md for full configuration reference.',
     ],
   },
+  duplicates: {
+    description: 'Detect duplicate content in markdown files',
+    usage: 'mdcontext duplicates [path] [options]',
+    examples: [
+      'mdcontext duplicates                      # Find duplicates in current directory',
+      'mdcontext duplicates docs/                 # Find duplicates in docs/',
+      'mdcontext duplicates --min-length 100      # Only flag sections over 100 chars',
+      'mdcontext duplicates -p "docs/**" --json   # Filter by path, JSON output',
+    ],
+    options: [
+      {
+        name: '--min-length <n>',
+        description:
+          'Minimum content length (characters) to consider (default: 50)',
+      },
+      {
+        name: '-p, --path <pattern>',
+        description: 'Filter by document path pattern (glob)',
+      },
+      { name: '--json', description: 'Output as JSON' },
+      { name: '--pretty', description: 'Pretty-print JSON output' },
+    ],
+    notes: [
+      'Requires an index. Run "mdcontext index" first.',
+      'Compares sections by content similarity to find duplicates.',
+    ],
+  },
   embeddings: {
     description: 'Manage embedding namespaces',
     usage: 'mdcontext embeddings <command> [options]',
@@ -419,9 +558,15 @@ export const helpContent: Record<string, CommandHelp> = {
 // ============================================================================
 
 /**
- * Render beautiful subcommand help
+ * Render beautiful subcommand help.
+ *
+ * @param command - subcommand name
+ * @param color - override color flag; defaults to shouldUseColor()
  */
-export const showSubcommandHelp = (command: string): void => {
+export const showSubcommandHelp = (
+  command: string,
+  color: boolean = shouldUseColor(),
+): void => {
   const help = helpContent[command]
   if (!help) {
     console.log(`Unknown command: ${command}`)
@@ -429,21 +574,23 @@ export const showSubcommandHelp = (command: string): void => {
     process.exit(1)
   }
 
+  const c = ansi(color)
+
   // Header
-  console.log(`\n\x1b[1mmdcontext ${command}\x1b[0m - ${help.description}`)
+  console.log(`\n${c.bold(`mdcontext ${command}`)} - ${help.description}`)
 
   // Usage
-  console.log(`\n\x1b[33mUSAGE\x1b[0m`)
+  console.log(`\n${c.yellow('USAGE')}`)
   console.log(`  ${help.usage}`)
 
   // Examples
-  console.log(`\n\x1b[33mEXAMPLES\x1b[0m`)
+  console.log(`\n${c.yellow('EXAMPLES')}`)
   for (const example of help.examples) {
     console.log(`  ${example}`)
   }
 
   // Options
-  console.log(`\n\x1b[33mOPTIONS\x1b[0m`)
+  console.log(`\n${c.yellow('OPTIONS')}`)
   for (const opt of help.options) {
     // Pad option name to 24 chars for alignment
     const paddedName = opt.name.padEnd(24)
@@ -452,7 +599,7 @@ export const showSubcommandHelp = (command: string): void => {
 
   // Notes (if any)
   if (help.notes && help.notes.length > 0) {
-    console.log(`\n\x1b[33mNOTES\x1b[0m`)
+    console.log(`\n${c.yellow('NOTES')}`)
     for (const note of help.notes) {
       console.log(`  ${note}`)
     }
@@ -462,24 +609,29 @@ export const showSubcommandHelp = (command: string): void => {
 }
 
 /**
- * Custom help output for main command - beautiful and useful
+ * Custom help output for main command.
+ *
+ * @param color - override color flag; defaults to shouldUseColor()
  */
-export const showMainHelp = (): void => {
-  const help = `
-\x1b[1mmdcontext\x1b[0m - Token-efficient markdown analysis for LLMs
+export const showMainHelp = (color: boolean = shouldUseColor()): void => {
+  const c = ansi(color)
 
-\x1b[33mCOMMANDS\x1b[0m
+  const help = `
+${c.bold('mdcontext')} - Token-efficient markdown analysis for LLMs
+
+${c.yellow('COMMANDS')}
   index [path]              Index markdown files (default: .)
   search <query> [path]     Search by meaning or structure
   context <files>...        Get LLM-ready summary
   tree [path]               Show files or document outline
   config <command>          Configuration management
+  duplicates [path]         Detect duplicate content
   embeddings <command>      Manage embedding namespaces
   links <file>              Show outgoing links
   backlinks <file>          Show incoming links
   stats [path]              Index statistics
 
-\x1b[33mEXAMPLES\x1b[0m
+${c.yellow('EXAMPLES')}
   mdcontext tree                         # List all markdown files
   mdcontext tree README.md               # Show document outline
   mdcontext index                        # Index current directory
@@ -492,33 +644,33 @@ export const showMainHelp = (): void => {
   mdcontext context README.md            # Summarize a file
   mdcontext context *.md -t 2000         # Multi-file with token budget
 
-\x1b[33mWORKFLOWS\x1b[0m
-  \x1b[2m# Quick context for LLM\x1b[0m
+${c.yellow('WORKFLOWS')}
+  ${c.dim('# Quick context for LLM')}
   mdcontext context README.md docs/*.md | pbcopy
 
-  \x1b[2m# Find relevant documentation\x1b[0m
+  ${c.dim('# Find relevant documentation')}
   mdcontext search "error handling"
 
-  \x1b[2m# Complex queries with boolean operators\x1b[0m
+  ${c.dim('# Complex queries with boolean operators')}
   mdcontext search "auth AND (error OR exception) NOT test"
 
-  \x1b[2m# Explore a new codebase\x1b[0m
+  ${c.dim('# Explore a new codebase')}
   mdcontext tree && mdcontext stats
 
-  \x1b[2m# Build semantic search\x1b[0m
+  ${c.dim('# Build semantic search')}
   mdcontext index --embed && mdcontext search "authentication flow"
 
-  \x1b[2m# Set up project configuration\x1b[0m
+  ${c.dim('# Set up project configuration')}
   mdcontext config init && mdcontext config check
 
-\x1b[33mGLOBAL OPTIONS\x1b[0m
+${c.yellow('GLOBAL OPTIONS')}
   -c, --config <file>  Use specified config file
   --json               Output as JSON
   --pretty             Pretty-print JSON
   --help, -h           Show help
   --version, -v        Show version
 
-Run \x1b[36mmdcontext <command> --help\x1b[0m for command-specific options.
+Run ${c.cyan('mdcontext <command> --help')} for command-specific options.
 `
   console.log(help)
 }

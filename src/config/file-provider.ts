@@ -64,8 +64,33 @@ export type ConfigFileFormat = 'ts' | 'js' | 'json'
 // ============================================================================
 
 /**
+ * Find the git repository root by walking up from startDir looking for a .git
+ * directory. Returns null if no git root is found.
+ */
+const findGitRoot = (startDir: string): string | null => {
+  let dir = path.resolve(startDir)
+  const root = path.parse(dir).root
+
+  while (dir !== root) {
+    if (fs.existsSync(path.join(dir, '.git'))) {
+      return dir
+    }
+    const parent = path.dirname(dir)
+    if (parent === dir) break
+    dir = parent
+  }
+
+  return null
+}
+
+/**
  * Find a config file starting from the given directory.
- * Searches up the directory tree until a config file is found or root is reached.
+ *
+ * When inside a git repository, searches up from startDir to the repository
+ * root. When outside a git repository, searches only the startDir itself.
+ * This prevents a malicious config file in an ancestor directory from being
+ * executed via dynamic import when there is no repository boundary to
+ * constrain the walk.
  *
  * @param startDir - Directory to start searching from
  * @returns The path to the config file if found, or null
@@ -74,16 +99,32 @@ export const findConfigFile = (
   startDir: string,
 ): { path: string; format: ConfigFileFormat } | null => {
   let currentDir = path.resolve(startDir)
-  const root = path.parse(currentDir).root
+  const gitRoot = findGitRoot(currentDir)
 
-  while (currentDir !== root) {
+  // Without a git boundary, only check the starting directory.
+  // Traversing to filesystem root would allow arbitrary ancestor
+  // directories to inject executable config files.
+  if (!gitRoot) {
     for (const fileName of CONFIG_FILE_NAMES) {
       const configPath = path.join(currentDir, fileName)
       if (fs.existsSync(configPath)) {
-        const format = getConfigFormat(fileName)
-        return { path: configPath, format }
+        return { path: configPath, format: getConfigFormat(fileName) }
       }
     }
+    return null
+  }
+
+  // Walk up from startDir to git root (inclusive)
+  while (true) {
+    for (const fileName of CONFIG_FILE_NAMES) {
+      const configPath = path.join(currentDir, fileName)
+      if (fs.existsSync(configPath)) {
+        return { path: configPath, format: getConfigFormat(fileName) }
+      }
+    }
+
+    if (currentDir === gitRoot) break
+
     const parentDir = path.dirname(currentDir)
     if (parentDir === currentDir) break
     currentDir = parentDir
@@ -186,6 +227,8 @@ export const loadConfigFile = (
         searched: CONFIG_FILE_NAMES.map((name) => path.join(startDir, name)),
       } as LoadConfigResult
     }
+
+    yield* Effect.logInfo(`Loading config from ${found.path}`)
 
     const config = yield* loadConfigFromFile(found.path, found.format)
 

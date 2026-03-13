@@ -8,9 +8,10 @@
 import * as crypto from 'node:crypto'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { Effect } from 'effect'
-import type { FileReadError, IndexCorruptedError } from '../errors/index.js'
+import { Effect, Option } from 'effect'
+import { FileReadError, type IndexCorruptedError } from '../errors/index.js'
 import { createStorage, loadSectionIndex } from '../index/storage.js'
+import { matchPath } from '../search/path-matcher.js'
 
 // ============================================================================
 // Types
@@ -150,14 +151,20 @@ const createFileContentCache = (): FileContentCache => {
         if (cache.has(documentPath)) {
           return cache.get(documentPath)!
         }
-        const content = yield* Effect.promise(async () => {
-          try {
-            const filePath = path.join(rootPath, documentPath)
-            return await fs.readFile(filePath, 'utf-8')
-          } catch {
-            return null
-          }
-        })
+        const filePath = path.join(rootPath, documentPath)
+        const readResult = yield* Effect.tryPromise({
+          try: () => fs.readFile(filePath, 'utf-8'),
+          catch: (e) =>
+            new FileReadError({
+              path: filePath,
+              message: `Failed to read file: ${filePath}`,
+              cause: e,
+            }),
+        }).pipe(
+          Effect.tapError((e) => Effect.logWarning(`Skipping file: ${e.path}`)),
+          Effect.option,
+        )
+        const content = Option.getOrNull(readResult)
         cache.set(documentPath, content)
         return content
       }),
@@ -210,9 +217,7 @@ export const detectExactDuplicates = (
 
     // Filter sections by path pattern if specified
     const filteredSections = options.pathPattern
-      ? sections.filter((s) =>
-          matchPathPattern(s.documentPath, options.pathPattern!),
-        )
+      ? sections.filter((s) => matchPath(s.documentPath, options.pathPattern!))
       : sections
 
     // Map: hash -> list of sections with that hash
@@ -308,19 +313,6 @@ export const detectExactDuplicates = (
       sectionsWithDuplicates: sectionsInDuplicates.size,
     }
   })
-
-/**
- * Simple path pattern matching (supports glob-like patterns).
- */
-const matchPathPattern = (filePath: string, pattern: string): boolean => {
-  // Simple glob support: * matches any sequence, ** matches any path segments
-  const regexPattern = pattern
-    .replace(/[.+^${}()|[\]\\]/g, '\\$&') // Escape regex special chars
-    .replace(/\*\*/g, '.*') // ** matches anything
-    .replace(/\*/g, '[^/]*') // * matches within a segment
-  const regex = new RegExp(`^${regexPattern}`)
-  return regex.test(filePath)
-}
 
 // ============================================================================
 // Search Result Collapsing
