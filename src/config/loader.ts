@@ -335,14 +335,14 @@ export const load = (options: LoadOptions = {}): MdmConfig => {
   let merged: PartialMdmConfig = {}
 
   // Layer 1: Config file (lowest priority source)
-  if (!skipConfigFile) {
-    if (fileConfig) {
-      merged = fileConfig
-    } else {
-      const result = loadConfigFile(workingDir)
-      if (result) {
-        merged = result.config
-      }
+  // fileConfig always takes effect when provided (used for testing).
+  // skipConfigFile only prevents reading from disk.
+  if (fileConfig) {
+    merged = fileConfig
+  } else if (!skipConfigFile) {
+    const result = loadConfigFile(workingDir)
+    if (result) {
+      merged = result.config
     }
   }
 
