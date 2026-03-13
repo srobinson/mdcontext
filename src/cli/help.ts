@@ -94,7 +94,9 @@ export const helpContent: Record<string, CommandHelp> = {
       'mdm index --embed            # Include semantic embeddings',
       'mdm index --watch            # Watch for file changes',
       'mdm index --embed --watch    # Full setup with live updates',
-      'mdm index --force            # Rebuild from scratch',
+      'mdm index --force            # Bypass cache, re-process all files',
+      'mdm index --all              # Index all registered global sources',
+      'mdm index --all --force      # Re-index all sources from scratch',
       '',
       '# Alternative embedding providers:',
       'mdm index --embed --provider ollama --provider-model nomic-embed-text',
@@ -130,7 +132,16 @@ export const helpContent: Record<string, CommandHelp> = {
         name: '-w, --watch',
         description: 'Watch for changes and re-index automatically',
       },
-      { name: '--force', description: 'Rebuild from scratch, ignoring cache' },
+      {
+        name: '-a, --all',
+        description:
+          'Index all registered sources from global config (~/.mdm/.mdm.toml)',
+      },
+      {
+        name: '-f, --force',
+        description:
+          'Bypass mtime/hash cache and re-process every file (does not delete index)',
+      },
       { name: '--json', description: 'Output results as JSON' },
       { name: '--pretty', description: 'Pretty-print JSON output' },
     ],
@@ -139,6 +150,7 @@ export const helpContent: Record<string, CommandHelp> = {
       'Providers: openai (default), ollama (free/local), lm-studio, openrouter, voyage.',
       'Set API keys: OPENAI_API_KEY, OPENROUTER_API_KEY, or use local providers.',
       'Index is stored in .mdm/ directory.',
+      '--force and --all are orthogonal: --force controls HOW (bypass cache), --all controls WHAT (all sources).',
     ],
   },
   search: {
@@ -424,6 +436,7 @@ export const helpContent: Record<string, CommandHelp> = {
     usage: 'mdm config <command> [options]',
     examples: [
       'mdm config init              # Create a .mdm.toml config file',
+      'mdm config init --global     # Create global config in ~/.mdm/',
       'mdm config init --force      # Overwrite existing config',
       'mdm config show              # Show config file location',
       'mdm config check             # Validate and show effective config',
@@ -435,6 +448,10 @@ export const helpContent: Record<string, CommandHelp> = {
       {
         name: 'check',
         description: 'Validate and show effective configuration',
+      },
+      {
+        name: '--global',
+        description: 'Write config to ~/.mdm/.mdm.toml (init only)',
       },
       { name: '--force', description: 'Overwrite existing config (init only)' },
       { name: '--json', description: 'Output as JSON' },

@@ -20,6 +20,7 @@ import {
   loadConfigFile,
   loadTomlFile,
   mergeWithDefaults,
+  type PartialMdmConfig,
   readEnvVars,
   readEnvVarsMap,
   validateConfig,
@@ -546,5 +547,45 @@ describe('load() with fileConfig', () => {
     })
     expect(result.index.maxDepth).toBe(2)
     expect(result.index.followSymlinks).toBe(defaultConfig.index.followSymlinks)
+  })
+})
+
+// ============================================================================
+// ALP-1366: generateDefaultToml round-trip
+// ============================================================================
+
+describe('generateDefaultToml round-trip', () => {
+  it('parses back to compiled defaults', async () => {
+    const { parse: parseToml } = await import('smol-toml')
+    const { generateDefaultToml } = await import('../cli/commands/init-toml.js')
+    const toml = generateDefaultToml()
+    const parsed = parseToml(toml)
+    expect(parsed).toBeTruthy()
+
+    // Feed the parsed TOML through mergeWithDefaults and compare
+    const result = mergeWithDefaults(parsed as unknown as PartialMdmConfig)
+
+    // Every field in the template should match compiled defaults
+    expect(result.index.maxDepth).toBe(defaultConfig.index.maxDepth)
+    expect(result.index.excludePatterns).toEqual(
+      defaultConfig.index.excludePatterns,
+    )
+    expect(result.index.fileExtensions).toEqual(
+      defaultConfig.index.fileExtensions,
+    )
+    expect(result.index.followSymlinks).toBe(defaultConfig.index.followSymlinks)
+    expect(result.search.defaultLimit).toBe(defaultConfig.search.defaultLimit)
+    expect(result.search.maxLimit).toBe(defaultConfig.search.maxLimit)
+    expect(result.embeddings.provider).toBe(defaultConfig.embeddings.provider)
+    expect(result.embeddings.model).toBe(defaultConfig.embeddings.model)
+    expect(result.embeddings.dimensions).toBe(
+      defaultConfig.embeddings.dimensions,
+    )
+    expect(result.output.format).toBe(defaultConfig.output.format)
+    expect(result.output.color).toBe(defaultConfig.output.color)
+    expect(result.aiSummarization.mode).toBe(defaultConfig.aiSummarization.mode)
+    expect(result.aiSummarization.provider).toBe(
+      defaultConfig.aiSummarization.provider,
+    )
   })
 })
