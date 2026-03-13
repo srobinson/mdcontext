@@ -310,8 +310,8 @@ export const parse = (
     } catch (error) {
       // Malformed frontmatter - treat entire content as markdown
       const msg = error instanceof Error ? error.message : String(error)
-      console.warn(
-        `Warning: Malformed frontmatter in ${path}, skipping: ${msg.split('\n')[0]}`,
+      yield* Effect.logWarning(
+        `Malformed frontmatter in ${path}, skipping: ${msg.split('\n')[0]}`,
       )
     }
 
