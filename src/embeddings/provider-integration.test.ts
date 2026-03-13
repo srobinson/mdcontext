@@ -545,10 +545,7 @@ describe('Provider Integration Tests', () => {
         },
       }
 
-      fs.writeFileSync(
-        path.join(tempDir, 'mdm.config.json'),
-        JSON.stringify(openaiConfig),
-      )
+      writeTomlConfig(tempDir, openaiConfig as Record<string, Record<string, unknown>>)
 
       let result = load({ workingDir: tempDir, skipEnv: true })
 
@@ -562,10 +559,7 @@ describe('Provider Integration Tests', () => {
         },
       }
 
-      fs.writeFileSync(
-        path.join(tempDir, 'mdm.config.json'),
-        JSON.stringify(ollamaConfig),
-      )
+      writeTomlConfig(tempDir, ollamaConfig as Record<string, Record<string, unknown>>)
 
       result = load({ workingDir: tempDir, skipEnv: true })
 
@@ -602,11 +596,10 @@ describe('Provider Integration Tests', () => {
 
       // Verify config file unchanged
       const fileContent = fs.readFileSync(
-        path.join(tempDir, 'mdm.config.json'),
+        path.join(tempDir, '.mdm.toml'),
         'utf-8',
       )
-      const savedConfig = JSON.parse(fileContent)
-      expect(savedConfig.embeddings.provider).toBe('openai')
+      expect(fileContent).toContain('provider = "openai"')
     })
   })
 
