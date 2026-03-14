@@ -10,7 +10,7 @@ const tomlArray = (items: readonly string[]): string =>
   `[${items.map((s) => `"${s}"`).join(', ')}]`
 
 export const generateDefaultToml = (): string => `# mdm configuration
-# https://github.com/mdcontext/markdown-matters
+# https://github.com/helioy/markdown-matters
 
 [index]
 maxDepth = ${defaultConfig.index.maxDepth}

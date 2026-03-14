@@ -31,7 +31,7 @@ coverage/
 .env.local
 .env.*.local
 
-# mdcontext indexes (local data)
+# markdown-matters indexes (local data)
 .mdm/
 !tests/fixtures/cli/.mdm/
 !src/__tests__/fixtures/semantic-search/multi-word-corpus/.mdm/

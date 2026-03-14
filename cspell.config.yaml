@@ -8,7 +8,7 @@ words:
   - Helioy
   - Hnsw
   - hnswlib
-  - mdcontext
+  - markdown-matters
   - mdm
   - modelcontextprotocol
   - tiktoken
