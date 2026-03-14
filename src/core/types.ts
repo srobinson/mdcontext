@@ -1,5 +1,5 @@
 /**
- * Core data types for mdcontext
+ * Core data types for mdm
  * Based on DESIGN.md specifications
  */
 

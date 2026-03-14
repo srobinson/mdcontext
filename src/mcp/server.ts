@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * MCP Server for mdcontext.
+ * MCP Server for mdm.
  *
  * Wires tool definitions, handlers, and transport together. Handler
  * implementations, input schemas, and the Effect-to-MCP adapter live
@@ -16,21 +16,16 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js'
-import { type ConfigError, Effect } from 'effect'
-
-import { createConfigProvider } from '../config/precedence.js'
-import type { MdContextConfig } from '../config/schema.js'
-import {
-  defaultConfig,
-  MdContextConfig as MdContextConfigSchema,
-} from '../config/schema.js'
+import { load } from '../config/loader.js'
+import type { MdmConfig } from '../config/schema.js'
+import { defaultConfig } from '../config/schema.js'
 
 import {
   handleMdBacklinks,
-  handleMdContext,
   handleMdIndex,
   handleMdKeywordSearch,
   handleMdLinks,
+  handleMdm,
   handleMdSearch,
   handleMdStructure,
 } from './handlers.js'
@@ -48,10 +43,10 @@ const MCP_VERSION: string = packageJson.version
 // MCP Server Setup
 // ============================================================================
 
-export const createServer = (rootPath: string, config: MdContextConfig) => {
+export const createServer = (rootPath: string, config: MdmConfig) => {
   const server = new Server(
     {
-      name: 'mdcontext-mcp',
+      name: 'mdm-mcp',
       version: MCP_VERSION,
     },
     {
@@ -74,7 +69,7 @@ export const createServer = (rootPath: string, config: MdContextConfig) => {
       case 'md_search':
         return handleMdSearch(args ?? {}, rootPath, config)
       case 'md_context':
-        return handleMdContext(args ?? {}, rootPath)
+        return handleMdm(args ?? {}, rootPath)
       case 'md_structure':
         return handleMdStructure(args ?? {}, rootPath)
       case 'md_keyword_search':
@@ -108,31 +103,13 @@ export const createServer = (rootPath: string, config: MdContextConfig) => {
  * Falls back to defaults on any config loading error to keep the
  * server operational even with a missing or malformed config file.
  */
-export const loadConfig = async (
-  rootPath: string,
-): Promise<MdContextConfig> => {
-  const program = Effect.gen(function* () {
-    const provider = yield* createConfigProvider({
-      workingDir: rootPath,
-    })
-    return yield* (
-      MdContextConfigSchema as Effect.Effect<
-        MdContextConfig,
-        ConfigError.ConfigError
-      >
-    ).pipe(Effect.withConfigProvider(provider))
-  })
-
-  return Effect.runPromise(
-    program.pipe(
-      Effect.catchAll((error) => {
-        console.error(
-          `[mdcontext] Config loading failed, using defaults: ${error}`,
-        )
-        return Effect.succeed(defaultConfig)
-      }),
-    ),
-  )
+export const loadConfig = (rootPath: string): MdmConfig => {
+  try {
+    return load({ workingDir: rootPath })
+  } catch (error) {
+    console.error(`[mdm] Config loading failed, using defaults: ${error}`)
+    return defaultConfig
+  }
 }
 
 const main = async () => {

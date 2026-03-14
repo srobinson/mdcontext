@@ -11,11 +11,7 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import { Effect, Option } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  createConfigProvider,
-  createConfigProviderSync,
-} from '../config/index.js'
-import { MdContextConfig } from '../config/schema.js'
+import { load, mergeWithDefaults } from '../config/index.js'
 import {
   createEmbeddingProviderDirect,
   getProviderBaseURL,
@@ -27,18 +23,40 @@ import type { VectorIndex } from './types.js'
 // Test Setup
 // ============================================================================
 
+/**
+ * Write a nested config object as TOML to .mdm.toml in the given directory.
+ */
+const writeTomlConfig = (
+  dir: string,
+  config: Record<string, Record<string, unknown>>,
+) => {
+  const lines: string[] = []
+  for (const [section, values] of Object.entries(config)) {
+    lines.push(`[${section}]`)
+    for (const [key, value] of Object.entries(values)) {
+      if (typeof value === 'string') {
+        lines.push(`${key} = "${value}"`)
+      } else if (typeof value === 'number' || typeof value === 'boolean') {
+        lines.push(`${key} = ${value}`)
+      }
+    }
+    lines.push('')
+  }
+  fs.writeFileSync(path.join(dir, '.mdm.toml'), lines.join('\n'))
+}
+
 describe('Provider Integration Tests', () => {
   let tempDir: string
   const savedEnv: Record<string, string | undefined> = {}
 
   beforeEach(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdcontext-provider-int-'))
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-provider-int-'))
 
     // Save and clear relevant env vars
     const envKeys = [
-      'MDCONTEXT_EMBEDDINGS_PROVIDER',
-      'MDCONTEXT_EMBEDDINGS_BASEURL',
-      'MDCONTEXT_EMBEDDINGS_MODEL',
+      'MDM_EMBEDDINGS_PROVIDER',
+      'MDM_EMBEDDINGS_BASEURL',
+      'MDM_EMBEDDINGS_MODEL',
       'OPENAI_API_KEY',
       'OPENROUTER_API_KEY',
     ]
@@ -67,116 +85,86 @@ describe('Provider Integration Tests', () => {
   // ==========================================================================
 
   describe('Configuration Precedence (CLI > Env > File > Defaults)', () => {
-    it('uses default provider (openai) when nothing specified', async () => {
-      const provider = createConfigProviderSync({
-        skipConfigFile: true,
-        skipEnv: true,
-      })
-
-      const result = await Effect.runPromise(
-        MdContextConfig.pipe(Effect.withConfigProvider(provider)),
-      )
+    it('uses default provider (openai) when nothing specified', () => {
+      const result = mergeWithDefaults({})
 
       expect(result.embeddings.provider).toBe('openai')
       expect(result.embeddings.model).toBe('text-embedding-3-small')
     })
 
-    it('config file overrides defaults', async () => {
+    it('config file overrides defaults', () => {
       const fileConfig = {
         embeddings: { provider: 'ollama', model: 'nomic-embed-text' },
       }
-      fs.writeFileSync(
-        path.join(tempDir, 'mdcontext.config.json'),
-        JSON.stringify(fileConfig),
+      writeTomlConfig(
+        tempDir,
+        fileConfig as Record<string, Record<string, unknown>>,
       )
 
-      const provider = await Effect.runPromise(
-        createConfigProvider({
-          workingDir: tempDir,
-          skipEnv: true,
-        }),
-      )
-
-      const result = await Effect.runPromise(
-        MdContextConfig.pipe(Effect.withConfigProvider(provider)),
-      )
+      const result = load({
+        workingDir: tempDir,
+        skipEnv: true,
+      })
 
       expect(result.embeddings.provider).toBe('ollama')
       expect(result.embeddings.model).toBe('nomic-embed-text')
     })
 
-    it('environment variable overrides config file', async () => {
+    it('environment variable overrides config file', () => {
       // Config file says openai
       const fileConfig = {
         embeddings: { provider: 'openai', model: 'text-embedding-3-small' },
       }
-      fs.writeFileSync(
-        path.join(tempDir, 'mdcontext.config.json'),
-        JSON.stringify(fileConfig),
+      writeTomlConfig(
+        tempDir,
+        fileConfig as Record<string, Record<string, unknown>>,
       )
 
       // Env says ollama
-      process.env.MDCONTEXT_EMBEDDINGS_PROVIDER = 'ollama'
+      process.env.MDM_EMBEDDINGS_PROVIDER = 'ollama'
 
-      const provider = await Effect.runPromise(
-        createConfigProvider({
-          workingDir: tempDir,
-          skipEnv: false,
-        }),
-      )
-
-      const result = await Effect.runPromise(
-        MdContextConfig.pipe(Effect.withConfigProvider(provider)),
-      )
+      const result = load({
+        workingDir: tempDir,
+        skipEnv: false,
+      })
 
       expect(result.embeddings.provider).toBe('ollama')
     })
 
-    it('CLI flag overrides environment variable', async () => {
+    it('CLI flag overrides environment variable', () => {
       // Env says openai
-      process.env.MDCONTEXT_EMBEDDINGS_PROVIDER = 'openai'
+      process.env.MDM_EMBEDDINGS_PROVIDER = 'openai'
 
       // CLI says ollama
-      const provider = createConfigProviderSync({
+      const result = load({
         skipConfigFile: true,
         skipEnv: false,
         cliOverrides: { embeddings: { provider: 'ollama' } },
       })
 
-      const result = await Effect.runPromise(
-        MdContextConfig.pipe(Effect.withConfigProvider(provider)),
-      )
-
       // CLI wins
       expect(result.embeddings.provider).toBe('ollama')
     })
 
-    it('CLI baseURL overrides provider default', async () => {
+    it('CLI baseURL overrides provider default', () => {
       const customURL = 'http://custom:9999/v1'
 
-      // Note: CLI overrides use plain strings, which get flattened to config keys.
-      // The flattenConfig function converts any value to a string, so this works at runtime
-      // even though the type expects Option<string>. Using 'as never' for test simplicity.
-      const provider = createConfigProviderSync({
+      const result = load({
         skipConfigFile: true,
         skipEnv: true,
         cliOverrides: {
           embeddings: {
             provider: 'ollama',
-            baseURL: customURL as never, // Type workaround for flattened config
+            baseURL: customURL,
           },
         },
       })
-
-      const result = await Effect.runPromise(
-        MdContextConfig.pipe(Effect.withConfigProvider(provider)),
-      )
 
       expect(result.embeddings.provider).toBe('ollama')
       expect(Option.getOrNull(result.embeddings.baseURL)).toBe(customURL)
     })
 
-    it('complete precedence chain works correctly', async () => {
+    it('complete precedence chain works correctly', () => {
       // Config file: provider=openai, model=text-embedding-3-large
       const fileConfig = {
         embeddings: {
@@ -185,26 +173,20 @@ describe('Provider Integration Tests', () => {
           batchSize: 50,
         },
       }
-      fs.writeFileSync(
-        path.join(tempDir, 'mdcontext.config.json'),
-        JSON.stringify(fileConfig),
+      writeTomlConfig(
+        tempDir,
+        fileConfig as Record<string, Record<string, unknown>>,
       )
 
       // Env: provider=ollama
-      process.env.MDCONTEXT_EMBEDDINGS_PROVIDER = 'ollama'
+      process.env.MDM_EMBEDDINGS_PROVIDER = 'ollama'
 
       // CLI: provider=openrouter
-      const provider = await Effect.runPromise(
-        createConfigProvider({
-          workingDir: tempDir,
-          skipEnv: false,
-          cliOverrides: { embeddings: { provider: 'openrouter' } },
-        }),
-      )
-
-      const result = await Effect.runPromise(
-        MdContextConfig.pipe(Effect.withConfigProvider(provider)),
-      )
+      const result = load({
+        workingDir: tempDir,
+        skipEnv: false,
+        cliOverrides: { embeddings: { provider: 'openrouter' } },
+      })
 
       // CLI wins for provider
       expect(result.embeddings.provider).toBe('openrouter')
@@ -444,76 +426,58 @@ describe('Provider Integration Tests', () => {
   // ==========================================================================
 
   describe('Config File Provider Selection', () => {
-    it('supports provider: "ollama" in config file', async () => {
+    it('supports provider: "ollama" in config file', () => {
       const fileConfig = {
         embeddings: { provider: 'ollama' },
       }
-      fs.writeFileSync(
-        path.join(tempDir, 'mdcontext.config.json'),
-        JSON.stringify(fileConfig),
+      writeTomlConfig(
+        tempDir,
+        fileConfig as Record<string, Record<string, unknown>>,
       )
 
-      const provider = await Effect.runPromise(
-        createConfigProvider({
-          workingDir: tempDir,
-          skipEnv: true,
-        }),
-      )
-
-      const result = await Effect.runPromise(
-        MdContextConfig.pipe(Effect.withConfigProvider(provider)),
-      )
+      const result = load({
+        workingDir: tempDir,
+        skipEnv: true,
+      })
 
       expect(result.embeddings.provider).toBe('ollama')
     })
 
-    it('supports provider: "lm-studio" in config file', async () => {
+    it('supports provider: "lm-studio" in config file', () => {
       const fileConfig = {
         embeddings: { provider: 'lm-studio' },
       }
-      fs.writeFileSync(
-        path.join(tempDir, 'mdcontext.config.json'),
-        JSON.stringify(fileConfig),
+      writeTomlConfig(
+        tempDir,
+        fileConfig as Record<string, Record<string, unknown>>,
       )
 
-      const provider = await Effect.runPromise(
-        createConfigProvider({
-          workingDir: tempDir,
-          skipEnv: true,
-        }),
-      )
-
-      const result = await Effect.runPromise(
-        MdContextConfig.pipe(Effect.withConfigProvider(provider)),
-      )
+      const result = load({
+        workingDir: tempDir,
+        skipEnv: true,
+      })
 
       expect(result.embeddings.provider).toBe('lm-studio')
     })
 
-    it('supports provider: "openrouter" in config file', async () => {
+    it('supports provider: "openrouter" in config file', () => {
       const fileConfig = {
         embeddings: { provider: 'openrouter' },
       }
-      fs.writeFileSync(
-        path.join(tempDir, 'mdcontext.config.json'),
-        JSON.stringify(fileConfig),
+      writeTomlConfig(
+        tempDir,
+        fileConfig as Record<string, Record<string, unknown>>,
       )
 
-      const provider = await Effect.runPromise(
-        createConfigProvider({
-          workingDir: tempDir,
-          skipEnv: true,
-        }),
-      )
-
-      const result = await Effect.runPromise(
-        MdContextConfig.pipe(Effect.withConfigProvider(provider)),
-      )
+      const result = load({
+        workingDir: tempDir,
+        skipEnv: true,
+      })
 
       expect(result.embeddings.provider).toBe('openrouter')
     })
 
-    it('supports custom baseURL in config file', async () => {
+    it('supports custom baseURL in config file', () => {
       const customURL = 'http://custom:8080/v1'
       const fileConfig = {
         embeddings: {
@@ -521,21 +485,15 @@ describe('Provider Integration Tests', () => {
           baseURL: customURL,
         },
       }
-      fs.writeFileSync(
-        path.join(tempDir, 'mdcontext.config.json'),
-        JSON.stringify(fileConfig),
+      writeTomlConfig(
+        tempDir,
+        fileConfig as Record<string, Record<string, unknown>>,
       )
 
-      const provider = await Effect.runPromise(
-        createConfigProvider({
-          workingDir: tempDir,
-          skipEnv: true,
-        }),
-      )
-
-      const result = await Effect.runPromise(
-        MdContextConfig.pipe(Effect.withConfigProvider(provider)),
-      )
+      const result = load({
+        workingDir: tempDir,
+        skipEnv: true,
+      })
 
       expect(result.embeddings.provider).toBe('ollama')
       expect(Option.getOrNull(result.embeddings.baseURL)).toBe(customURL)
@@ -547,63 +505,47 @@ describe('Provider Integration Tests', () => {
   // ==========================================================================
 
   describe('Environment Variable Provider Selection', () => {
-    it('MDCONTEXT_EMBEDDINGS_PROVIDER=ollama works', async () => {
-      process.env.MDCONTEXT_EMBEDDINGS_PROVIDER = 'ollama'
+    it('MDM_EMBEDDINGS_PROVIDER=ollama works', () => {
+      process.env.MDM_EMBEDDINGS_PROVIDER = 'ollama'
 
-      const provider = createConfigProviderSync({
+      const result = load({
         skipConfigFile: true,
         skipEnv: false,
       })
-
-      const result = await Effect.runPromise(
-        MdContextConfig.pipe(Effect.withConfigProvider(provider)),
-      )
 
       expect(result.embeddings.provider).toBe('ollama')
     })
 
-    it('MDCONTEXT_EMBEDDINGS_PROVIDER=lm-studio works', async () => {
-      process.env.MDCONTEXT_EMBEDDINGS_PROVIDER = 'lm-studio'
+    it('MDM_EMBEDDINGS_PROVIDER=lm-studio works', () => {
+      process.env.MDM_EMBEDDINGS_PROVIDER = 'lm-studio'
 
-      const provider = createConfigProviderSync({
+      const result = load({
         skipConfigFile: true,
         skipEnv: false,
       })
-
-      const result = await Effect.runPromise(
-        MdContextConfig.pipe(Effect.withConfigProvider(provider)),
-      )
 
       expect(result.embeddings.provider).toBe('lm-studio')
     })
 
-    it('MDCONTEXT_EMBEDDINGS_PROVIDER=openrouter works', async () => {
-      process.env.MDCONTEXT_EMBEDDINGS_PROVIDER = 'openrouter'
+    it('MDM_EMBEDDINGS_PROVIDER=openrouter works', () => {
+      process.env.MDM_EMBEDDINGS_PROVIDER = 'openrouter'
 
-      const provider = createConfigProviderSync({
+      const result = load({
         skipConfigFile: true,
         skipEnv: false,
       })
-
-      const result = await Effect.runPromise(
-        MdContextConfig.pipe(Effect.withConfigProvider(provider)),
-      )
 
       expect(result.embeddings.provider).toBe('openrouter')
     })
 
-    it('MDCONTEXT_EMBEDDINGS_MODEL works', async () => {
-      process.env.MDCONTEXT_EMBEDDINGS_PROVIDER = 'ollama'
-      process.env.MDCONTEXT_EMBEDDINGS_MODEL = 'mxbai-embed-large'
+    it('MDM_EMBEDDINGS_MODEL works', () => {
+      process.env.MDM_EMBEDDINGS_PROVIDER = 'ollama'
+      process.env.MDM_EMBEDDINGS_MODEL = 'mxbai-embed-large'
 
-      const provider = createConfigProviderSync({
+      const result = load({
         skipConfigFile: true,
         skipEnv: false,
       })
-
-      const result = await Effect.runPromise(
-        MdContextConfig.pipe(Effect.withConfigProvider(provider)),
-      )
 
       expect(result.embeddings.provider).toBe('ollama')
       expect(result.embeddings.model).toBe('mxbai-embed-large')
@@ -615,7 +557,7 @@ describe('Provider Integration Tests', () => {
   // ==========================================================================
 
   describe('Provider Switching Scenarios', () => {
-    it('simulates switching from OpenAI to Ollama config', async () => {
+    it('simulates switching from OpenAI to Ollama config', () => {
       // Start with OpenAI config
       const openaiConfig = {
         embeddings: {
@@ -624,18 +566,12 @@ describe('Provider Integration Tests', () => {
         },
       }
 
-      fs.writeFileSync(
-        path.join(tempDir, 'mdcontext.config.json'),
-        JSON.stringify(openaiConfig),
+      writeTomlConfig(
+        tempDir,
+        openaiConfig as Record<string, Record<string, unknown>>,
       )
 
-      let provider = await Effect.runPromise(
-        createConfigProvider({ workingDir: tempDir, skipEnv: true }),
-      )
-
-      let result = await Effect.runPromise(
-        MdContextConfig.pipe(Effect.withConfigProvider(provider)),
-      )
+      let result = load({ workingDir: tempDir, skipEnv: true })
 
       expect(result.embeddings.provider).toBe('openai')
 
@@ -647,24 +583,18 @@ describe('Provider Integration Tests', () => {
         },
       }
 
-      fs.writeFileSync(
-        path.join(tempDir, 'mdcontext.config.json'),
-        JSON.stringify(ollamaConfig),
+      writeTomlConfig(
+        tempDir,
+        ollamaConfig as Record<string, Record<string, unknown>>,
       )
 
-      provider = await Effect.runPromise(
-        createConfigProvider({ workingDir: tempDir, skipEnv: true }),
-      )
-
-      result = await Effect.runPromise(
-        MdContextConfig.pipe(Effect.withConfigProvider(provider)),
-      )
+      result = load({ workingDir: tempDir, skipEnv: true })
 
       expect(result.embeddings.provider).toBe('ollama')
       expect(result.embeddings.model).toBe('nomic-embed-text')
     })
 
-    it('simulates temporary CLI override without changing config', async () => {
+    it('simulates temporary CLI override without changing config', () => {
       // Persistent config uses OpenAI
       const fileConfig = {
         embeddings: {
@@ -673,28 +603,22 @@ describe('Provider Integration Tests', () => {
         },
       }
 
-      fs.writeFileSync(
-        path.join(tempDir, 'mdcontext.config.json'),
-        JSON.stringify(fileConfig),
+      writeTomlConfig(
+        tempDir,
+        fileConfig as Record<string, Record<string, unknown>>,
       )
 
       // One-off CLI override to use Ollama
-      const provider = await Effect.runPromise(
-        createConfigProvider({
-          workingDir: tempDir,
-          skipEnv: true,
-          cliOverrides: {
-            embeddings: {
-              provider: 'ollama',
-              model: 'nomic-embed-text',
-            },
+      const result = load({
+        workingDir: tempDir,
+        skipEnv: true,
+        cliOverrides: {
+          embeddings: {
+            provider: 'ollama',
+            model: 'nomic-embed-text',
           },
-        }),
-      )
-
-      const result = await Effect.runPromise(
-        MdContextConfig.pipe(Effect.withConfigProvider(provider)),
-      )
+        },
+      })
 
       // CLI override active
       expect(result.embeddings.provider).toBe('ollama')
@@ -702,11 +626,10 @@ describe('Provider Integration Tests', () => {
 
       // Verify config file unchanged
       const fileContent = fs.readFileSync(
-        path.join(tempDir, 'mdcontext.config.json'),
+        path.join(tempDir, '.mdm.toml'),
         'utf-8',
       )
-      const savedConfig = JSON.parse(fileContent)
-      expect(savedConfig.embeddings.provider).toBe('openai')
+      expect(fileContent).toContain('provider = "openai"')
     })
   })
 

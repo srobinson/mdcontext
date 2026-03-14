@@ -1,10 +1,10 @@
 # AI Summarization Architecture
 
-This document covers the architecture and implementation details of mdcontext's AI-powered search result summarization feature.
+This document covers the architecture and implementation details of mdm's AI-powered search result summarization feature.
 
 ## Overview
 
-mdcontext can generate AI-powered summaries of search results using either:
+mdm can generate AI-powered summaries of search results using either:
 
 1. **CLI tools** (Claude Code, Copilot CLI, OpenCode) - Free with your subscription
 2. **API providers** (DeepSeek, Anthropic, OpenAI, Gemini) - Pay per query
@@ -260,8 +260,8 @@ export class NewAPISummarizer implements Summarizer {
 ### Config File
 
 ```javascript
-// mdcontext.config.js
-/** @type {import('mdcontext').PartialMdContextConfig} */
+// mdm.config.js
+/** @type {import('markdown-matters').PartialMdmConfig} */
 export default {
   aiSummarization: {
     mode: 'cli',           // 'cli' or 'api'
@@ -276,10 +276,10 @@ export default {
 
 | Variable | Description |
 |----------|-------------|
-| `MDCONTEXT_AISUMMARIZATION_MODE` | 'cli' or 'api' |
-| `MDCONTEXT_AISUMMARIZATION_PROVIDER` | Provider name |
-| `MDCONTEXT_AISUMMARIZATION_MODEL` | Model name (API only) |
-| `MDCONTEXT_AISUMMARIZATION_STREAM` | 'true' or 'false' |
+| `MDM_AISUMMARIZATION_MODE` | 'cli' or 'api' |
+| `MDM_AISUMMARIZATION_PROVIDER` | Provider name |
+| `MDM_AISUMMARIZATION_MODEL` | Model name (API only) |
+| `MDM_AISUMMARIZATION_STREAM` | 'true' or 'false' |
 
 ## Troubleshooting
 

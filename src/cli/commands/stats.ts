@@ -54,7 +54,7 @@ export const statsCommand = Command.make(
           yield* Console.log(formatJson({ error: 'No index found' }, pretty))
         } else {
           yield* Console.log('No index found.')
-          yield* Console.log("Run 'mdcontext index <path>' to create an index.")
+          yield* Console.log("Run 'mdm index <path>' to create an index.")
         }
         return
       }
@@ -140,9 +140,7 @@ export const statsCommand = Command.make(
           )
         } else {
           yield* Console.log('    Not enabled')
-          yield* Console.log(
-            "    Run 'mdcontext index --embed' to build embeddings.",
-          )
+          yield* Console.log("    Run 'mdm index --embed' to build embeddings.")
         }
       }
     }),

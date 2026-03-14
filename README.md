@@ -1,17 +1,20 @@
-# mdcontext
+# mdm
 
 **Give LLMs exactly the markdown they need. Nothing more.**
 
 ```bash
 QUICK REFERENCE
-  mdcontext index [path]           Index markdown files (add --embed for semantic search)
-  mdcontext search <query> [path]  Search by meaning or structure
-  mdcontext context <files...>     Get LLM-ready summary
-  mdcontext tree [path|file]       Show files or document outline
-  mdcontext config <command>       Configuration management (init, show, check)
-  mdcontext links <file>           Outgoing links
-  mdcontext backlinks <file>       Incoming links
-  mdcontext stats [path]           Index statistics
+  mdm init [options]              Initialize mdm in a directory
+  mdm index [path] [options]      Index markdown files (add --embed for semantic search)
+  mdm search <query> [options]    Search by meaning or structure
+  mdm context <files...>          Get LLM-ready summary
+  mdm tree [path]                 Show files or document outline
+  mdm config <command>            Configuration management (init, show, check)
+  mdm duplicates [path]           Find duplicate content
+  mdm embeddings <command>        Manage embedding namespaces
+  mdm links <file>                Outgoing links
+  mdm backlinks <file>            Incoming links
+  mdm stats [path]                Index statistics
 ```
 
 ---
@@ -20,13 +23,13 @@ QUICK REFERENCE
 
 Your documentation is 50K tokens of markdown. LLM context windows are limited. Raw markdown dumps waste tokens on structure, headers, and noise.
 
-mdcontext extracts *structure* instead of dumping *text*. The result: **80%+ fewer tokens** while preserving everything needed to understand your docs.
+mdm extracts *structure* instead of dumping *text*. The result: **80%+ fewer tokens** while preserving everything needed to understand your docs.
 
 ```bash
-npm install -g mdcontext
-mdcontext index .                     # Index your docs
-mdcontext search "authentication"     # Find by meaning
-mdcontext context README.md           # Get LLM-ready summary
+npm install -g markdown-matters
+mdm index .                     # Index your docs
+mdm search "authentication"     # Find by meaning
+mdm context README.md           # Get LLM-ready summary
 ```
 
 ---
@@ -34,7 +37,7 @@ mdcontext context README.md           # Get LLM-ready summary
 ## Installation
 
 ```bash
-npm install -g mdcontext
+npm install -g markdown-matters
 ```
 
 Requires Node.js 18+. Semantic search requires an embedding provider (OpenAI, Ollama, LM Studio, OpenRouter, or Voyage). See [docs/CONFIG.md](./docs/CONFIG.md#embedding-providers) for provider setup.
@@ -43,28 +46,48 @@ Requires Node.js 18+. Semantic search requires an embedding provider (OpenAI, Ol
 
 ## Commands
 
-### index
+### init
 
-Index markdown files. Run this first.
+Initialize mdm in a directory. Supports both local project setup and global shared indexing.
 
 ```bash
-mdcontext index                       # Index current directory (prompts for semantic)
-mdcontext index ./docs                # Index specific path
-mdcontext index --embed               # Also build embeddings for semantic search
-mdcontext index --no-embed            # Skip the semantic search prompt
-mdcontext index --watch               # Watch for changes
-mdcontext index --force               # Force full rebuild
+mdm init                        # Interactive setup (prompts for local or global)
+mdm init --local                # Initialize locally (.mdm/ in current directory)
+mdm init --global               # Initialize globally (~/.mdm/)
+mdm init --yes                  # Accept all defaults without prompting
 ```
+
+Local setup creates `.mdm/` and `.mdm.toml` in your project. Global setup creates `~/.mdm/` with source registration for multi-project indexing.
+
+Config resolution: Local `.mdm.toml` takes precedence over `~/.mdm/.mdm.toml`, which falls back to built-in defaults.
+
+### index
+
+Index markdown files for fast searching.
+
+```bash
+mdm index                       # Index current directory (prompts for semantic)
+mdm index ./docs                # Index specific path
+mdm index --embed               # Build embeddings for semantic search
+mdm index --no-embed            # Skip the semantic search prompt
+mdm index --watch               # Watch for changes and re-index automatically
+mdm index --force               # Bypass cache, re-process all files
+mdm index --all                 # Index all registered global sources from ~/.mdm/.mdm.toml
+mdm index --exclude "*.draft.md,research/**"  # Exclude patterns (comma-separated)
+mdm index --no-gitignore        # Ignore .gitignore file
+```
+
+By default, mdm respects `.gitignore` and `.mdmignore` patterns. Use `--exclude` to add CLI-level patterns (highest priority).
 
 ### search
 
 Search by meaning (semantic) or keyword (text match).
 
 ```bash
-mdcontext search "how to authenticate"        # Semantic search (if embeddings exist)
-mdcontext search -k "auth.*flow"              # Keyword search (text match)
-mdcontext search -n 5 "setup"                 # Limit to 5 results
-mdcontext search --threshold 0.25 "deploy"    # Lower threshold for more results
+mdm search "how to authenticate"        # Semantic search (if embeddings exist)
+mdm search -k "auth.*flow"              # Keyword search (text match)
+mdm search -n 5 "setup"                 # Limit to 5 results
+mdm search --threshold 0.25 "deploy"    # Lower threshold for more results
 ```
 
 #### Similarity Threshold
@@ -77,9 +100,9 @@ Semantic search filters results by similarity score (0-1). Default: **0.35** (35
 - **Lower threshold** = more results, possibly less relevant
 
 ```bash
-mdcontext search "authentication"              # Uses default 0.35 threshold
-mdcontext search --threshold 0.25 "auth"       # Lower threshold for broad queries
-mdcontext search --threshold 0.6 "specific"    # Higher threshold for precision
+mdm search "authentication"              # Uses default 0.35 threshold
+mdm search --threshold 0.25 "auth"       # Lower threshold for broad queries
+mdm search --threshold 0.6 "specific"    # Higher threshold for precision
 ```
 
 #### Context Lines
@@ -87,8 +110,8 @@ mdcontext search --threshold 0.6 "specific"    # Higher threshold for precision
 Show surrounding lines around matches (like grep):
 
 ```bash
-mdcontext search "checkpoint" -C 3            # 3 lines before AND after each match
-mdcontext search "error" -B 2 -A 5            # 2 lines before, 5 lines after
+mdm search "checkpoint" -C 3            # 3 lines before AND after each match
+mdm search "error" -B 2 -A 5            # 2 lines before, 5 lines after
 ```
 
 Auto-detection: Uses semantic search if embeddings exist and query looks like natural language. Use `-k` to force keyword search.
@@ -97,19 +120,19 @@ Auto-detection: Uses semantic search if embeddings exist and query looks like na
 
 **Quality Modes** - Control speed vs. accuracy tradeoff:
 ```bash
-mdcontext search "query" --quality fast       # 40% faster, good recall
-mdcontext search "query" -q thorough          # Best recall, 30% slower
+mdm search "query" --quality fast       # 40% faster, good recall
+mdm search "query" -q thorough          # Best recall, 30% slower
 ```
 
 **Re-ranking** - Boost precision by 20-35%:
 ```bash
-mdcontext search "query" --rerank             # First use downloads 90MB model
+mdm search "query" --rerank             # First use downloads 90MB model
 npm install @huggingface/transformers         # Required dependency
 ```
 
 **HyDE** - Better results for complex questions:
 ```bash
-mdcontext search "how to implement auth" --hyde   # Expands query semantically
+mdm search "how to implement auth" --hyde   # Expands query semantically
 ```
 
 #### AI Summarization
@@ -117,9 +140,9 @@ mdcontext search "how to implement auth" --hyde   # Expands query semantically
 Generate AI-powered summaries of search results:
 
 ```bash
-mdcontext search "authentication" --summarize     # Get AI summary of results
-mdcontext search "error handling" -s --yes        # Skip cost confirmation
-mdcontext search "database" -s --stream           # Stream output in real-time
+mdm search "authentication" --summarize     # Get AI summary of results
+mdm search "error handling" -s --yes        # Skip cost confirmation
+mdm search "database" -s --stream           # Stream output in real-time
 ```
 
 Uses your existing AI subscription (Claude Code, Copilot CLI) for free, or pay-per-use API providers. See [AI Summarization](#ai-summarization) for setup.
@@ -129,12 +152,12 @@ Uses your existing AI subscription (Claude Code, Copilot CLI) for free, or pay-p
 Get LLM-ready summaries from one or more files.
 
 ```bash
-mdcontext context README.md                   # Single file
-mdcontext context README.md docs/api.md       # Multiple files
-mdcontext context docs/*.md                   # Glob patterns work
-mdcontext context -t 500 README.md            # Token budget
-mdcontext context --brief README.md           # Minimal output
-mdcontext context --full README.md            # Include full content
+mdm context README.md                   # Single file
+mdm context README.md docs/api.md       # Multiple files
+mdm context docs/*.md                   # Glob patterns work
+mdm context -t 500 README.md            # Token budget
+mdm context --brief README.md           # Minimal output
+mdm context --full README.md            # Include full content
 ```
 
 #### Section Filtering
@@ -142,11 +165,11 @@ mdcontext context --full README.md            # Include full content
 Extract specific sections instead of entire files:
 
 ```bash
-mdcontext context doc.md --sections           # List available sections
-mdcontext context doc.md --section "Setup"    # Extract by section name
-mdcontext context doc.md --section "2.1"      # Extract by section number
-mdcontext context doc.md --section "API*"     # Glob pattern matching
-mdcontext context doc.md --section "Config" --shallow  # Top-level only (no nested subsections)
+mdm context doc.md --sections           # List available sections
+mdm context doc.md --section "Setup"    # Extract by section name
+mdm context doc.md --section "2.1"      # Extract by section number
+mdm context doc.md --section "API*"     # Glob pattern matching
+mdm context doc.md --section "Config" --shallow  # Top-level only (no nested subsections)
 ```
 
 The `--sections` flag shows all sections with their numbers and token counts, helping you target exactly what you need.
@@ -156,9 +179,9 @@ The `--sections` flag shows all sections with their numbers and token counts, he
 Show file structure or document outline.
 
 ```bash
-mdcontext tree                        # List markdown files in current directory
-mdcontext tree ./docs                 # List files in specific directory
-mdcontext tree README.md              # Show document outline (heading hierarchy)
+mdm tree                        # List markdown files in current directory
+mdm tree ./docs                 # List files in specific directory
+mdm tree README.md              # Show document outline (heading hierarchy)
 ```
 
 Auto-detection: Directory shows file list, file shows document outline.
@@ -168,8 +191,8 @@ Auto-detection: Directory shows file list, file shows document outline.
 Analyze link relationships.
 
 ```bash
-mdcontext links README.md             # What does this file link to?
-mdcontext backlinks docs/api.md       # What files link to this?
+mdm links README.md             # What does this file link to?
+mdm backlinks docs/api.md       # What files link to this?
 ```
 
 ### stats
@@ -177,9 +200,34 @@ mdcontext backlinks docs/api.md       # What files link to this?
 Show index statistics.
 
 ```bash
-mdcontext stats                       # Current directory
-mdcontext stats ./docs                # Specific path
+mdm stats                       # Current directory
+mdm stats ./docs                # Specific path
 ```
+
+### duplicates
+
+Detect duplicate content in markdown files.
+
+```bash
+mdm duplicates                  # Find duplicates in current directory
+mdm duplicates docs/            # Find duplicates in specific directory
+mdm duplicates --min-length 100 # Only flag sections over 100 characters
+mdm duplicates -p "docs/**"     # Filter by path pattern
+```
+
+### embeddings
+
+Manage embedding providers and namespaces.
+
+```bash
+mdm embeddings list             # List all embedding namespaces
+mdm embeddings current          # Show active namespace
+mdm embeddings switch openai    # Switch to OpenAI embeddings
+mdm embeddings remove ollama    # Remove Ollama embeddings
+mdm embeddings remove openai -f # Force remove active namespace
+```
+
+Namespaces store embeddings separately by provider/model. Switching is instant without rebuild.
 
 ---
 
@@ -188,21 +236,21 @@ mdcontext stats ./docs                # Specific path
 ### Before Adding Context to LLM
 
 ```bash
-mdcontext tree docs/                          # See what's available
-mdcontext tree docs/api.md                    # Check document structure
-mdcontext context -t 500 docs/api.md          # Get summary within token budget
+mdm tree docs/                          # See what's available
+mdm tree docs/api.md                    # Check document structure
+mdm context -t 500 docs/api.md          # Get summary within token budget
 ```
 
 ### Finding Documentation
 
 ```bash
-mdcontext search "authentication"             # By meaning
-mdcontext search -k "Setup|Install"           # By keyword pattern
+mdm search "authentication"             # By meaning
+mdm search -k "Setup|Install"           # By keyword pattern
 ```
 
 ### Setting Up Semantic Search
 
-mdcontext supports multiple embedding providers for semantic search:
+mdm supports multiple embedding providers for semantic search:
 
 - **OpenAI** (default) - Cloud-based, requires API key
 - **Ollama** - Free, local, daemon-based
@@ -213,14 +261,14 @@ mdcontext supports multiple embedding providers for semantic search:
 Quick start with OpenAI:
 ```bash
 export OPENAI_API_KEY=sk-...
-mdcontext index --embed                       # Build embeddings
-mdcontext search "how to deploy"              # Now works semantically
+mdm index --embed                       # Build embeddings
+mdm search "how to deploy"              # Now works semantically
 ```
 
 Using Ollama (free, local):
 ```bash
 ollama serve && ollama pull nomic-embed-text
-mdcontext index --embed --provider ollama --provider-model nomic-embed-text
+mdm index --embed --provider ollama --provider-model nomic-embed-text
 ```
 
 See [docs/CONFIG.md](./docs/CONFIG.md#embedding-providers) for complete provider setup, comparison, and configuration options.
@@ -234,8 +282,8 @@ For Claude Desktop, add to `~/Library/Application Support/Claude/claude_desktop_
 ```json
 {
   "mcpServers": {
-    "mdcontext": {
-      "command": "mdcontext-mcp",
+    "mdm": {
+      "command": "mdm-mcp",
       "args": []
     }
   }
@@ -247,8 +295,8 @@ For Claude Code, add to `.claude/settings.json`:
 ```json
 {
   "mcpServers": {
-    "mdcontext": {
-      "command": "mdcontext-mcp",
+    "mdm": {
+      "command": "mdm-mcp",
       "args": []
     }
   }
@@ -267,29 +315,27 @@ For Claude Code, add to `.claude/settings.json`:
 
 ## Configuration
 
-mdcontext supports a layered configuration system for persistent settings:
+mdm supports a layered configuration system for persistent settings:
 
 ```bash
 # Create a config file
-mdcontext config init
+mdm config init
 
 # Check your configuration
-mdcontext config check
+mdm config check
 
-# Customize settings in mdcontext.config.js
+# Customize settings in .mdm.toml
 ```
 
-```javascript
-// mdcontext.config.js
-/** @type {import('mdcontext').PartialMdContextConfig} */
-export default {
-  index: {
-    excludePatterns: ['node_modules', '.git', 'dist', 'vendor']
-  },
-  search: {
-    defaultLimit: 20
-  }
-}
+```toml
+# .mdm.toml
+[index]
+maxDepth = 10
+excludePatterns = ["node_modules", ".git", "dist", "build"]
+
+[search]
+defaultLimit = 20
+minSimilarity = 0.35
 ```
 
 Configuration precedence: CLI flags > Environment variables > Config file > Defaults
@@ -298,10 +344,10 @@ Configuration precedence: CLI flags > Environment variables > Config file > Defa
 
 ### Index Location
 
-Indexes are stored in `.mdcontext/` in your project root:
+Indexes are stored in `.mdm/` in your project root:
 
 ```
-.mdcontext/
+.mdm/
   indexes/
     documents.json    # Document metadata
     sections.json     # Section index
@@ -315,7 +361,7 @@ Indexes are stored in `.mdcontext/` in your project root:
 |----------|-------------|
 | `OPENAI_API_KEY` | Required for OpenAI semantic search (default provider) |
 | `OPENROUTER_API_KEY` | Required for OpenRouter semantic search |
-| `MDCONTEXT_*` | Configuration overrides (see [CONFIG.md](./docs/CONFIG.md)) |
+| `MDM_*` | Configuration overrides (see [CONFIG.md](./docs/CONFIG.md)) |
 
 ---
 
@@ -327,18 +373,18 @@ Transform search results into actionable insights using AI.
 
 ```bash
 # Basic usage (auto-detects installed CLI tools)
-mdcontext search "authentication" --summarize
+mdm search "authentication" --summarize
 
 # Skip confirmation for scripts
-mdcontext search "error handling" --summarize --yes
+mdm search "error handling" --summarize --yes
 
 # Stream output in real-time
-mdcontext search "database" --summarize --stream
+mdm search "database" --summarize --stream
 ```
 
 ### First-Time Setup
 
-On first use, mdcontext auto-detects available providers:
+On first use, mdm auto-detects available providers:
 
 ```
 Using claude (subscription - FREE)
@@ -372,26 +418,22 @@ Based on the search results, here are the key findings...
 
 **Option 1: Auto-detection (recommended)**
 
-Just run `--summarize` - mdcontext finds installed CLI tools automatically.
+Just run `--summarize` - mdm finds installed CLI tools automatically.
 
 **Option 2: Config file**
 
-```javascript
-// mdcontext.config.js
-/** @type {import('mdcontext').PartialMdContextConfig} */
-export default {
-  aiSummarization: {
-    mode: 'cli',        // 'cli' (free) or 'api' (paid)
-    provider: 'claude', // Provider name
-  },
-}
+```toml
+# .mdm.toml
+[aiSummarization]
+mode = "cli"        # 'cli' (free) or 'api' (paid)
+provider = "claude" # Provider name
 ```
 
 **Option 3: Environment variables**
 
 ```bash
-export MDCONTEXT_AISUMMARIZATION_MODE=api
-export MDCONTEXT_AISUMMARIZATION_PROVIDER=deepseek
+export MDM_AISUMMARIZATION_MODE=api
+export MDM_AISUMMARIZATION_PROVIDER=deepseek
 export DEEPSEEK_API_KEY=sk-...
 ```
 
@@ -429,7 +471,7 @@ See [docs/summarization.md](./docs/summarization.md) for architecture details an
 
 ## Performance
 
-| Metric | Raw Markdown | mdcontext | Savings |
+| Metric | Raw Markdown | mdm | Savings |
 |--------|--------------|---------|---------|
 | Context for single doc | 2,500 tokens | 400 tokens | **84%** |
 | Context for 10 docs | 25,000 tokens | 4,000 tokens | **84%** |

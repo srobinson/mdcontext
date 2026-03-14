@@ -106,7 +106,7 @@ export const contextCommand = Command.make(
         yield* Effect.fail(
           new CliValidationError({
             message:
-              'At least one file is required. Usage: mdcontext context <file> [files...]',
+              'At least one file is required. Usage: mdm context <file> [files...]',
             argument: 'files',
           }),
         )

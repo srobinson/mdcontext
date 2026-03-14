@@ -107,7 +107,7 @@ const listSubcommand = Command.make(
         } else {
           yield* Console.log('No embedding namespaces found.')
           yield* Console.log('')
-          yield* Console.log('Run: mdcontext index --embed')
+          yield* Console.log('Run: mdm index --embed')
         }
         return
       }
@@ -229,14 +229,14 @@ const switchSubcommand = Command.make(
             formatJson(
               {
                 error:
-                  'No embedding namespaces found. Run "mdcontext index --embed" first.',
+                  'No embedding namespaces found. Run "mdm index --embed" first.',
               },
               pretty,
             ),
           )
         } else {
           yield* Console.log(
-            'No embedding namespaces found. Run "mdcontext index --embed" first.',
+            'No embedding namespaces found. Run "mdm index --embed" first.',
           )
         }
         return
@@ -463,7 +463,7 @@ const removeSubcommand = Command.make(
         yield* Console.log(`Removed namespace: ${result.removed}`)
         if (result.wasActive) {
           yield* Console.log(
-            'Note: This was the active namespace. Run "mdcontext embeddings list" to see remaining namespaces.',
+            'Note: This was the active namespace. Run "mdm embeddings list" to see remaining namespaces.',
           )
         }
       }
@@ -498,7 +498,7 @@ const currentSubcommand = Command.make(
         } else {
           yield* Console.log('No active embedding namespace.')
           yield* Console.log('')
-          yield* Console.log('Run: mdcontext index --embed')
+          yield* Console.log('Run: mdm index --embed')
         }
         return
       }

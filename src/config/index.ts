@@ -5,47 +5,38 @@
  */
 
 export {
-  // File detection
-  CONFIG_FILE_NAMES,
-  type ConfigFileFormat,
-  type ConfigFileName,
-  // Provider creation
-  createFileConfigProvider,
-  findConfigFile,
-  type LoadConfigResult,
-  // File loading
+  type GlobalSource,
+  type LoadOptions,
+  // Loader
+  load,
   loadConfigFile,
-  loadConfigFromPath,
-  loadFileConfigProvider,
-  loadFileConfigProviderFromPath,
-} from './file-provider.js'
+  loadTomlFile,
+  mergeWithDefaults,
+  type PartialMdmConfig,
+  readEnvVars,
+  readEnvVarsMap,
+  readGlobalSources,
+  validateConfig,
+} from './loader.js'
 export {
-  // Precedence chain
-  type ConfigProviderOptions,
-  createCliConfigProvider,
-  createConfigProvider,
-  createConfigProviderSync,
-  createEnvConfigProvider,
-  createTestConfigProvider,
-  // Utilities
-  flattenConfig,
-  readEnvConfig,
-} from './precedence.js'
-export {
+  // Schema types
+  type AISummarizationConfig,
+  type AISummarizationMode,
+  type APIProviderName,
+  type CLIProviderName,
   // Default values
   defaultConfig,
-  // Types
   type EmbeddingProviderName,
-  EmbeddingsConfig,
-  // Config schemas
-  IndexConfig,
-  MdContextConfig,
+  type EmbeddingsConfig,
+  type IndexConfig,
+  type MdmConfig,
   type OpenAIEmbeddingModel,
-  OutputConfig,
+  type OutputConfig,
   type OutputFormat,
-  PathsConfig,
-  SearchConfig,
-  SummarizationConfig,
+  type PathsConfig,
+  type SearchConfig,
+  type SummarizationConfig,
+  type SummarizationProviderName,
 } from './schema.js'
 export {
   // Service
@@ -58,10 +49,8 @@ export {
   getConfigValue,
   // Layer utilities
   makeConfigLayer,
+  makeConfigLayerFromOptions,
   makeConfigLayerPartial,
-  // Merge utilities
-  mergeWithDefaults,
-  type PartialMdContextConfig,
 } from './service.js'
 export {
   // Testing utilities

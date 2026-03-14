@@ -39,7 +39,7 @@ import type {
   IndexBuildError,
   IndexCorruptedError,
   IndexNotFoundError,
-  MdContextError,
+  MdmError,
   ParseError,
   SummarizationError,
   VectorStoreError,
@@ -115,7 +115,7 @@ const formatConfigError = (e: ConfigError): FormattedError => {
 
   const suggestions: string[] = []
   suggestions.push('Check your config file syntax')
-  suggestions.push("Run 'mdcontext config check' to validate configuration")
+  suggestions.push("Run 'mdm config check' to validate configuration")
 
   return {
     code: e.code,
@@ -134,7 +134,7 @@ const formatConfigError = (e: ConfigError): FormattedError => {
  * Format an error for user display.
  * Returns a structured object with message, suggestions, and exit code.
  */
-export const formatError = (error: MdContextError): FormattedError =>
+export const formatError = (error: MdmError): FormattedError =>
   Match.value(error).pipe(
     // File system errors
     Match.tag('FileReadError', (e) => ({
@@ -321,7 +321,7 @@ export const formatError = (error: MdContextError): FormattedError =>
       code: e.code,
       message: 'Index not found',
       details: `No index at ${e.path}`,
-      suggestions: ["Run 'mdcontext index' first to build the index"] as const,
+      suggestions: ["Run 'mdm index' first to build the index"] as const,
       exitCode: EXIT_CODE.USER_ERROR,
     })),
     Match.tag('IndexCorruptedError', (e) => ({
@@ -329,7 +329,7 @@ export const formatError = (error: MdContextError): FormattedError =>
       message: 'Index is corrupted',
       details: e.details ?? `Corruption reason: ${e.reason}`,
       suggestions: [
-        "Delete the .mdcontext folder and run 'mdcontext index' again",
+        "Delete the .mdm folder and run 'mdm index' again",
       ] as const,
       exitCode: EXIT_CODE.USER_ERROR,
     })),
@@ -346,7 +346,7 @@ export const formatError = (error: MdContextError): FormattedError =>
       code: e.code,
       message: `Document not found in index: ${e.path}`,
       suggestions: [
-        "Run 'mdcontext index' to update the index",
+        "Run 'mdm index' to update the index",
         'Check the file path is correct',
       ] as const,
       exitCode: EXIT_CODE.USER_ERROR,
@@ -356,7 +356,7 @@ export const formatError = (error: MdContextError): FormattedError =>
       message: 'Embeddings not found',
       details: `No embeddings at ${e.path}`,
       suggestions: [
-        "Run 'mdcontext index --embed' to build embeddings for semantic search",
+        "Run 'mdm index --embed' to build embeddings for semantic search",
         'Use -k flag for keyword search instead',
       ] as const,
       exitCode: EXIT_CODE.USER_ERROR,
@@ -371,7 +371,7 @@ export const formatError = (error: MdContextError): FormattedError =>
         e.corpusProvider
           ? `Switch back to original provider: --provider ${e.corpusProvider.split(':')[0]} --provider-model ${e.corpusProvider.split(':')[1] ?? ''}`
           : 'Check your embedding provider configuration',
-        "Rebuild corpus with current provider: 'mdcontext index --embed --force'",
+        "Rebuild corpus with current provider: 'mdm index --embed --force'",
         'The corpus was created with different embedding dimensions than your current provider',
       ] as const,
       exitCode: EXIT_CODE.USER_ERROR,
@@ -383,7 +383,7 @@ export const formatError = (error: MdContextError): FormattedError =>
       message: `Vector store error during ${e.operation}`,
       details: e.message,
       suggestions: [
-        "Delete .mdcontext/embeddings and run 'mdcontext index --embed' again",
+        "Delete .mdm/embeddings and run 'mdm index --embed' again",
       ] as const,
       exitCode: EXIT_CODE.SYSTEM_ERROR,
     })),
@@ -412,7 +412,7 @@ export const formatError = (error: MdContextError): FormattedError =>
         e.argument && e.expected
           ? `Expected ${e.expected}${e.received ? `, got ${e.received}` : ''}`
           : undefined,
-      suggestions: ["Run 'mdcontext --help' for usage information"] as const,
+      suggestions: ["Run 'mdm --help' for usage information"] as const,
       exitCode: EXIT_CODE.USER_ERROR,
     })),
 
@@ -423,7 +423,7 @@ export const formatError = (error: MdContextError): FormattedError =>
       details: e.provider ? `Provider: ${e.provider}` : undefined,
       suggestions: [
         'Try a different provider with --provider',
-        "Run 'mdcontext search' without --summarize",
+        "Run 'mdm search' without --summarize",
       ] as const,
       exitCode: EXIT_CODE.SYSTEM_ERROR,
     })),
@@ -494,7 +494,7 @@ const sensitiveFieldReplacer = (_key: string, value: unknown): unknown => {
  * Display error with debug information (stack trace, full context)
  */
 export const displayErrorDebug = (
-  error: MdContextError,
+  error: MdmError,
   formatted: FormattedError,
 ): Effect.Effect<void, never> =>
   Effect.gen(function* () {
@@ -524,7 +524,7 @@ export const displayErrorDebug = (
  * Handle a typed error: format, display, and return appropriate exit code.
  */
 export const handleError = (
-  error: MdContextError,
+  error: MdmError,
   options: { debug?: boolean } = {},
 ): Effect.Effect<never, never, never> =>
   Effect.gen(function* () {
@@ -541,7 +541,7 @@ export const handleError = (
 
 /**
  * Create an error handler that can be piped into an Effect.
- * Handles all MdContextError types with proper formatting and exit codes.
+ * Handles all MdmError types with proper formatting and exit codes.
  *
  * Usage:
  * ```typescript

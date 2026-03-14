@@ -117,7 +117,7 @@ const checkHnswMismatch = (
   return Effect.logWarning(
     `HNSW parameter mismatch: Index was built with M=${indexParams.m}, efConstruction=${indexParams.efConstruction}, ` +
       `but config specifies M=${configParams.m}, efConstruction=${configParams.efConstruction}. ` +
-      `HNSW parameters only affect index construction. Run 'mdcontext index --embed --force' to rebuild with new parameters.`,
+      `HNSW parameters only affect index construction. Run 'mdm index --embed --force' to rebuild with new parameters.`,
   )
 }
 

@@ -1,5 +1,5 @@
 /**
- * Index data types for mdcontext
+ * Index data types for mdm
  */
 
 import * as path from 'node:path'
@@ -137,7 +137,7 @@ export interface FileProcessingError {
 // Index Paths
 // ============================================================================
 
-export const INDEX_DIR = '.mdcontext'
+export const INDEX_DIR = '.mdm'
 export const INDEX_VERSION = 1
 
 export const getIndexPaths = (rootPath: string) => ({

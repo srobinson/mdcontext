@@ -328,7 +328,7 @@ export class OpenAIProvider implements EmbeddingProvider {
         const delay = baseDelay + jitter
 
         console.info(
-          `[mdcontext] Embedding API ${reason} error, retry ${attempt + 1}/${maxAttempts} after ${Math.round(delay)}ms`,
+          `[mdm] Embedding API ${reason} error, retry ${attempt + 1}/${maxAttempts} after ${Math.round(delay)}ms`,
         )
 
         await new Promise((resolve) => setTimeout(resolve, delay))

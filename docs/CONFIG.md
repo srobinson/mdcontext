@@ -1,6 +1,6 @@
 # Configuration Guide
 
-mdcontext supports a layered configuration system that allows you to set persistent defaults, override them with environment variables, and use CLI flags for one-off changes.
+mdm supports a layered configuration system that allows you to set persistent defaults, override them with environment variables, and use CLI flags for one-off changes.
 
 ## Table of Contents
 
@@ -27,136 +27,137 @@ mdcontext supports a layered configuration system that allows you to set persist
 Create a config file in your project root:
 
 ```bash
-# Generate a JavaScript config with type annotations (recommended)
-mdcontext config init
+# Generate a .mdm.toml config file
+mdm config init
 
-# Or generate a JSON config
-mdcontext config init --format json
+# Or generate a global config in ~/.mdm/
+mdm config init --global
+
+# Overwrite existing config
+mdm config init --force
 ```
 
-This creates `mdcontext.config.js` with documented defaults:
+This creates `.mdm.toml` with documented defaults:
 
-```javascript
-/** @type {import('mdcontext').PartialMdContextConfig} */
-export default {
-  index: {
-    maxDepth: 10,
-    excludePatterns: ['node_modules', '.git', 'dist', 'build'],
-  },
-  search: {
-    defaultLimit: 10,
-    minSimilarity: 0.35,
-  },
-}
+```toml
+# .mdm.toml
+[index]
+maxDepth = 10
+excludePatterns = ["node_modules", ".git", "dist", "build"]
+fileExtensions = [".md", ".mdx"]
+followSymlinks = false
+indexDir = ".mdm"
+
+[search]
+defaultLimit = 10
+maxLimit = 100
+minSimilarity = 0.35
+includeSnippets = true
+snippetLength = 200
+
+[embeddings]
+provider = "openai"
+model = "text-embedding-3-small"
+batchSize = 100
 ```
 
 ---
 
 ## Configuration Precedence
 
-mdcontext uses a layered configuration system. Values from higher-priority sources override lower ones:
+mdm uses a layered configuration system with two-tier file resolution. Values from higher-priority sources override lower ones:
 
 ```
 CLI Flags           (highest priority)
     |
-Environment Variables
+Environment Variables (MDM_*)
     |
-Config File
+Config File (.mdm.toml)
     |
 Built-in Defaults   (lowest priority)
 ```
 
+**Config File Resolution** (two-tier):
+1. Local: `PWD/.mdm.toml` (project-specific)
+2. Global: `~/.mdm/.mdm.toml` (fallback)
+3. Defaults (hardcoded)
+
 **Example:**
 
 ```bash
-# Config file sets: index.maxDepth = 10
-# Environment sets: MDCONTEXT_INDEX_MAXDEPTH = 5
-# CLI flag: --max-depth 3
+# Local config sets: index.maxDepth = 10
+# Environment sets: MDM_INDEX_MAXDEPTH = 5
+# CLI flag: --exclude "*.draft.md"
 
-# Effective value: 3 (CLI wins)
+# Effective values:
+# - index.maxDepth = 5 (environment wins)
+# - index.excludePatterns includes *.draft.md (CLI wins)
 ```
 
 ---
 
 ## Config File Formats
 
-mdcontext searches for configuration files in this order:
+mdm uses TOML for configuration. The config file must be named `.mdm.toml` and is searched in this order:
 
-| Filename                  | Format     | Notes                         |
-| ------------------------- | ---------- | ----------------------------- |
-| `mdcontext.config.js`     | JavaScript | Best: type-safe with JSDoc    |
-| `mdcontext.config.mjs`    | ESM        | ES modules only               |
-| `mdcontext.config.json`   | JSON       | Simple, no code               |
-| `.mdcontextrc`            | JSON       | Hidden file, JSON format      |
-| `.mdcontextrc.json`       | JSON       | Explicit JSON rc file         |
-| `mdcontext.config.ts`     | TypeScript | Not supported (see note below)|
+1. `.mdm.toml` in current directory (project-local)
+2. `~/.mdm/.mdm.toml` in home directory (global)
+3. Built-in defaults
 
-### JavaScript Config with Types (Recommended)
+### TOML Config Format (Recommended)
 
-Using JSDoc type annotations provides full type safety and IDE autocompletion:
+TOML is the standard format for mdm configuration:
 
-```javascript
-// mdcontext.config.js
-/** @type {import('mdcontext').PartialMdContextConfig} */
-export default {
-  index: {
-    maxDepth: 10,
-    excludePatterns: ['node_modules', '.git', 'dist', 'build'],
-    fileExtensions: ['.md', '.mdx'],
-    followSymlinks: false,
-    indexDir: '.mdcontext',
-  },
-  search: {
-    defaultLimit: 10,
-    maxLimit: 100,
-    minSimilarity: 0.35,
-    includeSnippets: true,
-    snippetLength: 200,
-  },
-  embeddings: {
-    provider: 'openai',
-    model: 'text-embedding-3-small',
-    batchSize: 100,
-    maxRetries: 3,
-  },
-  output: {
-    format: 'text',
-    color: true,
-    verbose: false,
-  },
-}
+```toml
+# .mdm.toml
+[index]
+maxDepth = 10
+excludePatterns = ["node_modules", ".git", "dist", "build"]
+fileExtensions = [".md", ".mdx"]
+followSymlinks = false
+indexDir = ".mdm"
+
+[search]
+defaultLimit = 10
+maxLimit = 100
+minSimilarity = 0.35
+includeSnippets = true
+snippetLength = 200
+autoIndexThreshold = 10
+
+[embeddings]
+provider = "openai"
+model = "text-embedding-3-small"
+dimensions = 512
+batchSize = 100
+maxRetries = 3
+# baseURL = "https://custom-endpoint.example.com"
+# apiKey = "sk-..."
+
+[summarization]
+briefTokenBudget = 100
+summaryTokenBudget = 500
+compressionRatio = 0.3
+minSectionTokens = 20
+maxTopics = 10
+minPartialBudget = 50
+
+[aiSummarization]
+mode = "cli"
+provider = "claude"
+stream = false
+# model = "claude-sonnet-4-20250514"
+# baseURL = "https://api.anthropic.com"
+# apiKey = "sk-ant-..."
+
+[output]
+format = "text"
+color = true
+prettyJson = true
+verbose = false
+debug = false
 ```
 
-The `@type` JSDoc annotation provides TypeScript type checking and IDE autocompletion while remaining a valid JavaScript file that Node.js can import directly.
-
-**Note:** TypeScript (`.ts`) config files are not currently supported because Node.js cannot import them without a loader. Use JavaScript with JSDoc types instead.
-
-### JSON Config
-
-```json
-{
-  "$schema": "https://mdcontext.dev/schema.json",
-  "index": {
-    "maxDepth": 10,
-    "excludePatterns": ["node_modules", ".git", "dist", "build"],
-    "fileExtensions": [".md", ".mdx"]
-  },
-  "search": {
-    "defaultLimit": 10,
-    "minSimilarity": 0.35
-  }
-}
-```
-
-### Using a Custom Config Path
-
-```bash
-# Use a specific config file
-mdcontext --config ./config/mdcontext.json index
-
-# Short form
-mdcontext -c ./custom.config.json search "query"
-```
 
 ---
 
@@ -172,46 +173,36 @@ Controls how markdown files are discovered and indexed.
 | `excludePatterns` | `string[]` | `['node_modules', '.git', 'dist', 'build']` | Glob patterns to exclude from indexing   |
 | `fileExtensions`  | `string[]` | `['.md', '.mdx']`                          | File extensions to index                 |
 | `followSymlinks`  | `boolean`  | `false`                                    | Whether to follow symbolic links         |
-| `indexDir`        | `string`   | `'.mdcontext'`                             | Directory for storing index files        |
+| `indexDir`        | `string`   | `'.mdm'`                             | Directory for storing index files        |
 
 **Example:**
 
-```typescript
-export default defineConfig({
-  index: {
-    // Only index top 5 levels of directories
-    maxDepth: 5,
+```toml
+[index]
+# Only index top 5 levels of directories
+maxDepth = 5
 
-    // Exclude additional directories
-    excludePatterns: [
-      'node_modules',
-      '.git',
-      'dist',
-      'build',
-      'vendor',
-      '__tests__',
-    ],
+# Exclude additional directories
+excludePatterns = ["node_modules", ".git", "dist", "build", "vendor", "__tests__"]
 
-    // Only index standard markdown
-    fileExtensions: ['.md'],
+# Only index standard markdown
+fileExtensions = [".md"]
 
-    // Store index in a custom location
-    indexDir: '.cache/mdcontext',
-  },
-})
+# Store index in a custom location
+indexDir = ".cache/mdm"
 ```
 
 ### Excluding Files
 
-mdcontext automatically respects standard ignore patterns.
+mdm automatically respects standard ignore patterns.
 
 #### .gitignore (Honored by Default)
 
 Your existing `.gitignore` is automatically respected. No additional configuration needed.
 
-#### .mdcontextignore (Custom Patterns)
+#### .mdmignore (Custom Patterns)
 
-Create `.mdcontextignore` in your project root for mdcontext-specific exclusions:
+Create `.mdmignore` in your project root for mdm-specific exclusions:
 
 ```gitignore
 # Ignore research notes
@@ -231,15 +222,15 @@ Patterns are applied in this order (later patterns override earlier):
 
 1. **Built-in defaults** - `node_modules`, `.git`, `dist`, `build`
 2. **.gitignore** - Standard git ignore patterns
-3. **.mdcontextignore** - mdcontext-specific patterns
+3. **.mdmignore** - mdm-specific patterns
 4. **CLI --exclude** - Highest priority, overrides all
 
 ```bash
 # Add patterns via CLI (highest priority)
-mdcontext index --exclude "*.draft.md,research/**"
+mdm index --exclude "*.draft.md,research/**"
 
 # Disable .gitignore honoring
-mdcontext index --no-gitignore
+mdm index --no-gitignore
 ```
 
 #### Pattern Syntax
@@ -271,19 +262,16 @@ Controls search behavior and defaults.
 
 **Example:**
 
-```typescript
-export default defineConfig({
-  search: {
-    // Return more results by default
-    defaultLimit: 20,
+```toml
+[search]
+# Return more results by default
+defaultLimit = 20
 
-    // Require higher similarity for matches
-    minSimilarity: 0.7,
+# Require higher similarity for matches
+minSimilarity = 0.7
 
-    // Longer snippets for more context
-    snippetLength: 300,
-  },
-})
+# Longer snippets for more context
+snippetLength = 300
 ```
 
 ### Embeddings Configuration
@@ -309,11 +297,10 @@ Dimensions are now automatically configured based on the model. If not explicitl
 - **Ollama mxbai-embed-large/bge-m3**: Uses 1024 native dimensions
 
 You can override dimensions for models that support Matryoshka reduction:
-```javascript
-embeddings: {
-  model: 'text-embedding-3-small',
-  dimensions: 1024  // Higher accuracy, larger index
-}
+```toml
+[embeddings]
+model = "text-embedding-3-small"
+dimensions = 1024  # Higher accuracy, larger index
 ```
 
 **Available Models:**
@@ -329,27 +316,24 @@ embeddings: {
 
 **Example:**
 
-```typescript
-export default defineConfig({
-  embeddings: {
-    // Use higher quality model
-    model: 'text-embedding-3-large',
+```toml
+[embeddings]
+# Use higher quality model
+model = "text-embedding-3-large"
 
-    // Smaller batches for rate limiting
-    batchSize: 50,
+# Smaller batches for rate limiting
+batchSize = 50
 
-    // More aggressive retries
-    maxRetries: 5,
-    retryDelayMs: 2000,
-  },
-})
+# More aggressive retries
+maxRetries = 5
+retryDelayMs = 2000
 ```
 
 ---
 
 ## Embedding Providers
 
-mdcontext supports multiple embedding providers:
+mdm supports multiple embedding providers:
 
 | Provider | Best For | Cost | Privacy | Production Ready |
 |----------|----------|------|---------|------------------|
@@ -381,32 +365,29 @@ mdcontext supports multiple embedding providers:
 **Example safe configurations:**
 ```bash
 # Safe: Local Ollama
-mdcontext index --embed --provider-base-url http://localhost:11434/v1
+mdm index --embed --provider-base-url http://localhost:11434/v1
 
 # Safe: Trusted internal server with encryption
-mdcontext index --embed --provider-base-url https://ollama.internal.company.com/v1
+mdm index --embed --provider-base-url https://ollama.internal.company.com/v1
 
 # Unsafe: Unknown external server
-mdcontext index --embed --provider-base-url http://random-server.example.com/v1  # ❌ DON'T DO THIS
+mdm index --embed --provider-base-url http://random-server.example.com/v1  # ❌ DON'T DO THIS
 ```
 
 ### CLI Usage
 
 ```bash
-mdcontext index --embed --provider ollama --provider-model nomic-embed-text
-mdcontext index --embed --provider openrouter
-mdcontext index --embed --provider lm-studio
+mdm index --embed --provider ollama --provider-model nomic-embed-text
+mdm index --embed --provider openrouter
+mdm index --embed --provider lm-studio
 ```
 
 ### Configuration
 
-```javascript
-export default {
-  embeddings: {
-    provider: 'ollama',
-    model: 'nomic-embed-text',
-  },
-}
+```toml
+[embeddings]
+provider = "ollama"
+model = "nomic-embed-text"
 ```
 
 **Note:** Re-indexing required when switching providers.
@@ -428,16 +409,13 @@ Controls context assembly and summarization behavior.
 
 **Example:**
 
-```typescript
-export default defineConfig({
-  summarization: {
-    // More detailed brief summaries
-    briefTokenBudget: 150,
+```toml
+[summarization]
+# More detailed brief summaries
+briefTokenBudget = 150
 
-    // Higher compression for large docs
-    compressionRatio: 0.2,
-  },
-})
+# Higher compression for large docs
+compressionRatio = 0.2
 ```
 
 ### AI Summarization Configuration
@@ -475,29 +453,21 @@ Controls AI-powered summarization of search results. This is separate from `summ
 
 **Example:**
 
-```javascript
-// mdcontext.config.js
-/** @type {import('mdcontext').PartialMdContextConfig} */
-export default {
-  aiSummarization: {
-    // Use Claude CLI (free with subscription)
-    mode: 'cli',
-    provider: 'claude',
-  },
-}
+```toml
+[aiSummarization]
+# Use Claude CLI (free with subscription)
+mode = "cli"
+provider = "claude"
 ```
 
 **Example with API provider:**
 
-```javascript
-export default {
-  aiSummarization: {
-    // Use DeepSeek API (ultra-cheap)
-    mode: 'api',
-    provider: 'deepseek',
-    model: 'deepseek-chat',
-  },
-}
+```toml
+[aiSummarization]
+# Use DeepSeek API (ultra-cheap)
+mode = "api"
+provider = "deepseek"
+model = "deepseek-chat"
 ```
 
 See [docs/summarization.md](./summarization.md) for architecture details and adding new providers.
@@ -516,17 +486,14 @@ Controls CLI output formatting.
 
 **Example:**
 
-```typescript
-export default defineConfig({
-  output: {
-    // Always output JSON for scripting
-    format: 'json',
-    prettyJson: true,
+```toml
+[output]
+# Always output JSON for scripting
+format = "json"
+prettyJson = true
 
-    // Disable colors for CI environments
-    color: false,
-  },
-})
+# Disable colors for CI environments
+color = false
 ```
 
 ### Paths Configuration
@@ -537,27 +504,24 @@ Controls file path behavior.
 | ------------ | -------- | -------------------- | ------------------------------ |
 | `root`       | `string` | (current directory)  | Root directory for markdown files |
 | `configFile` | `string` | (auto-detected)      | Custom config file path        |
-| `cacheDir`   | `string` | `'.mdcontext/cache'` | Cache directory for temporary files |
+| `cacheDir`   | `string` | `'.mdm/cache'` | Cache directory for temporary files |
 
 **Example:**
 
-```typescript
-export default defineConfig({
-  paths: {
-    // Index a specific subdirectory
-    root: './docs',
+```toml
+[paths]
+# Index a specific subdirectory
+root = "./docs"
 
-    // Custom cache location
-    cacheDir: '.cache/mdcontext',
-  },
-})
+# Custom cache location
+cacheDir = ".cache/mdm"
 ```
 
 ---
 
 ## Environment Variables
 
-All configuration options can be set via environment variables using the `MDCONTEXT_` prefix.
+All configuration options can be set via environment variables using the `MDM_` prefix.
 
 ### Variable Naming
 
@@ -565,7 +529,7 @@ Convert the config key to uppercase and replace dots with underscores:
 
 ```
 config key:        index.maxDepth
-environment var:   MDCONTEXT_INDEX_MAXDEPTH
+environment var:   MDM_INDEX_MAXDEPTH
 ```
 
 ### Complete Variable Reference
@@ -574,57 +538,57 @@ environment var:   MDCONTEXT_INDEX_MAXDEPTH
 
 | Variable                          | Config Key               |
 | --------------------------------- | ------------------------ |
-| `MDCONTEXT_INDEX_MAXDEPTH`        | `index.maxDepth`         |
-| `MDCONTEXT_INDEX_EXCLUDEPATTERNS` | `index.excludePatterns`  |
-| `MDCONTEXT_INDEX_FILEEXTENSIONS`  | `index.fileExtensions`   |
-| `MDCONTEXT_INDEX_FOLLOWSYMLINKS`  | `index.followSymlinks`   |
-| `MDCONTEXT_INDEX_INDEXDIR`        | `index.indexDir`         |
+| `MDM_INDEX_MAXDEPTH`        | `index.maxDepth`         |
+| `MDM_INDEX_EXCLUDEPATTERNS` | `index.excludePatterns`  |
+| `MDM_INDEX_FILEEXTENSIONS`  | `index.fileExtensions`   |
+| `MDM_INDEX_FOLLOWSYMLINKS`  | `index.followSymlinks`   |
+| `MDM_INDEX_INDEXDIR`        | `index.indexDir`         |
 
 #### Search Configuration
 
 | Variable                            | Config Key                |
 | ----------------------------------- | ------------------------- |
-| `MDCONTEXT_SEARCH_DEFAULTLIMIT`     | `search.defaultLimit`     |
-| `MDCONTEXT_SEARCH_MAXLIMIT`         | `search.maxLimit`         |
-| `MDCONTEXT_SEARCH_MINSIMILARITY`    | `search.minSimilarity`    |
-| `MDCONTEXT_SEARCH_INCLUDESNIPPETS`  | `search.includeSnippets`  |
-| `MDCONTEXT_SEARCH_SNIPPETLENGTH`    | `search.snippetLength`    |
-| `MDCONTEXT_SEARCH_AUTOINDEXTHRESHOLD` | `search.autoIndexThreshold` |
+| `MDM_SEARCH_DEFAULTLIMIT`     | `search.defaultLimit`     |
+| `MDM_SEARCH_MAXLIMIT`         | `search.maxLimit`         |
+| `MDM_SEARCH_MINSIMILARITY`    | `search.minSimilarity`    |
+| `MDM_SEARCH_INCLUDESNIPPETS`  | `search.includeSnippets`  |
+| `MDM_SEARCH_SNIPPETLENGTH`    | `search.snippetLength`    |
+| `MDM_SEARCH_AUTOINDEXTHRESHOLD` | `search.autoIndexThreshold` |
 
 #### Embeddings Configuration
 
 | Variable                          | Config Key               |
 | --------------------------------- | ------------------------ |
-| `MDCONTEXT_EMBEDDINGS_PROVIDER`   | `embeddings.provider`    |
-| `MDCONTEXT_EMBEDDINGS_MODEL`      | `embeddings.model`       |
-| `MDCONTEXT_EMBEDDINGS_DIMENSIONS` | `embeddings.dimensions`  |
-| `MDCONTEXT_EMBEDDINGS_BATCHSIZE`  | `embeddings.batchSize`   |
-| `MDCONTEXT_EMBEDDINGS_MAXRETRIES` | `embeddings.maxRetries`  |
-| `MDCONTEXT_EMBEDDINGS_RETRYDELAYMS` | `embeddings.retryDelayMs` |
-| `MDCONTEXT_EMBEDDINGS_TIMEOUTMS`  | `embeddings.timeoutMs`   |
-| `MDCONTEXT_EMBEDDINGS_APIKEY`     | `embeddings.apiKey`      |
+| `MDM_EMBEDDINGS_PROVIDER`   | `embeddings.provider`    |
+| `MDM_EMBEDDINGS_MODEL`      | `embeddings.model`       |
+| `MDM_EMBEDDINGS_DIMENSIONS` | `embeddings.dimensions`  |
+| `MDM_EMBEDDINGS_BATCHSIZE`  | `embeddings.batchSize`   |
+| `MDM_EMBEDDINGS_MAXRETRIES` | `embeddings.maxRetries`  |
+| `MDM_EMBEDDINGS_RETRYDELAYMS` | `embeddings.retryDelayMs` |
+| `MDM_EMBEDDINGS_TIMEOUTMS`  | `embeddings.timeoutMs`   |
+| `MDM_EMBEDDINGS_APIKEY`     | `embeddings.apiKey`      |
 
 #### Summarization Configuration
 
 | Variable                                   | Config Key                       |
 | ------------------------------------------ | -------------------------------- |
-| `MDCONTEXT_SUMMARIZATION_BRIEFTOKENBUDGET` | `summarization.briefTokenBudget` |
-| `MDCONTEXT_SUMMARIZATION_SUMMARYTOKENBUDGET` | `summarization.summaryTokenBudget` |
-| `MDCONTEXT_SUMMARIZATION_COMPRESSIONRATIO` | `summarization.compressionRatio` |
-| `MDCONTEXT_SUMMARIZATION_MINSECTIONTOKENS` | `summarization.minSectionTokens` |
-| `MDCONTEXT_SUMMARIZATION_MAXTOPICS`        | `summarization.maxTopics`        |
-| `MDCONTEXT_SUMMARIZATION_MINPARTIALBUDGET` | `summarization.minPartialBudget` |
+| `MDM_SUMMARIZATION_BRIEFTOKENBUDGET` | `summarization.briefTokenBudget` |
+| `MDM_SUMMARIZATION_SUMMARYTOKENBUDGET` | `summarization.summaryTokenBudget` |
+| `MDM_SUMMARIZATION_COMPRESSIONRATIO` | `summarization.compressionRatio` |
+| `MDM_SUMMARIZATION_MINSECTIONTOKENS` | `summarization.minSectionTokens` |
+| `MDM_SUMMARIZATION_MAXTOPICS`        | `summarization.maxTopics`        |
+| `MDM_SUMMARIZATION_MINPARTIALBUDGET` | `summarization.minPartialBudget` |
 
 #### AI Summarization Configuration
 
 | Variable                                | Config Key                  |
 | --------------------------------------- | --------------------------- |
-| `MDCONTEXT_AISUMMARIZATION_MODE`        | `aiSummarization.mode`      |
-| `MDCONTEXT_AISUMMARIZATION_PROVIDER`    | `aiSummarization.provider`  |
-| `MDCONTEXT_AISUMMARIZATION_MODEL`       | `aiSummarization.model`     |
-| `MDCONTEXT_AISUMMARIZATION_STREAM`      | `aiSummarization.stream`    |
-| `MDCONTEXT_AISUMMARIZATION_BASEURL`     | `aiSummarization.baseURL`   |
-| `MDCONTEXT_AISUMMARIZATION_APIKEY`      | `aiSummarization.apiKey`    |
+| `MDM_AISUMMARIZATION_MODE`        | `aiSummarization.mode`      |
+| `MDM_AISUMMARIZATION_PROVIDER`    | `aiSummarization.provider`  |
+| `MDM_AISUMMARIZATION_MODEL`       | `aiSummarization.model`     |
+| `MDM_AISUMMARIZATION_STREAM`      | `aiSummarization.stream`    |
+| `MDM_AISUMMARIZATION_BASEURL`     | `aiSummarization.baseURL`   |
+| `MDM_AISUMMARIZATION_APIKEY`      | `aiSummarization.apiKey`    |
 
 **Note:** For API providers, also set the provider-specific API key environment variable:
 - `DEEPSEEK_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_API_KEY`, `QWEN_API_KEY`
@@ -633,27 +597,27 @@ environment var:   MDCONTEXT_INDEX_MAXDEPTH
 
 | Variable                        | Config Key          |
 | ------------------------------- | ------------------- |
-| `MDCONTEXT_OUTPUT_FORMAT`       | `output.format`     |
-| `MDCONTEXT_OUTPUT_COLOR`        | `output.color`      |
-| `MDCONTEXT_OUTPUT_PRETTYJSON`   | `output.prettyJson` |
-| `MDCONTEXT_OUTPUT_VERBOSE`      | `output.verbose`    |
-| `MDCONTEXT_OUTPUT_DEBUG`        | `output.debug`      |
+| `MDM_OUTPUT_FORMAT`       | `output.format`     |
+| `MDM_OUTPUT_COLOR`        | `output.color`      |
+| `MDM_OUTPUT_PRETTYJSON`   | `output.prettyJson` |
+| `MDM_OUTPUT_VERBOSE`      | `output.verbose`    |
+| `MDM_OUTPUT_DEBUG`        | `output.debug`      |
 
 #### Paths Configuration
 
 | Variable                      | Config Key         |
 | ----------------------------- | ------------------ |
-| `MDCONTEXT_PATHS_ROOT`        | `paths.root`       |
-| `MDCONTEXT_PATHS_CONFIGFILE`  | `paths.configFile` |
-| `MDCONTEXT_PATHS_CACHEDIR`    | `paths.cacheDir`   |
+| `MDM_PATHS_ROOT`        | `paths.root`       |
+| `MDM_PATHS_CONFIGFILE`  | `paths.configFile` |
+| `MDM_PATHS_CACHEDIR`    | `paths.cacheDir`   |
 
 ### Array Values
 
 For array values, use comma-separated strings:
 
 ```bash
-export MDCONTEXT_INDEX_EXCLUDEPATTERNS="node_modules,.git,dist,vendor"
-export MDCONTEXT_INDEX_FILEEXTENSIONS=".md,.mdx,.markdown"
+export MDM_INDEX_EXCLUDEPATTERNS="node_modules,.git,dist,vendor"
+export MDM_INDEX_FILEEXTENSIONS=".md,.mdx,.markdown"
 ```
 
 ### Boolean Values
@@ -661,8 +625,8 @@ export MDCONTEXT_INDEX_FILEEXTENSIONS=".md,.mdx,.markdown"
 Use `true` or `false`:
 
 ```bash
-export MDCONTEXT_INDEX_FOLLOWSYMLINKS=true
-export MDCONTEXT_OUTPUT_COLOR=false
+export MDM_INDEX_FOLLOWSYMLINKS=true
+export MDM_OUTPUT_COLOR=false
 ```
 
 ### Example: CI Environment
@@ -670,9 +634,9 @@ export MDCONTEXT_OUTPUT_COLOR=false
 ```bash
 # .github/workflows/docs.yml
 env:
-  MDCONTEXT_OUTPUT_COLOR: 'false'
-  MDCONTEXT_OUTPUT_FORMAT: 'json'
-  MDCONTEXT_SEARCH_DEFAULTLIMIT: '50'
+  MDM_OUTPUT_COLOR: 'false'
+  MDM_OUTPUT_FORMAT: 'json'
+  MDM_SEARCH_DEFAULTLIMIT: '50'
 ```
 
 ---
@@ -681,29 +645,29 @@ env:
 
 ### config init
 
-Create a starter configuration file.
+Create a starter `.mdm.toml` configuration file.
 
 ```bash
-mdcontext config init [options]
+mdm config init [options]
 
 Options:
-  -f, --format <ts|json>  Config file format (default: ts)
-  --force                 Overwrite existing config file
-  --json                  Output as JSON
-  --pretty                Pretty-print JSON output
+  --global    Write to ~/.mdm/.mdm.toml instead of PWD
+  --force     Overwrite existing config file
+  --json      Output as JSON
+  --pretty    Pretty-print JSON output
 ```
 
 **Examples:**
 
 ```bash
-# Create TypeScript config
-mdcontext config init
+# Create local config
+mdm config init
 
-# Create JSON config
-mdcontext config init --format json
+# Create global config
+mdm config init --global
 
 # Overwrite existing config
-mdcontext config init --force
+mdm config init --force
 ```
 
 ### config show
@@ -711,19 +675,21 @@ mdcontext config init --force
 Display the current config file location.
 
 ```bash
-mdcontext config show [options]
+mdm config show [options]
 
 Options:
   --json    Output as JSON
   --pretty  Pretty-print JSON output
 ```
 
+Shows which config file is being used (local or global).
+
 ### config check
 
 Validate configuration and show effective values with their sources.
 
 ```bash
-mdcontext config check [options]
+mdm config check [options]
 
 Options:
   --json    Output as JSON
@@ -735,7 +701,7 @@ Options:
 ```
 Configuration validated successfully!
 
-Source: /project/mdcontext.config.ts
+Source: /project/mdm.config.ts
 
 Effective configuration:
   index:
@@ -743,7 +709,7 @@ Effective configuration:
     excludePatterns: ["node_modules",".git","dist"] (default)
     fileExtensions: [".md",".mdx"] (default)
     followSymlinks: false (default)
-    indexDir: .mdcontext (default)
+    indexDir: .mdm (default)
   search:
     defaultLimit: 20 (from environment)
     maxLimit: 100 (default)
@@ -761,41 +727,36 @@ If you've been passing flags on every command:
 
 ```bash
 # Before: Flags every time
-mdcontext index --exclude vendor --exclude __tests__
-mdcontext search "query" --limit 20
+mdm index --exclude vendor --exclude __tests__
+mdm search "query" --limit 20
 ```
 
 Create a config file to persist these settings:
 
 ```bash
 # Generate config
-mdcontext config init
+mdm config init
 ```
 
-Edit `mdcontext.config.ts`:
+Edit `.mdm.toml`:
 
-```typescript
-import { defineConfig } from 'mdcontext'
+```toml
+[index]
+excludePatterns = ["node_modules", ".git", "dist", "build", "vendor", "__tests__"]
 
-export default defineConfig({
-  index: {
-    excludePatterns: ['node_modules', '.git', 'dist', 'build', 'vendor', '__tests__'],
-  },
-  search: {
-    defaultLimit: 20,
-  },
-})
+[search]
+defaultLimit = 20
 ```
 
 Now commands use your defaults:
 
 ```bash
 # After: Clean commands
-mdcontext index
-mdcontext search "query"
+mdm index
+mdm search "query"
 
 # Override when needed
-mdcontext search "query" --limit 5
+mdm search "query" --limit 5
 ```
 
 ### From Environment Variables
@@ -805,7 +766,7 @@ If you've been setting environment variables:
 ```bash
 # .bashrc or .zshrc
 export OPENAI_API_KEY=sk-...
-export MDCONTEXT_SEARCH_DEFAULTLIMIT=20
+export MDM_SEARCH_DEFAULTLIMIT=20
 ```
 
 You can now move project-specific settings to a config file while keeping environment variables for:
@@ -818,12 +779,12 @@ You can now move project-specific settings to a config file while keeping enviro
 
 ## Testing Configuration
 
-mdcontext provides utilities for testing with custom configurations.
+mdm provides utilities for testing with custom configurations.
 
 ### Test Utilities
 
 ```typescript
-import { TestConfigLayer, withTestConfig, runWithConfig } from 'mdcontext'
+import { TestConfigLayer, withTestConfig, runWithConfig } from 'mdm'
 import { Effect } from 'effect'
 
 // Option 1: Use TestConfigLayer directly
@@ -848,7 +809,7 @@ const result = await runWithConfig(
 ### Isolating Tests from Environment
 
 ```typescript
-import { createTestConfigProvider } from 'mdcontext'
+import { createTestConfigProvider } from 'mdm'
 
 // Creates a provider that ignores environment variables
 const provider = createTestConfigProvider(
@@ -871,65 +832,42 @@ If your config file isn't being used:
 
 1. **Verify the file is found:**
    ```bash
-   mdcontext config show
+   mdm config show
    ```
-   This shows which config file mdcontext is using, if any.
+   This shows which config file mdm is using (local or global).
 
 2. **Check for errors:**
    ```bash
-   mdcontext config check --json
+   mdm config check --json
    ```
    The `errors` array will show any loading failures.
 
 3. **Common issues:**
-   - **JSON syntax errors:** Validate your JSON with `jq` or an online validator
-   - **TypeScript files:** Not currently supported - use `.js` or `.json` instead (see below)
-   - **Wrong export:** Ensure `.js` files use `export default { ... }`
-   - **File location:** Config must be in project root or parent directory
-
-### TypeScript Config Files
-
-**Current Limitation:** `.ts` config files are not supported because Node.js cannot import TypeScript directly without a loader.
-
-**Recommended Alternatives:**
-
-1. **JavaScript with JSDoc types** (recommended):
-   ```javascript
-   // mdcontext.config.js
-   /** @type {import('mdcontext').PartialMdContextConfig} */
-   export default {
-     index: {
-       maxDepth: 10,
-     },
-   }
-   ```
-   This provides full type checking and IDE autocompletion while working at runtime.
-
-2. **JSON format** (simplest):
-   ```bash
-   mdcontext config init --format json
-   ```
+   - **TOML syntax errors:** Validate your TOML at https://www.toml-lint.com/
+   - **File not found:** Ensure `.mdm.toml` is in your project root or `~/.mdm/.mdm.toml` for global
+   - **Wrong location:** Config must be `.mdm.toml` (TOML format only)
+   - **Indentation:** TOML is whitespace-sensitive; check alignment
 
 ### Environment Variables Not Working
 
-1. **Check variable name:** Must be uppercase with `MDCONTEXT_` prefix
+1. **Check variable name:** Must be uppercase with `MDM_` prefix
    ```bash
    # Correct
-   export MDCONTEXT_SEARCH_DEFAULTLIMIT=20
+   export MDM_SEARCH_DEFAULTLIMIT=20
 
    # Wrong - will not work
-   export mdcontext_search_defaultLimit=20
+   export mdm_search_defaultLimit=20
    ```
 
 2. **Verify with config check:**
    ```bash
-   mdcontext config check
+   mdm config check
    ```
    Look for "(from environment)" annotations.
 
 3. **Array values:** Use comma-separated strings
    ```bash
-   export MDCONTEXT_INDEX_EXCLUDEPATTERNS="node_modules,.git,dist"
+   export MDM_INDEX_EXCLUDEPATTERNS="node_modules,.git,dist"
    ```
 
 ### Config Not Taking Effect
@@ -939,19 +877,14 @@ If you've set config but commands still use defaults:
 1. **Check precedence:** CLI flags override everything
    ```bash
    # This ignores config file's defaultLimit setting
-   mdcontext search "query" --limit 5
+   mdm search "query" --limit 5
    ```
 
 2. **Verify effective config:**
    ```bash
-   mdcontext config check
+   mdm config check
    ```
    Shows exactly what values are being used and why.
-
-3. **Try explicit config path:**
-   ```bash
-   mdcontext --config ./mdcontext.config.json index
-   ```
 
 ---
 
@@ -961,32 +894,20 @@ If you've set config but commands still use defaults:
 
 Share consistent settings across a team:
 
-```typescript
-// mdcontext.config.ts
-import { defineConfig } from 'mdcontext'
+```toml
+# .mdm.toml
+[index]
+# Exclude team-specific directories
+excludePatterns = ["node_modules", ".git", "dist", "build", ".next", "coverage"]
 
-export default defineConfig({
-  index: {
-    // Exclude team-specific directories
-    excludePatterns: [
-      'node_modules',
-      '.git',
-      'dist',
-      'build',
-      '.next',
-      'coverage',
-    ],
-  },
-  search: {
-    // Team prefers more results
-    defaultLimit: 20,
-    minSimilarity: 0.6,
-  },
-  output: {
-    // Consistent formatting
-    prettyJson: true,
-  },
-})
+[search]
+# Team prefers more results
+defaultLimit = 20
+minSimilarity = 0.6
+
+[output]
+# Consistent formatting
+prettyJson = true
 ```
 
 ### CI/CD Pipeline
@@ -997,31 +918,26 @@ jobs:
   check-docs:
     runs-on: ubuntu-latest
     env:
-      MDCONTEXT_OUTPUT_COLOR: 'false'
-      MDCONTEXT_OUTPUT_FORMAT: 'json'
+      MDM_OUTPUT_COLOR: 'false'
+      MDM_OUTPUT_FORMAT: 'json'
     steps:
       - uses: actions/checkout@v4
-      - run: npm install -g mdcontext
-      - run: mdcontext index ./docs
-      - run: mdcontext stats --json > stats.json
+      - run: npm install -g markdown-matters
+      - run: mdm index ./docs
+      - run: mdm stats --json > stats.json
 ```
 
 ### Monorepo Setup
 
-```typescript
-// packages/docs/mdcontext.config.ts
-import { defineConfig } from 'mdcontext'
+```toml
+# packages/docs/.mdm.toml
+[paths]
+root = "./content"
 
-export default defineConfig({
-  paths: {
-    root: './content',
-  },
-  index: {
-    // Only this package's docs
-    excludePatterns: ['node_modules'],
-    maxDepth: 5,
-  },
-})
+[index]
+# Only this package's docs
+excludePatterns = ["node_modules"]
+maxDepth = 5
 ```
 
 ---
@@ -1030,7 +946,7 @@ _For CLI command reference, see [USAGE.md](./019-USAGE.md)_
 
 ## Hybrid Search
 
-mdcontext supports hybrid search combining BM25 keyword matching with semantic vector search for improved recall (15-30% improvement over single-method retrieval).
+mdm supports hybrid search combining BM25 keyword matching with semantic vector search for improved recall (15-30% improvement over single-method retrieval).
 
 ### How It Works
 
@@ -1042,16 +958,16 @@ Hybrid mode uses Reciprocal Rank Fusion (RRF) to merge results from:
 
 ```bash
 # Auto-detect (uses hybrid if both indexes available)
-mdcontext search "authentication"
+mdm search "authentication"
 
 # Force hybrid mode
-mdcontext search --mode hybrid "authentication"
+mdm search --mode hybrid "authentication"
 
 # Force keyword-only (BM25)
-mdcontext search --mode keyword "authentication"
+mdm search --mode keyword "authentication"
 
 # Force semantic-only
-mdcontext search --mode semantic "authentication"
+mdm search --mode semantic "authentication"
 ```
 
 ### Building Indexes
@@ -1060,10 +976,10 @@ Both indexes are built automatically:
 
 ```bash
 # Build document index and BM25 index
-mdcontext index
+mdm index
 
 # Build semantic embeddings (also updates BM25)
-mdcontext index --embed
+mdm index --embed
 ```
 
 ### Configuration
@@ -1081,7 +997,7 @@ Default weights (no configuration needed):
 
 ## Pricing Data Maintenance
 
-mdcontext uses hardcoded OpenAI pricing for embedding cost estimates. Prices change rarely for embedding models.
+mdm uses hardcoded OpenAI pricing for embedding cost estimates. Prices change rarely for embedding models.
 
 ### Current Pricing
 

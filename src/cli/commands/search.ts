@@ -426,7 +426,7 @@ export const searchCommand = Command.make(
       if (!indexInfo.exists && !json) {
         yield* Console.log('No index found.')
         yield* Console.log('')
-        yield* Console.log('Run: mdcontext index /path/to/docs')
+        yield* Console.log('Run: mdm index /path/to/docs')
         yield* Console.log('  Add --embed for semantic search capabilities')
         return
       }
@@ -808,7 +808,7 @@ export const searchCommand = Command.make(
 
           if (!indexInfo.embeddingsExist) {
             yield* Console.log(
-              "Tip: Run 'mdcontext index --embed' to enable semantic search",
+              "Tip: Run 'mdm index --embed' to enable semantic search",
             )
           }
         }
@@ -1217,7 +1217,7 @@ const handleMissingEmbeddings = (
       yield* Console.error(
         'No semantic index found and could not estimate cost.',
       )
-      yield* Console.error('Run "mdcontext index --embed" first.')
+      yield* Console.error('Run "mdm index --embed" first.')
       return false
     }
 

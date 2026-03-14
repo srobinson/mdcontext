@@ -1,11 +1,11 @@
 {
-  "name": "mdcontext",
+  "name": "markdown-matters",
   "version": "0.2.0",
   "description": "Token-efficient markdown analysis tool for LLM consumption",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/mdcontext/mdcontext.git"
+    "url": "https://github.com/mdcontext/markdown-matters.git"
   },
   "publishConfig": {
     "access": "public",
@@ -14,8 +14,8 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "mdcontext": "./dist/cli/main.js",
-    "mdcontext-mcp": "./dist/mcp/server.js"
+    "mdm": "./dist/cli/main.js",
+    "mdm-mcp": "./dist/mcp/server.js"
   },
   "scripts": {
     "postinstall": "node scripts/rebuild-hnswlib.js",
@@ -65,6 +65,7 @@
     "remark": "^15.0.1",
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
+    "smol-toml": "^1.6.0",
     "stemmer": "^2.0.1",
     "tiktoken": "^1.0.22",
     "unified": "^11.0.5",

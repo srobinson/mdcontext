@@ -117,7 +117,7 @@ export const tools: Tool[] = [
   {
     name: 'md_index',
     description:
-      'Build or rebuild the index for a directory. Required before using search tools.',
+      'Build or rebuild the .mdm/ index for a directory. Required before using search tools. Indexes the directory the MCP server was launched in; global sources (--all) are not available via MCP.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -128,7 +128,8 @@ export const tools: Tool[] = [
         },
         force: {
           type: 'boolean',
-          description: 'Force full rebuild (default: false)',
+          description:
+            'Bypass mtime/hash cache and re-process every file. Does not delete the index directory. (default: false)',
           default: false,
         },
       },

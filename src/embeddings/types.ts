@@ -1,5 +1,5 @@
 /**
- * Embedding types for mdcontext
+ * Embedding types for mdm
  */
 
 import type { ContextLine } from '../core/types.js'

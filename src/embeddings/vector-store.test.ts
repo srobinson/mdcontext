@@ -64,7 +64,7 @@ const makeEntry = (id: string, seed: number): VectorEntry => ({
 // ============================================================================
 
 beforeAll(async () => {
-  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'mdcontext-vs-'))
+  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'mdm-vs-'))
 })
 
 afterAll(async () => {
@@ -348,7 +348,7 @@ describe('legacy JSON metadata migration', () => {
     await run(store1.save())
 
     // Read the binary metadata and convert to JSON at the old path
-    const indexDir = path.join(dir, '.mdcontext')
+    const indexDir = path.join(dir, '.mdm')
     const binPath = path.join(indexDir, 'vectors.meta.bin')
     const jsonPath = path.join(indexDir, 'vectors.meta.json')
 
@@ -396,7 +396,7 @@ describe('corrupted metadata validation', () => {
     await run(store1.save())
 
     // Overwrite metadata with invalid structure
-    const indexDir = path.join(dir, '.mdcontext')
+    const indexDir = path.join(dir, '.mdm')
     const metaPath = path.join(indexDir, 'vectors.meta.bin')
     const { encode } = await import('@msgpack/msgpack')
     await fs.writeFile(metaPath, encode({ bad: 'data', version: 'wrong' }))
@@ -420,7 +420,7 @@ describe('corrupted metadata validation', () => {
     await run(store1.save())
 
     // Replace binary metadata with invalid JSON at legacy path
-    const indexDir = path.join(dir, '.mdcontext')
+    const indexDir = path.join(dir, '.mdm')
     const binPath = path.join(indexDir, 'vectors.meta.bin')
     const jsonPath = path.join(indexDir, 'vectors.meta.json')
 

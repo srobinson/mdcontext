@@ -6,7 +6,7 @@
  * vector index and metadata.
  *
  * Directory structure:
- * .mdcontext/
+ * .mdm/
  *   embeddings/
  *     openai_text-embedding-3-small_512/
  *       vectors.bin
@@ -501,7 +501,7 @@ export const switchNamespace = (
         new EmbeddingNamespaceError({
           operation: 'switchNamespace',
           message:
-            'No embedding namespaces found. Run "mdcontext index --embed" first.',
+            'No embedding namespaces found. Run "mdm index --embed" first.',
         }),
       )
     }

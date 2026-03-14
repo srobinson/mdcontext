@@ -1,5 +1,5 @@
 /**
- * Custom help system for mdcontext CLI
+ * Custom help system for mdm CLI
  *
  * Provides beautiful, useful help output that matches the quality of
  * professional CLI tools like git and gh.
@@ -10,9 +10,6 @@
  *   3. Non-TTY stdout (piped output)
  *   4. output.color config value (when available via resolveColorEnabled)
  */
-
-import * as fs from 'node:fs'
-import * as path from 'node:path'
 
 // ============================================================================
 // Color Support
@@ -25,83 +22,11 @@ import * as path from 'node:path'
  *   1. NO_COLOR env var (always wins per no-color.org spec)
  *   2. --no-color CLI flag
  *   3. Non-TTY stdout (piped output)
- *   4. output.color from config file (if --config is specified)
- *
- * The config peek is a lightweight sync read that extracts only the
- * output.color field. This runs before the full config loading pipeline
- * so help output can honor the setting.
  */
 export const shouldUseColor = (): boolean => {
   if (process.env.NO_COLOR !== undefined) return false
   if (process.argv.includes('--no-color')) return false
   if (!process.stdout.isTTY) return false
-
-  // Peek at config file for output.color if --config is specified
-  const configColor = peekConfigColor()
-  if (configColor === false) return false
-
-  return true
-}
-
-/**
- * Extract --config path from process.argv without full preprocessing.
- * Returns undefined if no --config flag is present.
- */
-const extractConfigPathFromArgv = (): string | undefined => {
-  const argv = process.argv
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i]
-    if (arg === undefined) continue
-
-    if (arg.startsWith('--config=')) {
-      const value = arg.slice('--config='.length)
-      return value.length > 0 ? value : undefined
-    }
-    if (arg.startsWith('-c=')) {
-      const value = arg.slice('-c='.length)
-      return value.length > 0 ? value : undefined
-    }
-    if (
-      (arg === '--config' || arg === '-c') &&
-      argv[i + 1] &&
-      !argv[i + 1]!.startsWith('-')
-    ) {
-      return argv[i + 1]
-    }
-  }
-  return undefined
-}
-
-/**
- * Lightweight sync peek at a config file's output.color value.
- * Returns false if config explicitly disables color, true otherwise.
- * Silently returns true on any read/parse error (fail open for color).
- *
- * Exported for testing. Not part of the public API.
- */
-export const peekConfigColor = (): boolean => {
-  const configPath = extractConfigPathFromArgv()
-  if (!configPath) return true
-
-  try {
-    const resolved = path.resolve(configPath)
-    const content = fs.readFileSync(resolved, 'utf-8')
-    const parsed = JSON.parse(content) as Record<string, unknown>
-    if (
-      parsed &&
-      typeof parsed === 'object' &&
-      'output' in parsed &&
-      parsed.output &&
-      typeof parsed.output === 'object' &&
-      'color' in (parsed.output as Record<string, unknown>) &&
-      (parsed.output as Record<string, unknown>).color === false
-    ) {
-      return false
-    }
-  } catch {
-    // Fail open: if we can't read the config, allow color
-  }
-
   return true
 }
 
@@ -130,20 +55,52 @@ interface CommandHelp {
 // ============================================================================
 
 export const helpContent: Record<string, CommandHelp> = {
+  init: {
+    description: 'Initialize mdm in a directory',
+    usage: 'mdm init [options]',
+    examples: [
+      'mdm init                     # Interactive setup',
+      'mdm init --local             # Initialize locally in current directory',
+      'mdm init --global            # Initialize globally in ~/.mdm/',
+      'mdm init -y                  # Accept all defaults',
+    ],
+    options: [
+      {
+        name: '-l, --local',
+        description: 'Initialize locally in current directory (.mdm/)',
+      },
+      {
+        name: '-g, --global',
+        description: 'Initialize globally in ~/.mdm/',
+      },
+      {
+        name: '-y, --yes',
+        description: 'Accept all defaults without prompting',
+      },
+    ],
+    notes: [
+      'Creates .mdm/ directory and .mdm.toml config file.',
+      'Local init: project-specific index in PWD/.mdm/',
+      'Global init: shared index in ~/.mdm/ with source tracking.',
+      'Config resolution: PWD/.mdm.toml > ~/.mdm/.mdm.toml > defaults.',
+    ],
+  },
   index: {
     description: 'Index markdown files for fast searching',
-    usage: 'mdcontext index [path] [options]',
+    usage: 'mdm index [path] [options]',
     examples: [
-      'mdcontext index                    # Index current directory',
-      'mdcontext index docs/              # Index specific directory',
-      'mdcontext index --embed            # Include semantic embeddings',
-      'mdcontext index --watch            # Watch for file changes',
-      'mdcontext index --embed --watch    # Full setup with live updates',
-      'mdcontext index --force            # Rebuild from scratch',
+      'mdm index                    # Index current directory',
+      'mdm index docs/              # Index specific directory',
+      'mdm index --embed            # Include semantic embeddings',
+      'mdm index --watch            # Watch for file changes',
+      'mdm index --embed --watch    # Full setup with live updates',
+      'mdm index --force            # Bypass cache, re-process all files',
+      'mdm index --all              # Index all registered global sources',
+      'mdm index --all --force      # Re-index all sources from scratch',
       '',
       '# Alternative embedding providers:',
-      'mdcontext index --embed --provider ollama --provider-model nomic-embed-text',
-      'mdcontext index --embed --provider openrouter',
+      'mdm index --embed --provider ollama --provider-model nomic-embed-text',
+      'mdm index --embed --provider openrouter',
     ],
     options: [
       {
@@ -175,7 +132,16 @@ export const helpContent: Record<string, CommandHelp> = {
         name: '-w, --watch',
         description: 'Watch for changes and re-index automatically',
       },
-      { name: '--force', description: 'Rebuild from scratch, ignoring cache' },
+      {
+        name: '-a, --all',
+        description:
+          'Index all registered sources from global config (~/.mdm/.mdm.toml)',
+      },
+      {
+        name: '-f, --force',
+        description:
+          'Bypass mtime/hash cache and re-process every file (does not delete index)',
+      },
       { name: '--json', description: 'Output results as JSON' },
       { name: '--pretty', description: 'Pretty-print JSON output' },
     ],
@@ -183,44 +149,45 @@ export const helpContent: Record<string, CommandHelp> = {
       'After indexing, prompts to enable semantic search (use --no-embed to skip).',
       'Providers: openai (default), ollama (free/local), lm-studio, openrouter, voyage.',
       'Set API keys: OPENAI_API_KEY, OPENROUTER_API_KEY, or use local providers.',
-      'Index is stored in .mdcontext/ directory.',
+      'Index is stored in .mdm/ directory.',
+      '--force and --all are orthogonal: --force controls HOW (bypass cache), --all controls WHAT (all sources).',
     ],
   },
   search: {
     description: 'Search markdown content by meaning or heading pattern',
-    usage: 'mdcontext search [options] <query> [path]',
+    usage: 'mdm search [options] <query> [path]',
     examples: [
-      'mdcontext search "auth"                    # Simple term search',
-      'mdcontext search "auth AND deploy"         # Both terms required',
-      'mdcontext search "error OR bug"            # Either term matches',
-      'mdcontext search "impl NOT test"           # Exclude "test"',
-      'mdcontext search "auth AND (error OR bug)" # Grouped expressions',
-      'mdcontext search \'"exact phrase"\'          # Exact phrase match',
-      'mdcontext search \'"context resumption" AND drift\'  # Phrase + boolean',
-      'mdcontext search -H "API.*"                # Regex on headings only',
-      'mdcontext search --mode keyword "auth"     # Force keyword mode',
-      'mdcontext search --mode semantic "auth"    # Force semantic mode',
-      'mdcontext search -n 5 "setup"              # Limit to 5 results',
-      'mdcontext search "config" docs/            # Search in specific directory',
+      'mdm search "auth"                    # Simple term search',
+      'mdm search "auth AND deploy"         # Both terms required',
+      'mdm search "error OR bug"            # Either term matches',
+      'mdm search "impl NOT test"           # Exclude "test"',
+      'mdm search "auth AND (error OR bug)" # Grouped expressions',
+      'mdm search \'"exact phrase"\'          # Exact phrase match',
+      'mdm search \'"context resumption" AND drift\'  # Phrase + boolean',
+      'mdm search -H "API.*"                # Regex on headings only',
+      'mdm search --mode keyword "auth"     # Force keyword mode',
+      'mdm search --mode semantic "auth"    # Force semantic mode',
+      'mdm search -n 5 "setup"              # Limit to 5 results',
+      'mdm search "config" docs/            # Search in specific directory',
       '',
       '# Context lines (like grep):',
-      'mdcontext search "checkpoint" -C 3         # 3 lines before AND after',
-      'mdcontext search "error" -B 2 -A 5         # 2 before, 5 after',
+      'mdm search "checkpoint" -C 3         # 3 lines before AND after',
+      'mdm search "error" -B 2 -A 5         # 2 before, 5 after',
       '',
       '# Quality modes (speed vs recall tradeoff):',
-      'mdcontext search "auth" --quality fast       # Faster, slight recall reduction',
-      'mdcontext search "auth" -q thorough          # Best recall, ~30% slower',
+      'mdm search "auth" --quality fast       # Faster, slight recall reduction',
+      'mdm search "auth" -q thorough          # Best recall, ~30% slower',
       '',
       '# Re-ranking for precision:',
-      'mdcontext search "auth" --rerank           # Re-rank with cross-encoder',
+      'mdm search "auth" --rerank           # Re-rank with cross-encoder',
       '',
       '# HyDE for complex queries:',
-      'mdcontext search "how to implement auth" --hyde   # Expands query semantically',
+      'mdm search "how to implement auth" --hyde   # Expands query semantically',
       '',
       '# AI summarization:',
-      'mdcontext search "auth" --summarize        # Get AI summary of results',
-      'mdcontext search "error" -s --yes          # Skip cost confirmation',
-      'mdcontext search "config" -s --stream      # Stream summary output',
+      'mdm search "auth" --summarize        # Get AI summary of results',
+      'mdm search "error" -s --yes          # Skip cost confirmation',
+      'mdm search "config" -s --stream      # Stream summary output',
     ],
     options: [
       {
@@ -308,7 +275,7 @@ export const helpContent: Record<string, CommandHelp> = {
       'Boolean operators: AND, OR, NOT (case-insensitive).',
       'Quoted phrases match exactly: "context resumption".',
       'Regex patterns (e.g., "API.*") always use keyword search.',
-      'Run "mdcontext index --embed" first for semantic search.',
+      'Run "mdm index --embed" first for semantic search.',
       '',
       'Similarity threshold (--threshold):',
       '  Default: 0.35 (35%). Results below this similarity are filtered out.',
@@ -336,25 +303,25 @@ export const helpContent: Record<string, CommandHelp> = {
   },
   context: {
     description: 'Get LLM-ready summary of markdown files',
-    usage: 'mdcontext context [options] <files>...',
+    usage: 'mdm context [options] <files>...',
     examples: [
-      'mdcontext context README.md        # Summarize single file',
-      'mdcontext context *.md             # Summarize all markdown files',
-      'mdcontext context -t 1000 *.md     # Fit within 1000 token budget',
-      'mdcontext context --brief *.md     # Minimal output (headings only)',
-      'mdcontext context --full doc.md    # Include full content',
-      'mdcontext context *.md | pbcopy    # Copy to clipboard (macOS)',
+      'mdm context README.md        # Summarize single file',
+      'mdm context *.md             # Summarize all markdown files',
+      'mdm context -t 1000 *.md     # Fit within 1000 token budget',
+      'mdm context --brief *.md     # Minimal output (headings only)',
+      'mdm context --full doc.md    # Include full content',
+      'mdm context *.md | pbcopy    # Copy to clipboard (macOS)',
       '',
       '# Section filtering:',
-      'mdcontext context doc.md --sections                # List available sections',
-      'mdcontext context doc.md --section "Setup"         # Extract by section name',
-      'mdcontext context doc.md --section "2.1"           # Extract by section number',
-      'mdcontext context doc.md --section "API*"          # Glob pattern matching',
-      'mdcontext context doc.md --section "Config" --shallow  # Top-level only',
+      'mdm context doc.md --sections                # List available sections',
+      'mdm context doc.md --section "Setup"         # Extract by section name',
+      'mdm context doc.md --section "2.1"           # Extract by section number',
+      'mdm context doc.md --section "API*"          # Glob pattern matching',
+      'mdm context doc.md --section "Config" --shallow  # Top-level only',
       '',
       '# Section exclusion:',
-      'mdcontext context doc.md --exclude "License"       # Exclude License section',
-      'mdcontext context doc.md -x "License" -x "Test*"   # Multiple exclusions',
+      'mdm context doc.md --exclude "License"       # Exclude License section',
+      'mdm context doc.md -x "License" -x "Test*"   # Multiple exclusions',
     ],
     options: [
       {
@@ -399,12 +366,12 @@ export const helpContent: Record<string, CommandHelp> = {
   },
   tree: {
     description: 'Show file tree or document outline',
-    usage: 'mdcontext tree [path] [options]',
+    usage: 'mdm tree [path] [options]',
     examples: [
-      'mdcontext tree                     # List markdown files in current dir',
-      'mdcontext tree docs/               # List files in specific directory',
-      'mdcontext tree README.md           # Show document outline (headings)',
-      'mdcontext tree doc.md --json       # Outline as JSON',
+      'mdm tree                     # List markdown files in current dir',
+      'mdm tree docs/               # List files in specific directory',
+      'mdm tree README.md           # Show document outline (headings)',
+      'mdm tree doc.md --json       # Outline as JSON',
     ],
     options: [
       { name: '--json', description: 'Output as JSON' },
@@ -417,11 +384,11 @@ export const helpContent: Record<string, CommandHelp> = {
   },
   links: {
     description: 'Show what a file links to (outgoing links)',
-    usage: 'mdcontext links <file> [options]',
+    usage: 'mdm links <file> [options]',
     examples: [
-      'mdcontext links README.md          # Show outgoing links',
-      'mdcontext links doc.md --json      # Output as JSON',
-      'mdcontext links doc.md -r docs/    # Resolve links relative to docs/',
+      'mdm links README.md          # Show outgoing links',
+      'mdm links doc.md --json      # Output as JSON',
+      'mdm links doc.md -r docs/    # Resolve links relative to docs/',
     ],
     options: [
       {
@@ -434,11 +401,11 @@ export const helpContent: Record<string, CommandHelp> = {
   },
   backlinks: {
     description: 'Show what links to a file (incoming links)',
-    usage: 'mdcontext backlinks <file> [options]',
+    usage: 'mdm backlinks <file> [options]',
     examples: [
-      'mdcontext backlinks api.md         # What links to api.md?',
-      'mdcontext backlinks doc.md --json  # Output as JSON',
-      'mdcontext backlinks doc.md -r ./   # Resolve from current directory',
+      'mdm backlinks api.md         # What links to api.md?',
+      'mdm backlinks doc.md --json  # Output as JSON',
+      'mdm backlinks doc.md -r ./   # Resolve from current directory',
     ],
     options: [
       {
@@ -448,15 +415,15 @@ export const helpContent: Record<string, CommandHelp> = {
       { name: '--json', description: 'Output as JSON' },
       { name: '--pretty', description: 'Pretty-print JSON output' },
     ],
-    notes: ['Requires index to exist. Run "mdcontext index" first.'],
+    notes: ['Requires index to exist. Run "mdm index" first.'],
   },
   stats: {
     description: 'Show index statistics',
-    usage: 'mdcontext stats [path] [options]',
+    usage: 'mdm stats [path] [options]',
     examples: [
-      'mdcontext stats                    # Show stats for current directory',
-      'mdcontext stats docs/              # Show stats for specific directory',
-      'mdcontext stats --json             # Output as JSON',
+      'mdm stats                    # Show stats for current directory',
+      'mdm stats docs/              # Show stats for specific directory',
+      'mdm stats --json             # Output as JSON',
     ],
     options: [
       { name: '--json', description: 'Output as JSON' },
@@ -466,43 +433,44 @@ export const helpContent: Record<string, CommandHelp> = {
   },
   config: {
     description: 'Configuration management',
-    usage: 'mdcontext config <command> [options]',
+    usage: 'mdm config <command> [options]',
     examples: [
-      'mdcontext config init              # Create a starter config file',
-      'mdcontext config init --format json  # Create JSON config instead of JS',
-      'mdcontext config show              # Show config file location',
-      'mdcontext config check             # Validate and show effective config',
-      'mdcontext config check --json      # Output config as JSON',
+      'mdm config init              # Create a .mdm.toml config file',
+      'mdm config init --global     # Create global config in ~/.mdm/',
+      'mdm config init --force      # Overwrite existing config',
+      'mdm config show              # Show config file location',
+      'mdm config check             # Validate and show effective config',
+      'mdm config check --json      # Output config as JSON',
     ],
     options: [
-      { name: 'init', description: 'Create a starter config file' },
+      { name: 'init', description: 'Create a .mdm.toml config file' },
       { name: 'show', description: 'Display config file location' },
       {
         name: 'check',
         description: 'Validate and show effective configuration',
       },
       {
-        name: '-f, --format <format>',
-        description: 'Config format: js or json (init only)',
+        name: '--global',
+        description: 'Write config to ~/.mdm/.mdm.toml (init only)',
       },
       { name: '--force', description: 'Overwrite existing config (init only)' },
       { name: '--json', description: 'Output as JSON' },
       { name: '--pretty', description: 'Pretty-print JSON output' },
     ],
     notes: [
-      'Config files set persistent defaults for all commands.',
-      'Precedence: CLI flags > environment > config file > defaults.',
-      'See docs/CONFIG.md for full configuration reference.',
+      'Config file: .mdm.toml (TOML format).',
+      'Resolution: PWD/.mdm.toml > ~/.mdm/.mdm.toml > defaults.',
+      'Precedence: CLI flags > environment (MDM_*) > config file > defaults.',
     ],
   },
   duplicates: {
     description: 'Detect duplicate content in markdown files',
-    usage: 'mdcontext duplicates [path] [options]',
+    usage: 'mdm duplicates [path] [options]',
     examples: [
-      'mdcontext duplicates                      # Find duplicates in current directory',
-      'mdcontext duplicates docs/                 # Find duplicates in docs/',
-      'mdcontext duplicates --min-length 100      # Only flag sections over 100 chars',
-      'mdcontext duplicates -p "docs/**" --json   # Filter by path, JSON output',
+      'mdm duplicates                      # Find duplicates in current directory',
+      'mdm duplicates docs/                 # Find duplicates in docs/',
+      'mdm duplicates --min-length 100      # Only flag sections over 100 chars',
+      'mdm duplicates -p "docs/**" --json   # Filter by path, JSON output',
     ],
     options: [
       {
@@ -518,20 +486,20 @@ export const helpContent: Record<string, CommandHelp> = {
       { name: '--pretty', description: 'Pretty-print JSON output' },
     ],
     notes: [
-      'Requires an index. Run "mdcontext index" first.',
+      'Requires an index. Run "mdm index" first.',
       'Compares sections by content similarity to find duplicates.',
     ],
   },
   embeddings: {
     description: 'Manage embedding namespaces',
-    usage: 'mdcontext embeddings <command> [options]',
+    usage: 'mdm embeddings <command> [options]',
     examples: [
-      'mdcontext embeddings list              # List all embedding namespaces',
-      'mdcontext embeddings current           # Show active namespace',
-      'mdcontext embeddings switch openai     # Switch to OpenAI embeddings',
-      'mdcontext embeddings switch voyage     # Switch to Voyage embeddings',
-      'mdcontext embeddings remove ollama     # Remove Ollama embeddings',
-      'mdcontext embeddings remove openai -f  # Force remove active namespace',
+      'mdm embeddings list              # List all embedding namespaces',
+      'mdm embeddings current           # Show active namespace',
+      'mdm embeddings switch openai     # Switch to OpenAI embeddings',
+      'mdm embeddings switch voyage     # Switch to Voyage embeddings',
+      'mdm embeddings remove ollama     # Remove Ollama embeddings',
+      'mdm embeddings remove openai -f  # Force remove active namespace',
     ],
     options: [
       { name: 'list', description: 'List all available embedding namespaces' },
@@ -548,7 +516,7 @@ export const helpContent: Record<string, CommandHelp> = {
     notes: [
       'Namespaces store embeddings separately by provider/model.',
       'Switching namespaces is instant - no rebuild required.',
-      'Run "mdcontext index --embed" to create embeddings for a provider.',
+      'Run "mdm index --embed" to create embeddings for a provider.',
     ],
   },
 }
@@ -570,14 +538,14 @@ export const showSubcommandHelp = (
   const help = helpContent[command]
   if (!help) {
     console.log(`Unknown command: ${command}`)
-    console.log('Run "mdcontext --help" for available commands.')
+    console.log('Run "mdm --help" for available commands.')
     process.exit(1)
   }
 
   const c = ansi(color)
 
   // Header
-  console.log(`\n${c.bold(`mdcontext ${command}`)} - ${help.description}`)
+  console.log(`\n${c.bold(`mdm ${command}`)} - ${help.description}`)
 
   // Usage
   console.log(`\n${c.yellow('USAGE')}`)
@@ -617,9 +585,10 @@ export const showMainHelp = (color: boolean = shouldUseColor()): void => {
   const c = ansi(color)
 
   const help = `
-${c.bold('mdcontext')} - Token-efficient markdown analysis for LLMs
+${c.bold('mdm')} - Token-efficient markdown analysis for LLMs
 
 ${c.yellow('COMMANDS')}
+  init                      Initialize mdm in a directory
   index [path]              Index markdown files (default: .)
   search <query> [path]     Search by meaning or structure
   context <files>...        Get LLM-ready summary
@@ -632,45 +601,44 @@ ${c.yellow('COMMANDS')}
   stats [path]              Index statistics
 
 ${c.yellow('EXAMPLES')}
-  mdcontext tree                         # List all markdown files
-  mdcontext tree README.md               # Show document outline
-  mdcontext index                        # Index current directory
-  mdcontext index --embed                # Index with semantic embeddings
-  mdcontext search "auth"                # Simple term search
-  mdcontext search "auth AND deploy"     # Boolean AND (both required)
-  mdcontext search "error OR bug"        # Boolean OR (either matches)
-  mdcontext search '"exact phrase"'      # Quoted phrase (exact match)
-  mdcontext search "how to deploy"       # Semantic search (if embeddings exist)
-  mdcontext context README.md            # Summarize a file
-  mdcontext context *.md -t 2000         # Multi-file with token budget
+  mdm tree                         # List all markdown files
+  mdm tree README.md               # Show document outline
+  mdm index                        # Index current directory
+  mdm index --embed                # Index with semantic embeddings
+  mdm search "auth"                # Simple term search
+  mdm search "auth AND deploy"     # Boolean AND (both required)
+  mdm search "error OR bug"        # Boolean OR (either matches)
+  mdm search '"exact phrase"'      # Quoted phrase (exact match)
+  mdm search "how to deploy"       # Semantic search (if embeddings exist)
+  mdm context README.md            # Summarize a file
+  mdm context *.md -t 2000         # Multi-file with token budget
 
 ${c.yellow('WORKFLOWS')}
   ${c.dim('# Quick context for LLM')}
-  mdcontext context README.md docs/*.md | pbcopy
+  mdm context README.md docs/*.md | pbcopy
 
   ${c.dim('# Find relevant documentation')}
-  mdcontext search "error handling"
+  mdm search "error handling"
 
   ${c.dim('# Complex queries with boolean operators')}
-  mdcontext search "auth AND (error OR exception) NOT test"
+  mdm search "auth AND (error OR exception) NOT test"
 
   ${c.dim('# Explore a new codebase')}
-  mdcontext tree && mdcontext stats
+  mdm tree && mdm stats
 
   ${c.dim('# Build semantic search')}
-  mdcontext index --embed && mdcontext search "authentication flow"
+  mdm index --embed && mdm search "authentication flow"
 
-  ${c.dim('# Set up project configuration')}
-  mdcontext config init && mdcontext config check
+  ${c.dim('# Set up project')}
+  mdm init && mdm index
 
 ${c.yellow('GLOBAL OPTIONS')}
-  -c, --config <file>  Use specified config file
   --json               Output as JSON
   --pretty             Pretty-print JSON
   --help, -h           Show help
   --version, -v        Show version
 
-Run ${c.cyan('mdcontext <command> --help')} for command-specific options.
+Run ${c.cyan('mdm <command> --help')} for command-specific options.
 `
   console.log(help)
 }
@@ -680,7 +648,7 @@ Run ${c.cyan('mdcontext <command> --help')} for command-specific options.
 // ============================================================================
 
 /**
- * Check for subcommand help pattern: mdcontext <cmd> --help or mdcontext <cmd> -h
+ * Check for subcommand help pattern: mdm <cmd> --help or mdm <cmd> -h
  * Returns true if help was shown and we should exit
  */
 export const checkSubcommandHelp = (): boolean => {
@@ -700,7 +668,7 @@ export const checkSubcommandHelp = (): boolean => {
 
 /**
  * Check for bare subcommand that has nested subcommands (e.g., "config", "embeddings").
- * Shows custom help when running "mdcontext config" without arguments.
+ * Shows custom help when running "mdm config" without arguments.
  * This prevents the ugly Effect CLI default output.
  */
 export const checkBareSubcommandHelp = (): boolean => {
