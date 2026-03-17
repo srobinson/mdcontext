@@ -1,5 +1,12 @@
 # markdown-matters
 
+## [0.3.1](https://github.com/srobinson/markdown-matters/compare/v0.3.0...v0.3.1) (2026-03-17)
+
+
+### Bug Fixes
+
+* eliminate redundant CI runs across workflows ([#14](https://github.com/srobinson/markdown-matters/issues/14)) ([49c5f44](https://github.com/srobinson/markdown-matters/commit/49c5f4445c1d4c421a77db3f86d171e38b179591))
+
 ## 0.3.0
 
 ### Minor Changes
