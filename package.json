@@ -1,6 +1,6 @@
 {
   "name": "markdown-matters",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Token-efficient markdown analysis tool for LLM consumption",
   "type": "module",
   "repository": {
