@@ -51,13 +51,9 @@ export const tools: Tool[] = [
         },
         level: {
           type: 'string',
-          enum: ['full', 'summary', 'brief'],
-          description: 'Compression level (default: summary)',
-          default: 'summary',
-        },
-        max_tokens: {
-          type: 'number',
-          description: 'Maximum tokens to include in output',
+          enum: ['brief', 'summary', 'full'],
+          description: 'Compression level (default: brief)',
+          default: 'brief',
         },
       },
       required: ['path'],

@@ -19,9 +19,6 @@ export const MdSearchArgs = Schema.Struct({
 export const MdmArgs = Schema.Struct({
   path: Schema.String,
   level: Schema.optional(Schema.Literal('brief', 'summary', 'full')),
-  max_tokens: Schema.optional(
-    Schema.Number.pipe(Schema.int(), Schema.positive()),
-  ),
 })
 
 export const MdStructureArgs = Schema.Struct({

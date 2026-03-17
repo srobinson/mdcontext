@@ -86,7 +86,7 @@ export const handleMdSearch = async (
 }
 
 // ============================================================================
-// Handler: md_context
+// Handler: context (md_context MCP tool)
 // ============================================================================
 
 export const handleMdm = async (

@@ -340,8 +340,12 @@ Build a token-efficient markdown analysis tool for LLM consumption. Each phase d
 
 - Expose tools for Claude integration
 - `md_search` — semantic search
-- `md_context` — get context for file/section
+- `md_context` — token-compressed file summaries
 - `md_structure` — document outline
+- `md_keyword_search` — structural search by heading/code/list/table
+- `md_index` — build or rebuild index
+- `md_links` — outgoing links
+- `md_backlinks` — incoming links
 
 **Deliverables:**
 

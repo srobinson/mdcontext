@@ -45,7 +45,7 @@ Exposes 7 tools over stdio transport for Claude and other MCP clients.
 | Tool | Description |
 |---|---|
 | `md_search` | Semantic search by meaning; returns relevant sections |
-| `md_context` | Token-compressed file summaries at `full`, `summary`, or `brief` detail |
+| `md_context` | Token-compressed file summaries at `brief`, `summary`, or `full` detail |
 | `md_structure` | Heading hierarchy with token counts |
 | `md_keyword_search` | Structural search by heading, code, list, or table presence |
 | `md_index` | Build or rebuild the index |

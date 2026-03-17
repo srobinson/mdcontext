@@ -427,11 +427,15 @@ mdm-mcp
 
 ### Available Tools
 
-| Tool           | Description                              |
-| -------------- | ---------------------------------------- |
-| `md_search`    | Semantic search across indexed documents |
-| `md_context`   | Get LLM-ready context for a file         |
-| `md_structure` | Get document structure/outline           |
+| Tool               | Description                                                  |
+| ------------------ | ------------------------------------------------------------ |
+| `md_search`        | Semantic search by meaning; returns relevant sections        |
+| `md_context`       | Token-compressed file summaries at `brief`, `summary`, or `full` detail |
+| `md_structure`     | Heading hierarchy with token counts                          |
+| `md_keyword_search`| Structural search by heading, code, list, or table presence  |
+| `md_index`         | Build or rebuild the index                                   |
+| `md_links`         | Outgoing links from a file                                   |
+| `md_backlinks`     | Incoming links to a file                                     |
 
 ### Claude Desktop Configuration
 

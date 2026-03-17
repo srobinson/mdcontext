@@ -400,11 +400,12 @@ mdm daemon --port 8765          # Custom port
 const tools = [
   {
     name: "md_search",
-    description: "Search markdown documents by meaning",
+    description: "Search markdown documents by meaning using semantic search",
     parameters: {
       query: { type: "string", required: true },
       limit: { type: "number", default: 5 },
       path_filter: { type: "string", description: "Glob pattern" },
+      threshold: { type: "number", default: 0.35, description: "Similarity threshold 0-1" },
     },
   },
   {
@@ -412,8 +413,7 @@ const tools = [
     description: "Get LLM-ready context from a markdown file",
     parameters: {
       path: { type: "string", required: true },
-      level: { type: "string", enum: ["full", "summary", "brief"] },
-      max_tokens: { type: "number" },
+      level: { type: "string", enum: ["brief", "summary", "full"], default: "brief" },
     },
   },
   {
@@ -424,11 +424,37 @@ const tools = [
     },
   },
   {
+    name: "md_keyword_search",
+    description: "Search markdown documents by keyword (headings, code blocks, lists, tables)",
+    parameters: {
+      heading: { type: "string", description: "Heading pattern (regex)" },
+      path_filter: { type: "string", description: "Glob pattern" },
+      has_code: { type: "boolean" },
+      has_list: { type: "boolean" },
+      has_table: { type: "boolean" },
+      limit: { type: "number", default: 20 },
+    },
+  },
+  {
+    name: "md_index",
+    description: "Build or rebuild the .mdm/ index for a directory",
+    parameters: {
+      path: { type: "string", default: "." },
+      force: { type: "boolean", default: false },
+    },
+  },
+  {
     name: "md_links",
-    description: "Get links to/from a markdown file",
+    description: "Get outgoing links from a markdown file",
     parameters: {
       path: { type: "string", required: true },
-      direction: { type: "string", enum: ["outgoing", "incoming", "both"] },
+    },
+  },
+  {
+    name: "md_backlinks",
+    description: "Get incoming links to a markdown file",
+    parameters: {
+      path: { type: "string", required: true },
     },
   },
 ];
