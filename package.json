@@ -14,6 +14,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
+    "markdown-matters": "./dist/cli/main.js",
     "mdm": "./dist/cli/main.js",
     "mdm-mcp": "./dist/mcp/server.js"
   },
