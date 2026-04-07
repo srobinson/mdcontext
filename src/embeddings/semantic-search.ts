@@ -40,11 +40,7 @@ import {
   createEmbeddingProviderDirect,
   type ProviderFactoryConfig,
 } from './provider-factory.js'
-import {
-  calculateFileImportanceBoost,
-  calculateHeadingBoost,
-  preprocessQuery,
-} from './ranking.js'
+import { calculateRankingBoost, preprocessQuery } from './ranking.js'
 import {
   type EmbeddingProvider,
   hasProviderMetadata,
@@ -749,7 +745,18 @@ interface SearchPipelineContext {
   readonly limit: number
   readonly threshold: number
   readonly efSearch: number | undefined
+  /**
+   * Multiplier applied to `limit` when fetching raw candidates from the
+   * vector store. HyDE benefits from a larger pool because its main value is
+   * surfacing chunks that sit lexically further from the original query, and
+   * those candidates need to enter the ranking stage to begin with.
+   */
+  readonly candidateMultiplier: number
 }
+
+/** Candidate pool multipliers for the dense-retrieval stage. */
+const CANDIDATE_MULTIPLIER_DEFAULT = 2
+const CANDIDATE_MULTIPLIER_HYDE = 10
 
 /**
  * Shared setup for semantic search: resolves the root path, loads the active
@@ -845,11 +852,12 @@ const prepareSearchPipeline = (
     let textToEmbed: string
 
     if (options.hyde) {
-      // Generate hypothetical document using LLM
+      // Generate hypothetical document using LLM. Forward the full
+      // hydeOptions object so any field on the underlying HydeOptions type
+      // (including future additions and runtime-only fields) reaches
+      // generateHypotheticalDocument unchanged.
       const hydeResult = yield* generateHypotheticalDocument(query, {
-        model: options.hydeOptions?.model,
-        maxTokens: options.hydeOptions?.maxTokens,
-        temperature: options.hydeOptions?.temperature,
+        ...options.hydeOptions,
       })
       textToEmbed = hydeResult.hypotheticalDocument
       yield* Effect.logDebug(
@@ -882,6 +890,9 @@ const prepareSearchPipeline = (
     const efSearch = options.quality
       ? QUALITY_EF_SEARCH[options.quality]
       : undefined
+    const candidateMultiplier = options.hyde
+      ? CANDIDATE_MULTIPLIER_HYDE
+      : CANDIDATE_MULTIPLIER_DEFAULT
 
     return {
       resolvedRoot,
@@ -890,6 +901,7 @@ const prepareSearchPipeline = (
       limit,
       threshold,
       efSearch,
+      candidateMultiplier,
     }
   })
 
@@ -917,7 +929,10 @@ const postProcessResults = (
       )
     }
 
-    // Apply ranking boost (heading + file importance, enabled by default)
+    // Apply ranking boost (heading + file importance, enabled by default).
+    // calculateRankingBoost already clamps the total to TOTAL_BOOST_CAP so
+    // cosine similarity stays the primary ranking signal. See ranking.ts
+    // for the rationale.
     const applyBoost = options.headingBoost !== false
     const boostedResults = applyBoost
       ? filteredResults.map((r) => ({
@@ -925,8 +940,7 @@ const postProcessResults = (
           similarity: Math.min(
             1,
             r.similarity +
-              calculateHeadingBoost(r.heading, query) +
-              calculateFileImportanceBoost(r.documentPath),
+              calculateRankingBoost(r.heading, query, r.documentPath),
           ),
         }))
       : filteredResults
@@ -1014,7 +1028,7 @@ export const semanticSearch = (
 
     const searchResults = yield* ctx.vectorStore.search(
       ctx.queryVector,
-      ctx.limit * 2,
+      ctx.limit * ctx.candidateMultiplier,
       ctx.threshold,
       { efSearch: ctx.efSearch },
     )
@@ -1067,7 +1081,7 @@ export const semanticSearchWithStats = (
 
     const searchResultWithStats = yield* ctx.vectorStore.searchWithStats(
       ctx.queryVector,
-      ctx.limit * 2,
+      ctx.limit * ctx.candidateMultiplier,
       ctx.threshold,
       { efSearch: ctx.efSearch },
     )

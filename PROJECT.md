@@ -1,6 +1,6 @@
 # markdown-matters
 
-**Version:** 0.3.0
+**Version:** 0.3.1
 **License:** MIT
 **Node:** >= 18.0.0
 **Package:** `markdown-matters` on npm
@@ -27,6 +27,7 @@ Consumers retrieve content through either the `mdm` CLI or the `mdm-mcp` MCP ser
 
 | Command | Description |
 |---|---|
+| `init` | Interactive setup wizard for `.mdm.toml` configuration |
 | `index` | Index markdown files; optionally build embeddings (`--embed`) |
 | `search` | Search by keyword, semantic, or hybrid mode |
 | `context` | Emit token-budget-aware compressed summaries of a file |
@@ -151,7 +152,7 @@ Key configurable surfaces:
 - **Summarization**: `budgetTokens`, `truncationStrategy`, `mode`, `model`
 - **Output**: `verbose`, `debug`, `noColor`, `format`
 
-Full reference: `docs/CONFIG.md`
+Full reference: `docs/CONFIG.md` and `docs/USAGE.md`
 
 ---
 
@@ -187,13 +188,14 @@ src/
   embeddings/    Provider abstraction, HNSW store, namespacing, HyDE, ranking
   summarization/ CLI and API summarizer provider implementations
   summarize/     Summarization orchestration
+  core/          Shared domain types (9 exports, 13 downstream dependents)
   config/        Schema, file loader, precedence, Effect service layer
   errors/        Typed error catalog
   duplicates/    Duplicate content detection
   utils/         Shared utilities
   types/         Shared TypeScript types
 tests/           Integration tests (search-context, search-semantic, embed-index)
-docs/            Extended documentation (CONFIG, DESIGN, ROADMAP, ERRORS, USAGE)
+docs/            Extended documentation (CONFIG, USAGE)
 scripts/         Build and utility scripts
 ```
 
@@ -220,6 +222,7 @@ Part of the [Helioy](https://github.com/helioy) ecosystem.
 | Component | Role |
 |---|---|
 | `attention-matters` | Geometric memory engine |
+| `context-matters` | Structured context store |
 | `fmm` | Code structural intelligence |
 | `nancyr` | Multi-agent orchestrator (Rust) |
 | `helioy-plugins` | Claude Code plugin |
