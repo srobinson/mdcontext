@@ -46,10 +46,7 @@ const makeSection = (
   metadata: makeSectionMeta(overrides.metadata),
 })
 
-const makeDocument = (
-  title: string,
-  sections: MdSection[],
-): MdDocument => {
+const makeDocument = (title: string, sections: MdSection[]): MdDocument => {
   const totalTokens = sections.reduce(
     (sum, s) => sum + s.metadata.tokenCount,
     0,
@@ -164,9 +161,7 @@ describe('summarizeDocument', () => {
       const section = result.sections[0]!
 
       expect(section.summary.length).toBeGreaterThan(0)
-      expect(section.summaryTokens).toBeLessThanOrEqual(
-        section.originalTokens,
-      )
+      expect(section.summaryTokens).toBeLessThanOrEqual(section.originalTokens)
     })
 
     it('full includes complete content', () => {

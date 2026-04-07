@@ -4,16 +4,82 @@
  * Tests for HyDE query expansion functionality.
  */
 
-import { Effect } from 'effect'
-import { describe, expect, it } from 'vitest'
+import { Effect, Redacted } from 'effect'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  DEFAULT_BASE_URLS_BY_PROVIDER,
+  DEFAULT_MODELS_BY_PROVIDER,
   generateHypotheticalDocument,
   type HydeOptions,
+  type HydeProviderName,
   type HydeResult,
   isHydeAvailable,
   shouldUseHyde,
 } from './hyde.js'
 import type { SemanticSearchOptions } from './types.js'
+
+// ============================================================================
+// OpenAI client mock
+// ============================================================================
+//
+// `vi.mock` calls are hoisted by vitest, so this runs before any import of
+// `openai`. The mock captures the constructor args and the chat.completions
+// .create payload so individual tests can introspect what hyde.ts forwards
+// to the SDK without making real network calls.
+
+interface MockChatCreatePayload {
+  model: string
+  messages: Array<{ role: string; content: string }>
+  max_tokens: number
+  temperature: number
+}
+
+interface MockChatCompletionsCreate {
+  (
+    payload: MockChatCreatePayload,
+  ): Promise<{
+    choices: Array<{ message: { content: string } }>
+    usage: { prompt_tokens: number; completion_tokens: number }
+  }>
+  mock: { calls: MockChatCreatePayload[][] }
+  mockClear: () => void
+}
+
+interface MockOpenAIConstructorArgs {
+  apiKey?: string
+  baseURL?: string
+}
+
+const mockChatCreate = vi.fn(async (_payload: MockChatCreatePayload) => ({
+  choices: [{ message: { content: 'mock hypothetical document' } }],
+  usage: { prompt_tokens: 10, completion_tokens: 20 },
+})) as unknown as MockChatCompletionsCreate
+
+const mockConstructorCalls: MockOpenAIConstructorArgs[] = []
+
+vi.mock('openai', () => {
+  // Minimal stub of the OpenAI client surface that hyde.ts touches.
+  class MockOpenAI {
+    chat: { completions: { create: MockChatCompletionsCreate } }
+    constructor(args: MockOpenAIConstructorArgs) {
+      mockConstructorCalls.push(args)
+      this.chat = { completions: { create: mockChatCreate } }
+    }
+  }
+
+  // Static error classes referenced by classifyLLMError. The runtime code
+  // uses `instanceof` checks; an empty class is enough to keep those
+  // branches reachable without triggering false positives.
+  class MockBaseError extends Error {}
+
+  return {
+    default: Object.assign(MockOpenAI, {
+      RateLimitError: MockBaseError,
+      BadRequestError: MockBaseError,
+      APIConnectionError: MockBaseError,
+    }),
+  }
+})
 
 describe('HyDE Query Expansion', () => {
   describe('shouldUseHyde detection', () => {
@@ -75,6 +141,7 @@ describe('HyDE Query Expansion', () => {
   describe('HydeOptions interface', () => {
     it('should accept all configuration options', () => {
       const options: HydeOptions = {
+        provider: 'openai',
         apiKey: 'test-key',
         model: 'gpt-4o-mini',
         maxTokens: 256,
@@ -83,6 +150,7 @@ describe('HyDE Query Expansion', () => {
         baseURL: 'http://localhost:1234/v1',
       }
 
+      expect(options.provider).toBe('openai')
       expect(options.apiKey).toBe('test-key')
       expect(options.model).toBe('gpt-4o-mini')
       expect(options.maxTokens).toBe(256)
@@ -91,17 +159,80 @@ describe('HyDE Query Expansion', () => {
       expect(options.baseURL).toBe('http://localhost:1234/v1')
     })
 
+    it('should accept each supported provider', () => {
+      // Compile-time assertion: each provider name is assignable to the
+      // public union. The runtime expect just keeps vitest happy.
+      const providers: HydeProviderName[] = [
+        'openai',
+        'ollama',
+        'lm-studio',
+        'openrouter',
+      ]
+      for (const provider of providers) {
+        const options: HydeOptions = { provider }
+        expect(options.provider).toBe(provider)
+      }
+    })
+
+    it('should reject voyage at the type level', () => {
+      // Voyage AI has no chat completions API. The type system must keep
+      // it out of HydeProviderName so callers cannot pin HyDE to voyage.
+      // @ts-expect-error voyage is intentionally excluded from HydeProviderName
+      const _options: HydeOptions = { provider: 'voyage' }
+      // Reference _options to silence noUnusedLocals.
+      expect(_options.provider).toBe('voyage')
+    })
+
+    it('should accept Redacted apiKey', () => {
+      const options: HydeOptions = {
+        apiKey: Redacted.make('sk-test'),
+      }
+      expect(Redacted.isRedacted(options.apiKey)).toBe(true)
+    })
+
     it('should allow partial options', () => {
       const options: HydeOptions = {
         model: 'gpt-4o',
       }
       expect(options.model).toBe('gpt-4o')
       expect(options.apiKey).toBeUndefined()
+      expect(options.provider).toBeUndefined()
     })
 
     it('should allow empty options', () => {
       const options: HydeOptions = {}
       expect(options).toEqual({})
+    })
+  })
+
+  describe('per-provider defaults', () => {
+    it('exposes a default model for every supported provider', () => {
+      expect(DEFAULT_MODELS_BY_PROVIDER.openai).toBe('gpt-4o-mini')
+      expect(DEFAULT_MODELS_BY_PROVIDER.ollama).toBe('llama3.2')
+      expect(DEFAULT_MODELS_BY_PROVIDER['lm-studio']).toBe('local-model')
+      expect(DEFAULT_MODELS_BY_PROVIDER.openrouter).toBe('openai/gpt-4o-mini')
+    })
+
+    it('exposes a default baseURL for every supported provider', () => {
+      // openai is intentionally undefined so the OpenAI SDK default applies.
+      expect(DEFAULT_BASE_URLS_BY_PROVIDER.openai).toBeUndefined()
+      expect(DEFAULT_BASE_URLS_BY_PROVIDER.ollama).toBe(
+        'http://localhost:11434/v1',
+      )
+      expect(DEFAULT_BASE_URLS_BY_PROVIDER['lm-studio']).toBe(
+        'http://localhost:1234/v1',
+      )
+      expect(DEFAULT_BASE_URLS_BY_PROVIDER.openrouter).toBe(
+        'https://openrouter.ai/api/v1',
+      )
+    })
+
+    it('keeps model and baseURL maps in sync on provider keys', () => {
+      // Belt-and-suspenders: any provider added to HydeProviderName must be
+      // covered by both default maps. Compare the key sets directly.
+      const modelKeys = Object.keys(DEFAULT_MODELS_BY_PROVIDER).sort()
+      const baseURLKeys = Object.keys(DEFAULT_BASE_URLS_BY_PROVIDER).sort()
+      expect(modelKeys).toEqual(baseURLKeys)
     })
   })
 
@@ -247,6 +378,153 @@ describe('HyDE Query Expansion', () => {
         expect(shouldUseHyde('example of using custom hooks')).toBe(true)
       })
     })
+  })
+})
+
+describe('generateHypotheticalDocument runtime forwarding', () => {
+  let originalEnvKey: string | undefined
+
+  beforeEach(() => {
+    mockChatCreate.mockClear()
+    mockConstructorCalls.length = 0
+    originalEnvKey = process.env.OPENAI_API_KEY
+    process.env.OPENAI_API_KEY = 'sk-env-fallback'
+  })
+
+  afterEach(() => {
+    if (originalEnvKey === undefined) {
+      delete process.env.OPENAI_API_KEY
+    } else {
+      process.env.OPENAI_API_KEY = originalEnvKey
+    }
+  })
+
+  it('uses openai defaults when no provider override is set', async () => {
+    const result = await Effect.runPromise(
+      generateHypotheticalDocument('how do I configure auth'),
+    )
+
+    expect(result.hypotheticalDocument).toBe('mock hypothetical document')
+    expect(mockConstructorCalls).toHaveLength(1)
+    // openai default baseURL is undefined so the SDK uses its built-in.
+    expect(mockConstructorCalls[0]?.baseURL).toBeUndefined()
+    expect(mockConstructorCalls[0]?.apiKey).toBe('sk-env-fallback')
+
+    expect(mockChatCreate.mock.calls).toHaveLength(1)
+    const payload = mockChatCreate.mock.calls[0]?.[0]
+    expect(payload?.model).toBe('gpt-4o-mini')
+  })
+
+  it('routes through ollama defaults when provider=ollama', async () => {
+    await Effect.runPromise(
+      generateHypotheticalDocument('configure ollama', { provider: 'ollama' }),
+    )
+
+    expect(mockConstructorCalls[0]?.baseURL).toBe('http://localhost:11434/v1')
+    expect(mockChatCreate.mock.calls[0]?.[0]?.model).toBe('llama3.2')
+  })
+
+  it('routes through lm-studio defaults when provider=lm-studio', async () => {
+    await Effect.runPromise(
+      generateHypotheticalDocument('local model query', {
+        provider: 'lm-studio',
+      }),
+    )
+
+    expect(mockConstructorCalls[0]?.baseURL).toBe('http://localhost:1234/v1')
+    expect(mockChatCreate.mock.calls[0]?.[0]?.model).toBe('local-model')
+  })
+
+  it('routes through openrouter defaults when provider=openrouter', async () => {
+    await Effect.runPromise(
+      generateHypotheticalDocument('openrouter query', {
+        provider: 'openrouter',
+      }),
+    )
+
+    expect(mockConstructorCalls[0]?.baseURL).toBe(
+      'https://openrouter.ai/api/v1',
+    )
+    expect(mockChatCreate.mock.calls[0]?.[0]?.model).toBe('openai/gpt-4o-mini')
+  })
+
+  it('explicit baseURL overrides the per-provider default', async () => {
+    await Effect.runPromise(
+      generateHypotheticalDocument('custom host query', {
+        provider: 'ollama',
+        baseURL: 'http://my-private-ollama:9999/v1',
+      }),
+    )
+
+    expect(mockConstructorCalls[0]?.baseURL).toBe(
+      'http://my-private-ollama:9999/v1',
+    )
+  })
+
+  it('explicit model overrides the per-provider default', async () => {
+    await Effect.runPromise(
+      generateHypotheticalDocument('custom model query', {
+        provider: 'ollama',
+        model: 'qwen2.5:7b',
+      }),
+    )
+
+    expect(mockChatCreate.mock.calls[0]?.[0]?.model).toBe('qwen2.5:7b')
+  })
+
+  it('forwards a custom systemPrompt to the chat call', async () => {
+    await Effect.runPromise(
+      generateHypotheticalDocument('what is x', {
+        systemPrompt: 'You are a strict reviewer who answers in one sentence.',
+      }),
+    )
+
+    const payload = mockChatCreate.mock.calls[0]?.[0]
+    expect(payload?.messages?.[0]?.role).toBe('system')
+    expect(payload?.messages?.[0]?.content).toBe(
+      'You are a strict reviewer who answers in one sentence.',
+    )
+  })
+
+  it('forwards maxTokens and temperature to the chat call', async () => {
+    await Effect.runPromise(
+      generateHypotheticalDocument('tuned generation', {
+        maxTokens: 512,
+        temperature: 0.7,
+      }),
+    )
+
+    const payload = mockChatCreate.mock.calls[0]?.[0]
+    expect(payload?.max_tokens).toBe(512)
+    expect(payload?.temperature).toBe(0.7)
+  })
+
+  it('uses an explicit string apiKey when provided', async () => {
+    await Effect.runPromise(
+      generateHypotheticalDocument('explicit key', {
+        apiKey: 'sk-explicit-string',
+      }),
+    )
+
+    expect(mockConstructorCalls[0]?.apiKey).toBe('sk-explicit-string')
+  })
+
+  it('unwraps a Redacted apiKey before passing it to OpenAI', async () => {
+    await Effect.runPromise(
+      generateHypotheticalDocument('redacted key', {
+        apiKey: Redacted.make('sk-redacted'),
+      }),
+    )
+
+    expect(mockConstructorCalls[0]?.apiKey).toBe('sk-redacted')
+  })
+
+  it('falls back to OPENAI_API_KEY env var when apiKey is unset', async () => {
+    process.env.OPENAI_API_KEY = 'sk-env-only'
+
+    await Effect.runPromise(generateHypotheticalDocument('no explicit key'))
+
+    expect(mockConstructorCalls[0]?.apiKey).toBe('sk-env-only')
   })
 })
 

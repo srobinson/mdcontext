@@ -326,8 +326,7 @@ export const helpContent: Record<string, CommandHelp> = {
     options: [
       {
         name: '-t, --tokens <n>',
-        description:
-          'Token budget for multi-file assembly (default: 2000)',
+        description: 'Token budget for multi-file assembly (default: 2000)',
       },
       {
         name: '--brief',
