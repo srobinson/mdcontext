@@ -2,7 +2,9 @@
  * Embedding types for mdm
  */
 
+import type { Redacted } from 'effect'
 import type { ContextLine } from '../core/types.js'
+import type { HydeProviderName } from './hyde.js'
 
 export type { ContextLine } from '../core/types.js'
 
@@ -172,10 +174,43 @@ export interface SemanticSearchOptions {
   readonly hyde?: boolean | undefined
   /**
    * HyDE configuration options (only used when hyde: true).
+   *
+   * Each field is optional. When unset, the value is resolved from the
+   * embedding-side `providerConfig` where it makes sense (provider, baseURL)
+   * and otherwise from per-provider defaults inside `hyde.ts`. Credentials
+   * fall through to the provider's environment variable (OPENAI_API_KEY)
+   * unless `apiKey` is set explicitly.
+   *
+   * Voyage is intentionally absent from `provider` because Voyage AI does
+   * not expose a chat completion API. If the embedding side uses voyage,
+   * HyDE silently falls back to openai for generation.
    */
   readonly hydeOptions?:
     | {
-        /** Model for hypothetical document generation. Default: gpt-4o-mini */
+        /**
+         * LLM provider for HyDE generation. Defaults to the embedding-side
+         * provider (`providerConfig.provider`) when not set, or `'openai'`
+         * when the embedding side uses voyage (which has no chat API).
+         */
+        readonly provider?: HydeProviderName | undefined
+        /**
+         * Base URL for the chat completion endpoint. Defaults to the
+         * embedding-side `baseURL` when HyDE inherits the embedding
+         * provider, otherwise to the resolved provider's default.
+         */
+        readonly baseURL?: string | undefined
+        /**
+         * API key for the chosen provider. Accepts plain string or
+         * `Redacted<string>`. Falls back to the env var resolution chain
+         * inside `generateHypotheticalDocument` (currently OPENAI_API_KEY).
+         */
+        readonly apiKey?: string | Redacted.Redacted<string> | undefined
+        /** Custom system prompt for hypothetical document generation. */
+        readonly systemPrompt?: string | undefined
+        /**
+         * Model for hypothetical document generation. Defaults to a
+         * provider-specific value (e.g. gpt-4o-mini for openai).
+         */
         readonly model?: string | undefined
         /** Max tokens for generation. Default: 256 */
         readonly maxTokens?: number | undefined

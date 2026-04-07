@@ -137,19 +137,17 @@ export const treeCommand = Command.make(
           yield* Console.log('')
 
           // Right-align line counts
-          const maxPathLen = Math.max(
-            ...tree.map((f) => f.relativePath.length),
-          )
+          const maxPathLen = Math.max(...tree.map((f) => f.relativePath.length))
           for (const file of tree) {
-            const padding = ' '.repeat(maxPathLen - file.relativePath.length + 2)
+            const padding = ' '.repeat(
+              maxPathLen - file.relativePath.length + 2,
+            )
             yield* Console.log(
               `  ${file.relativePath}${padding}${String(file.lines).padStart(6)} lines`,
             )
           }
           yield* Console.log('')
-          yield* Console.log(
-            `Total: ${tree.length} files, ${totalLines} lines`,
-          )
+          yield* Console.log(`Total: ${tree.length} files, ${totalLines} lines`)
         }
       }
     }),

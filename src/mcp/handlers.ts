@@ -102,9 +102,8 @@ export const handleMdm = async (
   const resolvedPath = await resolveAndValidatePath(rootPath, filePath)
   if (isPathError(resolvedPath)) return resolvedPath
 
-  return effectToMcpResult(
-    summarizeFile(resolvedPath, { level }),
-    (result) => mcpText(formatSummary(result)),
+  return effectToMcpResult(summarizeFile(resolvedPath, { level }), (result) =>
+    mcpText(formatSummary(result)),
   )
 }
 

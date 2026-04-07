@@ -171,7 +171,6 @@ describe('mdm init --global', () => {
       // Paths are normalized to forward slashes in TOML output.
       expect(content).toContain(`path = "${tempDir.replace(/\\/g, '/')}"`)
       expect(content).toContain(`path = "${secondDir.replace(/\\/g, '/')}"`)
-
     } finally {
       fs.rmSync(secondDir, { recursive: true, force: true })
     }
