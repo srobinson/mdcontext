@@ -796,13 +796,15 @@ export const resolveHydeOptions = (
   const provider: HydeProviderName =
     hydeOptions?.provider ?? inheritedProvider ?? 'openai'
 
-  // Only inherit the embedding-side baseURL when HyDE is using the same
-  // provider as the embedding side; mixing baseURLs across providers would
-  // point the chat client at the wrong host.
+  // Inherit the embedding-side baseURL whenever the resolved HyDE provider
+  // matches the (non-voyage) embedding provider, regardless of whether the
+  // HyDE provider was inherited implicitly or pinned explicitly to the same
+  // value. The previous gate required `hydeOptions?.provider === undefined`,
+  // which silently dropped custom hosts (private Ollama, self-hosted LM
+  // Studio, OpenRouter proxies) as soon as the caller wrote the provider
+  // name redundantly for clarity.
   const inheritedBaseURL =
-    hydeOptions?.provider === undefined &&
-    inheritedProvider !== undefined &&
-    inheritedProvider === provider
+    inheritedProvider !== undefined && inheritedProvider === provider
       ? options.providerConfig?.baseURL
       : undefined
 

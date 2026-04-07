@@ -86,6 +86,45 @@ describe('resolveHydeOptions baseURL resolution', () => {
     expect(resolved.baseURL).toBe('http://my-ollama:11434/v1')
   })
 
+  it('still inherits baseURL when hydeOptions.provider is pinned to the same value', () => {
+    // Regression test: an earlier version of resolveHydeOptions only
+    // inherited the embedding-side baseURL when hydeOptions.provider was
+    // undefined. That silently dropped custom hosts (private Ollama,
+    // self-hosted LM Studio, OpenRouter proxies) as soon as the caller
+    // wrote the provider name explicitly for clarity — e.g. mirroring the
+    // embedding provider for readability. The fix is to inherit whenever
+    // the resolved HyDE provider matches the (non-voyage) embedding
+    // provider, regardless of how the HyDE provider got there.
+    const options: SemanticSearchOptions = {
+      providerConfig: {
+        provider: 'ollama',
+        baseURL: 'http://my-ollama:11434/v1',
+      },
+      hydeOptions: { provider: 'ollama' },
+    }
+
+    const resolved = resolveHydeOptions(options)
+    expect(resolved.provider).toBe('ollama')
+    expect(resolved.baseURL).toBe('http://my-ollama:11434/v1')
+  })
+
+  it('inherits a private openrouter baseURL even when provider is pinned explicitly', () => {
+    // Same regression, different provider: operators behind a corporate
+    // OpenRouter proxy lose their custom host if the gate only inherits
+    // when hydeOptions.provider is left undefined.
+    const options: SemanticSearchOptions = {
+      providerConfig: {
+        provider: 'openrouter',
+        baseURL: 'https://proxy.corp/openrouter/v1',
+      },
+      hydeOptions: { provider: 'openrouter' },
+    }
+
+    const resolved = resolveHydeOptions(options)
+    expect(resolved.provider).toBe('openrouter')
+    expect(resolved.baseURL).toBe('https://proxy.corp/openrouter/v1')
+  })
+
   it('does not inherit baseURL when hydeOptions.provider diverges', () => {
     // The embedding side is pointed at a private ollama, but the user has
     // explicitly asked HyDE to use openrouter. Inheriting the ollama URL

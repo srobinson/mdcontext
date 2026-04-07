@@ -8,6 +8,7 @@ import { Effect, Redacted } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   DEFAULT_BASE_URLS_BY_PROVIDER,
+  DEFAULT_ENV_VARS_BY_PROVIDER,
   DEFAULT_MODELS_BY_PROVIDER,
   generateHypotheticalDocument,
   type HydeOptions,
@@ -34,15 +35,18 @@ interface MockChatCreatePayload {
   temperature: number
 }
 
+type MockChatCreateResponse = {
+  choices: Array<{ message: { content: string } }>
+  usage: { prompt_tokens: number; completion_tokens: number }
+}
+
 interface MockChatCompletionsCreate {
-  (
-    payload: MockChatCreatePayload,
-  ): Promise<{
-    choices: Array<{ message: { content: string } }>
-    usage: { prompt_tokens: number; completion_tokens: number }
-  }>
+  (payload: MockChatCreatePayload): Promise<MockChatCreateResponse>
   mock: { calls: MockChatCreatePayload[][] }
   mockClear: () => void
+  mockImplementationOnce: (
+    impl: (payload: MockChatCreatePayload) => Promise<MockChatCreateResponse>,
+  ) => MockChatCompletionsCreate
 }
 
 interface MockOpenAIConstructorArgs {
@@ -131,10 +135,67 @@ describe('HyDE Query Expansion', () => {
   })
 
   describe('isHydeAvailable', () => {
-    it('should check if OPENAI_API_KEY is set', () => {
-      // This test reflects the actual environment state
+    // Save/restore env so individual assertions can manipulate keys without
+    // leaking into sibling tests. Each assertion sets exactly the env vars
+    // it cares about and lets the shared cleanup put things back.
+    const savedEnv = {
+      openai: process.env.OPENAI_API_KEY,
+      openrouter: process.env.OPENROUTER_API_KEY,
+    }
+
+    afterEach(() => {
+      if (savedEnv.openai === undefined) delete process.env.OPENAI_API_KEY
+      else process.env.OPENAI_API_KEY = savedEnv.openai
+      if (savedEnv.openrouter === undefined)
+        delete process.env.OPENROUTER_API_KEY
+      else process.env.OPENROUTER_API_KEY = savedEnv.openrouter
+    })
+
+    it('returns a boolean regardless of env state', () => {
       const result = isHydeAvailable()
       expect(typeof result).toBe('boolean')
+    })
+
+    it('returns true for openai when OPENAI_API_KEY is set', () => {
+      process.env.OPENAI_API_KEY = 'sk-test'
+      expect(isHydeAvailable('openai')).toBe(true)
+    })
+
+    it('returns false for openai when OPENAI_API_KEY is unset', () => {
+      delete process.env.OPENAI_API_KEY
+      expect(isHydeAvailable('openai')).toBe(false)
+    })
+
+    it('returns true for openrouter when OPENROUTER_API_KEY is set', () => {
+      delete process.env.OPENAI_API_KEY
+      process.env.OPENROUTER_API_KEY = 'sk-or-test'
+      expect(isHydeAvailable('openrouter')).toBe(true)
+    })
+
+    it('returns true for openrouter via OPENAI_API_KEY compat fallback', () => {
+      // Mirrors the embedding-side resolver: some operators reuse a single
+      // key across both endpoints rather than rotating two.
+      delete process.env.OPENROUTER_API_KEY
+      process.env.OPENAI_API_KEY = 'sk-test'
+      expect(isHydeAvailable('openrouter')).toBe(true)
+    })
+
+    it('returns false for openrouter when neither key is set', () => {
+      delete process.env.OPENAI_API_KEY
+      delete process.env.OPENROUTER_API_KEY
+      expect(isHydeAvailable('openrouter')).toBe(false)
+    })
+
+    it('returns true for ollama regardless of env (local, no auth)', () => {
+      delete process.env.OPENAI_API_KEY
+      delete process.env.OPENROUTER_API_KEY
+      expect(isHydeAvailable('ollama')).toBe(true)
+    })
+
+    it('returns true for lm-studio regardless of env (local, no auth)', () => {
+      delete process.env.OPENAI_API_KEY
+      delete process.env.OPENROUTER_API_KEY
+      expect(isHydeAvailable('lm-studio')).toBe(true)
     })
   })
 
@@ -227,12 +288,24 @@ describe('HyDE Query Expansion', () => {
       )
     })
 
-    it('keeps model and baseURL maps in sync on provider keys', () => {
+    it('keeps model, baseURL, and env-var maps in sync on provider keys', () => {
       // Belt-and-suspenders: any provider added to HydeProviderName must be
-      // covered by both default maps. Compare the key sets directly.
+      // covered by every default map. Compare the key sets directly.
       const modelKeys = Object.keys(DEFAULT_MODELS_BY_PROVIDER).sort()
       const baseURLKeys = Object.keys(DEFAULT_BASE_URLS_BY_PROVIDER).sort()
+      const envKeys = Object.keys(DEFAULT_ENV_VARS_BY_PROVIDER).sort()
       expect(modelKeys).toEqual(baseURLKeys)
+      expect(modelKeys).toEqual(envKeys)
+    })
+
+    it('maps openai and openrouter to their native env vars', () => {
+      expect(DEFAULT_ENV_VARS_BY_PROVIDER.openai).toBe('OPENAI_API_KEY')
+      expect(DEFAULT_ENV_VARS_BY_PROVIDER.openrouter).toBe('OPENROUTER_API_KEY')
+    })
+
+    it('leaves local-provider env vars undefined (no auth required)', () => {
+      expect(DEFAULT_ENV_VARS_BY_PROVIDER.ollama).toBeUndefined()
+      expect(DEFAULT_ENV_VARS_BY_PROVIDER['lm-studio']).toBeUndefined()
     })
   })
 
@@ -300,26 +373,79 @@ describe('HyDE Query Expansion', () => {
   })
 
   describe('generateHypotheticalDocument error handling', () => {
-    it('should fail with ApiKeyMissingError when no API key', async () => {
-      // Save and clear the environment variable
-      const originalKey = process.env.OPENAI_API_KEY
+    let originalOpenAIKey: string | undefined
+    let originalOpenRouterKey: string | undefined
+
+    beforeEach(() => {
+      originalOpenAIKey = process.env.OPENAI_API_KEY
+      originalOpenRouterKey = process.env.OPENROUTER_API_KEY
       delete process.env.OPENAI_API_KEY
+      delete process.env.OPENROUTER_API_KEY
+    })
 
-      try {
-        const result = await Effect.runPromise(
-          generateHypotheticalDocument('test query').pipe(Effect.either),
-        )
+    afterEach(() => {
+      if (originalOpenAIKey === undefined) delete process.env.OPENAI_API_KEY
+      else process.env.OPENAI_API_KEY = originalOpenAIKey
+      if (originalOpenRouterKey === undefined)
+        delete process.env.OPENROUTER_API_KEY
+      else process.env.OPENROUTER_API_KEY = originalOpenRouterKey
+    })
 
-        expect(result._tag).toBe('Left')
-        if (result._tag === 'Left') {
-          expect(result.left._tag).toBe('ApiKeyMissingError')
-        }
-      } finally {
-        // Restore the environment variable
-        if (originalKey) {
-          process.env.OPENAI_API_KEY = originalKey
+    it('fails with ApiKeyMissingError for openai when no key is set', async () => {
+      const result = await Effect.runPromise(
+        generateHypotheticalDocument('test query').pipe(Effect.either),
+      )
+
+      expect(result._tag).toBe('Left')
+      if (result._tag === 'Left') {
+        expect(result.left._tag).toBe('ApiKeyMissingError')
+        if (result.left._tag === 'ApiKeyMissingError') {
+          expect(result.left.provider).toBe('OpenAI')
+          expect(result.left.envVar).toBe('OPENAI_API_KEY')
         }
       }
+    })
+
+    it('fails with ApiKeyMissingError for openrouter citing the right env var', async () => {
+      // Previously the error always said OPENAI_API_KEY; a user running
+      // purely on OpenRouter would hit an error that pointed at the wrong
+      // var and waste time debugging credentials they never configured.
+      const result = await Effect.runPromise(
+        generateHypotheticalDocument('openrouter query', {
+          provider: 'openrouter',
+        }).pipe(Effect.either),
+      )
+
+      expect(result._tag).toBe('Left')
+      if (result._tag === 'Left') {
+        expect(result.left._tag).toBe('ApiKeyMissingError')
+        if (result.left._tag === 'ApiKeyMissingError') {
+          expect(result.left.provider).toBe('OpenRouter')
+          expect(result.left.envVar).toBe('OPENROUTER_API_KEY')
+        }
+      }
+    })
+
+    it('does not fail for ollama when no api key is set (local provider)', async () => {
+      // Sanity check that local providers do not raise ApiKeyMissingError.
+      // The mocked OpenAI client still responds successfully.
+      const result = await Effect.runPromise(
+        generateHypotheticalDocument('local query', {
+          provider: 'ollama',
+        }).pipe(Effect.either),
+      )
+
+      expect(result._tag).toBe('Right')
+    })
+
+    it('does not fail for lm-studio when no api key is set (local provider)', async () => {
+      const result = await Effect.runPromise(
+        generateHypotheticalDocument('local query', {
+          provider: 'lm-studio',
+        }).pipe(Effect.either),
+      )
+
+      expect(result._tag).toBe('Right')
     })
   })
 
@@ -525,6 +651,173 @@ describe('generateHypotheticalDocument runtime forwarding', () => {
     await Effect.runPromise(generateHypotheticalDocument('no explicit key'))
 
     expect(mockConstructorCalls[0]?.apiKey).toBe('sk-env-only')
+  })
+
+  it('reads OPENROUTER_API_KEY when provider=openrouter', async () => {
+    const originalOpenRouter = process.env.OPENROUTER_API_KEY
+    try {
+      process.env.OPENROUTER_API_KEY = 'sk-or-specific'
+      // Clear OPENAI_API_KEY so we know the env var the resolver picked.
+      delete process.env.OPENAI_API_KEY
+
+      await Effect.runPromise(
+        generateHypotheticalDocument('openrouter env query', {
+          provider: 'openrouter',
+        }),
+      )
+
+      expect(mockConstructorCalls[0]?.apiKey).toBe('sk-or-specific')
+      expect(mockConstructorCalls[0]?.baseURL).toBe(
+        'https://openrouter.ai/api/v1',
+      )
+    } finally {
+      if (originalOpenRouter === undefined)
+        delete process.env.OPENROUTER_API_KEY
+      else process.env.OPENROUTER_API_KEY = originalOpenRouter
+    }
+  })
+
+  it('falls back to OPENAI_API_KEY for openrouter when OPENROUTER_API_KEY is unset', async () => {
+    const originalOpenRouter = process.env.OPENROUTER_API_KEY
+    try {
+      delete process.env.OPENROUTER_API_KEY
+      process.env.OPENAI_API_KEY = 'sk-shared-key'
+
+      await Effect.runPromise(
+        generateHypotheticalDocument('openrouter compat query', {
+          provider: 'openrouter',
+        }),
+      )
+
+      expect(mockConstructorCalls[0]?.apiKey).toBe('sk-shared-key')
+    } finally {
+      if (originalOpenRouter === undefined)
+        delete process.env.OPENROUTER_API_KEY
+      else process.env.OPENROUTER_API_KEY = originalOpenRouter
+    }
+  })
+
+  it('passes a placeholder apiKey to the SDK for ollama with no env key', async () => {
+    // The OpenAI SDK rejects an empty apiKey at construction time, so local
+    // providers need a sentinel. The exact value is not public contract but
+    // it must be a non-empty string; we assert both.
+    delete process.env.OPENAI_API_KEY
+
+    await Effect.runPromise(
+      generateHypotheticalDocument('local ollama query', {
+        provider: 'ollama',
+      }),
+    )
+
+    expect(typeof mockConstructorCalls[0]?.apiKey).toBe('string')
+    expect(mockConstructorCalls[0]?.apiKey?.length).toBeGreaterThan(0)
+    // A key that literally says sk-env-fallback would mean we leaked the
+    // OPENAI default into a local call. Placeholder must be distinct.
+    expect(mockConstructorCalls[0]?.apiKey).not.toBe('sk-env-fallback')
+  })
+
+  it('passes a placeholder apiKey to the SDK for lm-studio with no env key', async () => {
+    delete process.env.OPENAI_API_KEY
+
+    await Effect.runPromise(
+      generateHypotheticalDocument('local lm-studio query', {
+        provider: 'lm-studio',
+      }),
+    )
+
+    expect(typeof mockConstructorCalls[0]?.apiKey).toBe('string')
+    expect(mockConstructorCalls[0]?.apiKey?.length).toBeGreaterThan(0)
+  })
+
+  it('honours an explicit apiKey even for local providers', async () => {
+    delete process.env.OPENAI_API_KEY
+
+    await Effect.runPromise(
+      generateHypotheticalDocument('local with auth', {
+        provider: 'ollama',
+        apiKey: 'explicit-ollama-token',
+      }),
+    )
+
+    expect(mockConstructorCalls[0]?.apiKey).toBe('explicit-ollama-token')
+  })
+
+  it('reports cost=0 for local providers (free inference)', async () => {
+    // The previous implementation fell back to gpt-4o-mini pricing for
+    // every unknown model, fabricating a cost for local inference. The
+    // new behaviour returns 0 because local providers are free.
+    const result = await Effect.runPromise(
+      generateHypotheticalDocument('free local query', {
+        provider: 'ollama',
+      }),
+    )
+
+    expect(result.cost).toBe(0)
+    // Sanity: we still account for tokens even when cost is zero.
+    expect(result.tokensUsed).toBeGreaterThan(0)
+  })
+
+  it('reports cost=0 for lm-studio', async () => {
+    const result = await Effect.runPromise(
+      generateHypotheticalDocument('lm-studio query', {
+        provider: 'lm-studio',
+      }),
+    )
+
+    expect(result.cost).toBe(0)
+  })
+
+  it('reports cost=0 for unknown OpenRouter models', async () => {
+    // OpenRouter can serve any of hundreds of models. We do not track
+    // pricing for them because the catalog is too fluid; returning 0
+    // rather than fabricating gpt-4o-mini pricing keeps the report
+    // trustworthy.
+    const result = await Effect.runPromise(
+      generateHypotheticalDocument('openrouter custom', {
+        provider: 'openrouter',
+        model: 'anthropic/claude-3.5-sonnet',
+        apiKey: 'sk-or-anything',
+      }),
+    )
+
+    expect(result.cost).toBe(0)
+  })
+
+  it('still computes cost for known OpenAI models', async () => {
+    // Regression check: fixing the non-OpenAI path must not break the
+    // OpenAI pricing path. gpt-4o-mini: input=$0.15/M, output=$0.60/M.
+    // Mock returns prompt_tokens=10, completion_tokens=20, so the
+    // expected cost is 10*0.15/1e6 + 20*0.60/1e6 = 0.0000135.
+    const result = await Effect.runPromise(
+      generateHypotheticalDocument('known model query'),
+    )
+
+    expect(result.cost).toBeCloseTo(0.0000135, 10)
+  })
+
+  it('carries the actual provider into EmbeddingError metadata', async () => {
+    // The old implementation hardcoded `provider: 'openai'` on every
+    // EmbeddingError, so a user debugging a failed OpenRouter call would
+    // see a misleading label. Assert the resolved provider survives the
+    // catch block instead.
+    mockChatCreate.mockImplementationOnce(async () => {
+      throw new Error('openrouter: service unavailable')
+    })
+
+    const result = await Effect.runPromise(
+      generateHypotheticalDocument('failing openrouter call', {
+        provider: 'openrouter',
+        apiKey: 'sk-or-any',
+      }).pipe(Effect.either),
+    )
+
+    expect(result._tag).toBe('Left')
+    if (result._tag === 'Left') {
+      expect(result.left._tag).toBe('EmbeddingError')
+      if (result.left._tag === 'EmbeddingError') {
+        expect(result.left.provider).toBe('openrouter')
+      }
+    }
   })
 })
 

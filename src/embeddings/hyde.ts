@@ -125,6 +125,58 @@ export const DEFAULT_BASE_URLS_BY_PROVIDER: Record<
 }
 
 /**
+ * Per-provider environment variable for API key resolution. Local providers
+ * (ollama, lm-studio) do not require authentication and return undefined so
+ * the resolver knows to skip the env var lookup entirely.
+ *
+ * Exported so tests and tooling can assert the mapping without spinning up
+ * an OpenAI client.
+ */
+export const DEFAULT_ENV_VARS_BY_PROVIDER: Record<
+  HydeProviderName,
+  string | undefined
+> = {
+  openai: 'OPENAI_API_KEY',
+  ollama: undefined,
+  'lm-studio': undefined,
+  openrouter: 'OPENROUTER_API_KEY',
+}
+
+/**
+ * Human-facing provider names used in error messages (e.g.
+ * {@link ApiKeyMissingError}) so the user sees `OpenRouter` rather than
+ * `openrouter`. Kept separate from the lowercase discriminator so the
+ * canonical `HydeProviderName` values stay stable as identifiers.
+ */
+const PROVIDER_DISPLAY_NAMES: Record<HydeProviderName, string> = {
+  openai: 'OpenAI',
+  ollama: 'Ollama',
+  'lm-studio': 'LM Studio',
+  openrouter: 'OpenRouter',
+}
+
+/**
+ * Providers that must have an API key before a HyDE call can proceed.
+ * Local providers (ollama, lm-studio) are excluded: they accept any
+ * non-empty string as an auth header so we pass a placeholder to keep the
+ * OpenAI SDK constructor happy without misleading the user into thinking
+ * credentials are required.
+ */
+const PROVIDERS_REQUIRING_API_KEY = new Set<HydeProviderName>([
+  'openai',
+  'openrouter',
+])
+
+/**
+ * Placeholder value handed to the OpenAI SDK constructor when the resolved
+ * provider does not require authentication. The OpenAI client rejects an
+ * empty `apiKey` at construction time, so local providers need a sentinel.
+ * The value is never sent on the wire because the local server ignores the
+ * Authorization header.
+ */
+const LOCAL_PROVIDER_API_KEY_PLACEHOLDER = 'local-no-key-required'
+
+/**
  * Default system prompt for generating hypothetical documents.
  * Designed to produce concise, factual content that matches documentation style.
  */
@@ -139,7 +191,14 @@ Guidelines:
 - Write as if this is an excerpt from existing documentation`
 
 /**
- * Pricing data for LLM models (per 1M tokens).
+ * Pricing data for known LLM models (per 1M tokens). Used to compute
+ * {@link HydeResult.cost} for the generation call.
+ *
+ * Only OpenAI chat models are listed because the OpenRouter catalog is too
+ * large and fluid to track reliably here and local providers (ollama,
+ * lm-studio) are free. Unknown models return a cost of 0 rather than
+ * fabricating gpt-4o-mini pricing, which would mislead operators running
+ * on local inference or custom OpenRouter models.
  */
 const LLM_PRICING: Record<string, { input: number; output: number }> = {
   'gpt-4o-mini': { input: 0.15, output: 0.6 },
@@ -171,23 +230,40 @@ export const generateHypotheticalDocument = (
   options: HydeOptions = {},
 ): Effect.Effect<HydeResult, ApiKeyMissingError | EmbeddingError> =>
   Effect.gen(function* () {
-    // Get API key - resolve from options or environment, normalize to Redacted
-    const rawApiKey = options.apiKey ?? process.env.OPENAI_API_KEY
-    if (!rawApiKey) {
+    const provider = options.provider ?? DEFAULT_PROVIDER
+    const envVar = DEFAULT_ENV_VARS_BY_PROVIDER[provider]
+    const displayName = PROVIDER_DISPLAY_NAMES[provider]
+
+    // Resolve credentials through the same precedence rule that the
+    // embedding side uses: explicit option, provider-native env var, then
+    // OPENAI_API_KEY as a compatibility fallback for OpenRouter because
+    // some operators reuse a single key across both endpoints.
+    const rawApiKey =
+      options.apiKey ??
+      (envVar ? process.env[envVar] : undefined) ??
+      (provider === 'openrouter' ? process.env.OPENAI_API_KEY : undefined)
+
+    if (PROVIDERS_REQUIRING_API_KEY.has(provider) && !rawApiKey) {
       return yield* Effect.fail(
         new ApiKeyMissingError({
-          provider: 'OpenAI',
-          envVar: 'OPENAI_API_KEY',
+          provider: displayName,
+          envVar: envVar ?? 'OPENAI_API_KEY',
         }),
       )
     }
 
-    // Wrap in Redacted if it's a plain string
-    const redactedApiKey = Redacted.isRedacted(rawApiKey)
-      ? rawApiKey
-      : Redacted.make(rawApiKey)
+    // Local providers (ollama, lm-studio) do not require authentication,
+    // but the OpenAI SDK refuses to construct a client without a non-empty
+    // apiKey. Hand it a placeholder so the constructor succeeds; the local
+    // server ignores the Authorization header anyway.
+    const effectiveApiKey = rawApiKey ?? LOCAL_PROVIDER_API_KEY_PLACEHOLDER
 
-    const provider = options.provider ?? DEFAULT_PROVIDER
+    // Wrap in Redacted if it is a plain string so logging and error paths
+    // cannot accidentally splat credentials.
+    const redactedApiKey = Redacted.isRedacted(effectiveApiKey)
+      ? effectiveApiKey
+      : Redacted.make(effectiveApiKey)
+
     const baseURL = options.baseURL ?? DEFAULT_BASE_URLS_BY_PROVIDER[provider]
 
     const client = new OpenAI({
@@ -216,7 +292,7 @@ export const generateHypotheticalDocument = (
         new EmbeddingError({
           reason: classifyLLMError(error),
           message: error instanceof Error ? error.message : String(error),
-          provider: 'openai',
+          provider,
           cause: error,
         }),
     })
@@ -226,11 +302,15 @@ export const generateHypotheticalDocument = (
     const outputTokens = response.usage?.completion_tokens ?? 0
     const totalTokens = inputTokens + outputTokens
 
-    // Calculate cost
-    const pricing = LLM_PRICING[model] ?? LLM_PRICING['gpt-4o-mini']!
-    const cost =
-      (inputTokens / 1_000_000) * pricing.input +
-      (outputTokens / 1_000_000) * pricing.output
+    // Calculate cost only for known models. Local providers are free and
+    // unknown OpenRouter models are impossible to price from this side, so
+    // return 0 rather than fabricating gpt-4o-mini pricing and quietly
+    // misreporting local inference as costing money.
+    const pricing = LLM_PRICING[model]
+    const cost = pricing
+      ? (inputTokens / 1_000_000) * pricing.input +
+        (outputTokens / 1_000_000) * pricing.output
+      : 0
 
     return {
       hypotheticalDocument: content,
@@ -270,12 +350,27 @@ const classifyLLMError = (
 }
 
 /**
- * Check if HyDE is available (API key is set).
+ * Check if HyDE is available for a given provider.
  *
- * @returns true if HyDE can be used
+ * Returns `true` for local providers (ollama, lm-studio) because they do
+ * not require credentials. For openai and openrouter, checks that the
+ * provider-native environment variable is set; openrouter additionally
+ * honours OPENAI_API_KEY as a compatibility fallback, matching the
+ * embedding-side resolver in {@link ./openai-provider.ts}.
+ *
+ * @param provider - Which provider to check. Defaults to openai.
+ * @returns true if HyDE can run without an explicit apiKey override
  */
-export const isHydeAvailable = (): boolean => {
-  return Boolean(process.env.OPENAI_API_KEY)
+export const isHydeAvailable = (
+  provider: HydeProviderName = DEFAULT_PROVIDER,
+): boolean => {
+  if (!PROVIDERS_REQUIRING_API_KEY.has(provider)) {
+    return true
+  }
+  const envVar = DEFAULT_ENV_VARS_BY_PROVIDER[provider]
+  if (envVar && process.env[envVar]) return true
+  if (provider === 'openrouter' && process.env.OPENAI_API_KEY) return true
+  return false
 }
 
 /**
