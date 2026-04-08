@@ -327,4 +327,4 @@ const invokeGenerateText = (
  * `voyage.ts` for its embed-only runtime.
  */
 export const OPENAI_COMPATIBLE_PROVIDER_IDS: readonly OpenAICompatibleProviderId[] =
-  ['openai', 'openrouter', 'ollama', 'lm-studio'] as const
+  Object.keys(PROVIDER_CONFIGS) as OpenAICompatibleProviderId[]
