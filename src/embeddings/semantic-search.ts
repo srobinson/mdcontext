@@ -22,12 +22,15 @@ import {
   loadSectionIndex,
 } from '../index/storage.js'
 import type { SectionEntry } from '../index/types.js'
+import type { EmbeddingClient, ProviderId } from '../providers/index.js'
 import {
   checkPricingFreshness,
   getPricingDate,
   lookupPricing,
 } from '../providers/pricing.js'
 import { matchPath } from '../search/path-matcher.js'
+import { getRecommendedDimensions, supportsMatryoshka } from './dimensions.js'
+import { createEmbeddingClient, embedInBatches } from './embed-batched.js'
 import {
   type ActiveProvider,
   generateNamespace,
@@ -39,15 +42,8 @@ import {
   type HydeOptions,
   type HydeProviderName,
 } from './hyde.js'
-import { wrapEmbedding } from './openai-provider.js'
-import {
-  createEmbeddingProviderDirect,
-  type ProviderFactoryConfig,
-} from './provider-factory.js'
 import { calculateRankingBoost, preprocessQuery } from './ranking.js'
 import {
-  type EmbeddingProvider,
-  hasProviderMetadata,
   QUALITY_EF_SEARCH,
   type SemanticSearchOptions,
   type SemanticSearchResult,
@@ -281,10 +277,34 @@ export interface EmbeddingBatchProgress {
   readonly totalSections: number
 }
 
+/**
+ * Provider config accepted by `buildEmbeddings` and `prepareSearchPipeline`.
+ *
+ * `provider` and `model` flow into the runtime client. `baseURL` is
+ * carried for HyDE inheritance only — the runtime hardcodes per-provider
+ * base URLs and ignores this field on the embed path. `dimensions` is
+ * forwarded to the transport when set; otherwise the consumer derives a
+ * recommended value from the model. `timeout` is currently ignored on
+ * the embed path; the transport uses the OpenAI SDK default. Both no-ops
+ * are tracked for ALP-1705 cleanup.
+ */
+export interface EmbeddingProviderConfig {
+  readonly provider: ProviderId
+  readonly baseURL?: string | undefined
+  readonly model?: string | undefined
+  readonly dimensions?: number | undefined
+  readonly timeout?: number | undefined
+}
+
 export interface BuildEmbeddingsOptions {
   readonly force?: boolean | undefined
-  readonly provider?: EmbeddingProvider | undefined
-  readonly providerConfig?: ProviderFactoryConfig | undefined
+  /**
+   * Test-only escape hatch to inject a pre-built `EmbeddingClient`,
+   * bypassing runtime construction. Production callers leave this unset
+   * and let `providerConfig` drive the lookup.
+   */
+  readonly client?: EmbeddingClient | undefined
+  readonly providerConfig?: EmbeddingProviderConfig | undefined
   readonly excludePatterns?: readonly string[] | undefined
   readonly onFileProgress?: ((progress: FileProgress) => void) | undefined
   /** Callback for batch progress during embedding API calls */
@@ -349,28 +369,18 @@ export const buildEmbeddings = (
       return yield* Effect.fail(new IndexNotFoundError({ path: resolvedRoot }))
     }
 
-    // Get or create provider - use factory for config-driven provider selection
-    // Priority: explicit provider > providerConfig > default (openai)
+    // Resolve provider config and build (or accept) the runtime client.
+    // Priority: explicit client > providerConfig.provider > default (openai)
     const providerConfig = options.providerConfig ?? { provider: 'openai' }
-    const provider =
-      options.provider ?? (yield* createEmbeddingProviderDirect(providerConfig))
-    const dimensions = provider.dimensions
+    const providerName: ProviderId = providerConfig.provider
+    const providerModel = providerConfig.model ?? 'text-embedding-3-small'
+    const dimensions =
+      providerConfig.dimensions ??
+      getRecommendedDimensions(providerModel) ??
+      512
 
-    // Extract provider info for namespacing from the actual provider instance
-    // This ensures we use the correct values even when options.provider is explicitly set
-    let providerName: string
-    let providerModel: string
-
-    if (hasProviderMetadata(provider)) {
-      // Provider has metadata - extract provider name from provider.name (format: "provider:model")
-      const nameParts = provider.name.split(':')
-      providerName = nameParts[0] || 'openai'
-      providerModel = provider.model
-    } else {
-      // Fallback to config values for providers without metadata
-      providerName = providerConfig.provider ?? 'openai'
-      providerModel = providerConfig.model ?? 'text-embedding-3-small'
-    }
+    const client =
+      options.client ?? (yield* createEmbeddingClient(providerName))
 
     // Create namespaced vector store for this provider/model/dimensions combination
     const vectorStore = createNamespacedVectorStore(
@@ -381,12 +391,10 @@ export const buildEmbeddings = (
       options.hnswOptions,
     )
 
-    // Set provider metadata
-    if (hasProviderMetadata(provider)) {
-      vectorStore.setProvider(provider.name, provider.model, provider.baseURL)
-    } else {
-      vectorStore.setProvider(providerName, providerModel, undefined)
-    }
+    // Set provider metadata. baseURL is carried from providerConfig when set
+    // for downstream observability; the runtime client itself uses the
+    // transport-default base URL for the provider id.
+    vectorStore.setProvider(providerName, providerModel, providerConfig.baseURL)
 
     // Load existing vectors for delta computation (skip on --force)
     let embeddedIds = new Set<string>()
@@ -576,22 +584,30 @@ export const buildEmbeddings = (
       }
     }
 
-    // Generate embeddings
+    // Generate embeddings via the runtime client, batched + retried by the
+    // consumer-side helper. Cost is computed locally because the runtime
+    // client is intentionally cost-agnostic.
+    //
+    // Pass `dimensions` to the API only for Matryoshka-capable models so the
+    // OpenAI side returns truncated vectors. Non-Matryoshka models always
+    // emit native dimensions and would reject the parameter.
     const texts = sectionsToEmbed.map((s) => s.text)
-    const result = yield* wrapEmbedding(
-      provider.embed(texts, {
-        onBatchProgress: options.onBatchProgress
-          ? (p) =>
-              options.onBatchProgress?.({
-                batchIndex: p.batchIndex,
-                totalBatches: p.totalBatches,
-                processedSections: p.processedTexts,
-                totalSections: p.totalTexts,
-              })
-          : undefined,
-      }),
-      providerConfig.provider ?? 'openai',
-    )
+    const result = yield* embedInBatches(client, texts, {
+      model: providerModel,
+      ...(supportsMatryoshka(providerModel) ? { dimensions } : {}),
+      onBatchProgress: options.onBatchProgress
+        ? (p) =>
+            options.onBatchProgress?.({
+              batchIndex: p.batchIndex,
+              totalBatches: p.totalBatches,
+              processedSections: p.processedTexts,
+              totalSections: p.totalTexts,
+            })
+        : undefined,
+    })
+    const tokensUsed = result.usage?.inputTokens ?? 0
+    const pricePerMillion = lookupPricing('embed', providerModel)?.input ?? 0
+    const cost = (tokensUsed / 1_000_000) * pricePerMillion
 
     // Create vector entries
     const entries: VectorEntry[] = []
@@ -611,7 +627,7 @@ export const buildEmbeddings = (
 
     // Add to vector store
     yield* vectorStore.add(entries)
-    vectorStore.addCost(result.cost, result.tokensUsed)
+    vectorStore.addCost(cost, tokensUsed)
 
     // Save and invalidate cache so next search picks up new vectors
     yield* vectorStore.save()
@@ -637,8 +653,8 @@ export const buildEmbeddings = (
 
     return {
       sectionsEmbedded: entries.length,
-      tokensUsed: result.tokensUsed,
-      cost: result.cost,
+      tokensUsed,
+      cost,
       duration,
       filesProcessed,
     }
@@ -853,14 +869,12 @@ const prepareSearchPipeline = (
       )
     }
 
-    // Create provider for query embedding
-    const provider = yield* createEmbeddingProviderDirect(
-      options.providerConfig ?? { provider: 'openai' },
-    )
-    const dimensions = provider.dimensions
-
-    // Get current provider name for error messages
-    const currentProviderName = options.providerConfig?.provider ?? 'openai'
+    // Resolve provider config and build the runtime client for query embedding.
+    const queryProviderConfig = options.providerConfig ?? { provider: 'openai' }
+    const currentProviderName: ProviderId = queryProviderConfig.provider
+    const queryModel = queryProviderConfig.model ?? 'text-embedding-3-small'
+    const dimensions = getRecommendedDimensions(queryModel) ?? 512
+    const client = yield* createEmbeddingClient(currentProviderName)
 
     // Verify dimensions match the active namespace
     if (dimensions !== activeProvider.dimensions) {
@@ -942,11 +956,29 @@ const prepareSearchPipeline = (
       textToEmbed = options.skipPreprocessing ? query : preprocessQuery(query)
     }
 
-    // Embed the query (or hypothetical document)
-    const queryResult = yield* wrapEmbedding(
-      provider.embed([textToEmbed]),
-      currentProviderName,
-    )
+    // Embed the query (or hypothetical document) directly via the runtime
+    // client. No batching needed for a single text. The runtime returns
+    // Effect natively so no Promise wrapping is required.
+    //
+    // Pass `dimensions` to the API only for Matryoshka-capable models so the
+    // returned query vector has the same width as the corpus. Non-Matryoshka
+    // models always emit native dimensions and would reject the parameter.
+    const queryResult = yield* client
+      .embed([textToEmbed], {
+        model: queryModel,
+        ...(supportsMatryoshka(queryModel) ? { dimensions } : {}),
+      })
+      .pipe(
+        Effect.mapError(
+          (e) =>
+            new EmbeddingError({
+              reason: 'Unknown',
+              message: e.message,
+              provider: currentProviderName,
+              cause: e.cause,
+            }),
+        ),
+      )
 
     const queryVector = queryResult.embeddings[0]
     if (!queryVector) {
@@ -968,10 +1000,13 @@ const prepareSearchPipeline = (
       ? CANDIDATE_MULTIPLIER_HYDE
       : CANDIDATE_MULTIPLIER_DEFAULT
 
+    // hnswlib-node's searchKnn requires a mutable number[]; the runtime
+    // returns readonly number[] from embed. Copy once here so the rest of
+    // the pipeline can pass the vector through unchanged.
     return {
       resolvedRoot,
       vectorStore,
-      queryVector,
+      queryVector: [...queryVector],
       limit,
       threshold,
       efSearch,

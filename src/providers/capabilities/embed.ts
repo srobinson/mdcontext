@@ -9,6 +9,15 @@ import { Data, type Effect } from 'effect'
 
 export interface EmbedOptions {
   readonly model?: string
+  /**
+   * Output embedding dimensions. Only honored by providers whose models
+   * support dimension reduction (e.g. OpenAI's Matryoshka-compatible
+   * `text-embedding-3-*` models). Transports that do not support reduction
+   * ignore this field. The decision of *when* to pass dimensions belongs
+   * to the consumer; the runtime is use-case agnostic about which models
+   * support which reductions.
+   */
+  readonly dimensions?: number
   readonly signal?: AbortSignal
 }
 

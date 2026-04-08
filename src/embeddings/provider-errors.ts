@@ -29,7 +29,20 @@
  */
 
 import type { EmbeddingProviderName } from '../config/schema.js'
-import { PROVIDER_PORTS } from './provider-constants.js'
+
+// ============================================================================
+// Port Mappings (inlined from former provider-constants.ts)
+// ============================================================================
+
+/**
+ * Provider port mappings used to detect which provider an error originated
+ * from based on the port embedded in the error message. Single source of
+ * truth now lives here because port-detection is the only consumer.
+ */
+const PROVIDER_PORTS: Record<string, number> = {
+  ollama: 11434,
+  'lm-studio': 1234,
+}
 
 // ============================================================================
 // Provider Error Types

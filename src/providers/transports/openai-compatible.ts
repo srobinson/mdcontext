@@ -189,6 +189,9 @@ const invokeEmbed = (
         model,
         input: texts as string[],
       }
+      if (options?.dimensions !== undefined) {
+        params.dimensions = options.dimensions
+      }
       const requestOptions: { signal?: AbortSignal } = {}
       if (options?.signal !== undefined) {
         requestOptions.signal = options.signal
