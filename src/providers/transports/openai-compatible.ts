@@ -137,13 +137,21 @@ const resolveApiKey = (
 
 const buildOpenAIClient = (
   id: OpenAICompatibleProviderId,
+  overrides?: {
+    readonly baseURL?: string | undefined
+    readonly apiKey?: string | undefined
+  },
 ): Effect.Effect<OpenAI, MissingApiKey> =>
   Effect.gen(function* () {
-    const apiKey = yield* resolveApiKey(id)
+    const apiKey =
+      overrides?.apiKey !== undefined
+        ? overrides.apiKey
+        : yield* resolveApiKey(id)
     const config = PROVIDER_CONFIGS[id]
+    const baseURL = overrides?.baseURL ?? config.baseURL
     return new OpenAI({
       apiKey,
-      ...(config.baseURL !== undefined ? { baseURL: config.baseURL } : {}),
+      ...(baseURL !== undefined ? { baseURL } : {}),
     })
   })
 
@@ -223,11 +231,27 @@ const invokeEmbed = (
  *
  * Fails with `MissingApiKey` when the provider requires a key and the
  * env var is unset.
+ *
+ * Optional `overrides.baseURL` replaces the provider's default endpoint
+ * for the lifetime of the returned client. Used by HyDE callers that
+ * point at a private host (e.g. a self-hosted ollama on a non-default
+ * port) while still routing through the runtime's credential
+ * resolution.
+ *
+ * Optional `overrides.apiKey` bypasses env var resolution entirely and
+ * uses the provided string. The override is intentionally kept on the
+ * generateText factory and not the embed factory because HyDE is the
+ * only consumer that exposes a per-call apiKey override on its options
+ * surface; embeddings always go through the registered env var.
  */
 export const createGenerateTextClient = (
   id: OpenAICompatibleProviderId,
+  overrides?: {
+    readonly baseURL?: string | undefined
+    readonly apiKey?: string | undefined
+  },
 ): Effect.Effect<TextClient, MissingApiKey> =>
-  Effect.map(buildOpenAIClient(id), (openai) => ({
+  Effect.map(buildOpenAIClient(id, overrides), (openai) => ({
     generateText: (prompt, options) =>
       invokeGenerateText(openai, id, prompt, options),
   }))

@@ -37,11 +37,8 @@ import {
   getActiveNamespace,
   writeActiveProvider,
 } from './embedding-namespace.js'
-import {
-  generateHypotheticalDocument,
-  type HydeOptions,
-  type HydeProviderName,
-} from './hyde.js'
+import { generateHypotheticalDocument } from './hyde.js'
+import { resolveHydeOptions } from './hyde-options.js'
 import { calculateRankingBoost, preprocessQuery } from './ranking.js'
 import {
   QUALITY_EF_SEARCH,
@@ -777,61 +774,6 @@ interface SearchPipelineContext {
 /** Candidate pool multipliers for the dense-retrieval stage. */
 const CANDIDATE_MULTIPLIER_DEFAULT = 2
 const CANDIDATE_MULTIPLIER_HYDE = 10
-
-/**
- * Resolve the effective HyDE options for a given search call.
- *
- * Precedence (highest first):
- *  1. `options.hydeOptions.*` explicit overrides (provider, baseURL, apiKey,
- *     systemPrompt, model, maxTokens, temperature).
- *  2. The embedding-side `options.providerConfig` for the carry-across
- *     fields (`provider`, `baseURL`). The embedding-side `apiKey` is not
- *     exposed publicly and is intentionally not consulted here, see notes
- *     in the docs for {@link SemanticSearchOptions.hydeOptions}.
- *  3. Per-provider defaults inside {@link generateHypotheticalDocument}.
- *
- * Voyage cannot serve chat completions, so when the embedding side is voyage
- * and `hydeOptions.provider` is unset, the resolved provider falls back to
- * `'openai'`. Callers that hit this fallback see a debug log emitted from
- * `prepareSearchPipeline` so the substitution is observable.
- *
- * Returns the object that should be passed verbatim to
- * `generateHypotheticalDocument`.
- */
-export const resolveHydeOptions = (
-  options: SemanticSearchOptions,
-): HydeOptions => {
-  const hydeOptions = options.hydeOptions
-  const embeddingProviderName = options.providerConfig?.provider
-
-  // Voyage embedding side cannot serve chat, fall back to openai unless the
-  // user explicitly pinned a HyDE provider.
-  const inheritedProvider: HydeProviderName | undefined =
-    embeddingProviderName === 'voyage' ? undefined : embeddingProviderName
-
-  const provider: HydeProviderName =
-    hydeOptions?.provider ?? inheritedProvider ?? 'openai'
-
-  // Only inherit the embedding-side baseURL when HyDE is using the same
-  // provider as the embedding side; mixing baseURLs across providers would
-  // point the chat client at the wrong host.
-  const inheritedBaseURL =
-    hydeOptions?.provider === undefined &&
-    inheritedProvider !== undefined &&
-    inheritedProvider === provider
-      ? options.providerConfig?.baseURL
-      : undefined
-
-  return {
-    provider,
-    baseURL: hydeOptions?.baseURL ?? inheritedBaseURL,
-    apiKey: hydeOptions?.apiKey,
-    systemPrompt: hydeOptions?.systemPrompt,
-    model: hydeOptions?.model,
-    maxTokens: hydeOptions?.maxTokens,
-    temperature: hydeOptions?.temperature,
-  }
-}
 
 /**
  * Shared setup for semantic search: resolves the root path, loads the active

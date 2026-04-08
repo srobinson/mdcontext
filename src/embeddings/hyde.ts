@@ -10,11 +10,30 @@
  *
  * Paper: "Precise Zero-Shot Dense Retrieval without Relevance Labels"
  * https://arxiv.org/abs/2212.10496
+ *
+ * Implementation: this module is a thin consumer of the provider runtime.
+ * Credential resolution, base URL resolution, the chat completion call,
+ * and HTTP transport all live in `src/providers/transports/openai-compatible.ts`.
+ * The runtime keeps a single `new OpenAI` call site for the four
+ * OpenAI-compatible providers; HyDE only handles the use-case-specific bits:
+ * picking a default model per provider, computing dollar cost via
+ * `lookupPricing`, and remapping runtime errors into the consumer error
+ * surface that the CLI handles.
  */
 
 import { Effect, Redacted } from 'effect'
-import OpenAI from 'openai'
-import { ApiKeyMissingError, EmbeddingError } from '../errors/index.js'
+import {
+  ApiKeyMissingError,
+  EmbeddingError as ConsumerEmbeddingError,
+  type EmbeddingErrorCause,
+} from '../errors/index.js'
+import {
+  createGenerateTextClient,
+  lookupPricing,
+  type MissingApiKey,
+  type OpenAICompatibleProviderId,
+  type TextGenerationError,
+} from '../providers/index.js'
 
 // ============================================================================
 // Types
@@ -27,11 +46,11 @@ import { ApiKeyMissingError, EmbeddingError } from '../errors/index.js'
  * completion API. When the embedding side uses voyage and HyDE is enabled
  * without an explicit provider override, the runtime falls back to openai.
  *
- * All listed providers expose OpenAI-compatible chat completion endpoints,
- * so a single OpenAI SDK client works against all of them once given the
- * correct baseURL.
+ * The set is derived from `OpenAICompatibleProviderId` so any provider added
+ * to the runtime's OpenAI-compatible transport automatically becomes a
+ * candidate for HyDE generation.
  */
-export type HydeProviderName = 'openai' | 'ollama' | 'lm-studio' | 'openrouter'
+export type HydeProviderName = OpenAICompatibleProviderId
 
 /**
  * Configuration for HyDE query expansion.
@@ -45,7 +64,8 @@ export interface HydeOptions {
   readonly provider?: HydeProviderName | undefined
   /**
    * API key for the chosen provider. Can be a plain string or Redacted<string>.
-   * Falls back to OPENAI_API_KEY env var if not provided.
+   * When unset, the runtime resolves the credential from the provider's env
+   * var (OPENAI_API_KEY for openai, OPENROUTER_API_KEY for openrouter, etc.).
    */
   readonly apiKey?: string | Redacted.Redacted<string> | undefined
   /**
@@ -60,8 +80,8 @@ export interface HydeOptions {
   /** Custom system prompt for document generation */
   readonly systemPrompt?: string | undefined
   /**
-   * Base URL for the chat completion endpoint. When unset, the provider's
-   * default baseURL is used (see {@link DEFAULT_BASE_URLS_BY_PROVIDER}).
+   * Base URL for the chat completion endpoint. When unset, the runtime
+   * uses the provider's default baseURL.
    */
   readonly baseURL?: string | undefined
 }
@@ -78,7 +98,8 @@ export interface HydeResult {
   readonly model: string
   /** Tokens used for generation */
   readonly tokensUsed: number
-  /** Estimated cost of the LLM call */
+  /** Estimated cost of the LLM call. Zero when the model is not in the
+   *  pricing table (local providers and unknown remote models). */
   readonly cost: number
 }
 
@@ -96,32 +117,15 @@ const DEFAULT_TEMPERATURE = 0.3
  * expected to override; the remote providers point at their cheapest
  * capable chat model.
  *
- * Exported so tests and downstream tooling can introspect the defaults
- * without instantiating an OpenAI client.
+ * The runtime intentionally does not own model defaults — picking a
+ * sensible chat model is a use-case decision and lives at the consumer
+ * layer alongside the prompt template.
  */
-export const DEFAULT_MODELS_BY_PROVIDER: Record<HydeProviderName, string> = {
+const DEFAULT_MODELS_BY_PROVIDER: Record<HydeProviderName, string> = {
   openai: 'gpt-4o-mini',
   ollama: 'llama3.2',
   'lm-studio': 'local-model',
   openrouter: 'openai/gpt-4o-mini',
-}
-
-/**
- * Per-provider default baseURL. Mirrors PROVIDER_BASE_URLS in
- * provider-constants.ts but is duplicated here to avoid an import cycle
- * between hyde.ts and the embedding-provider plumbing. Update both maps
- * together if a new provider is added.
- *
- * - openai: undefined lets the OpenAI SDK use its built-in default.
- */
-export const DEFAULT_BASE_URLS_BY_PROVIDER: Record<
-  HydeProviderName,
-  string | undefined
-> = {
-  openai: undefined,
-  ollama: 'http://localhost:11434/v1',
-  'lm-studio': 'http://localhost:1234/v1',
-  openrouter: 'https://openrouter.ai/api/v1',
 }
 
 /**
@@ -138,14 +142,136 @@ Guidelines:
 - Do not include greetings, preambles, or meta-commentary
 - Write as if this is an excerpt from existing documentation`
 
+// ============================================================================
+// Error Classification
+// ============================================================================
+
 /**
- * Pricing data for LLM models (per 1M tokens).
+ * Classify a runtime `TextGenerationError` into a `reason` for the
+ * centralized consumer `EmbeddingError`. Mirrors the embed-batched.ts
+ * classifier so the CLI keeps producing the same suggestions for HyDE
+ * failures that it produces for embedding failures, even though the
+ * underlying capability differs.
  */
-const LLM_PRICING: Record<string, { input: number; output: number }> = {
-  'gpt-4o-mini': { input: 0.15, output: 0.6 },
-  'gpt-4o': { input: 2.5, output: 10 },
-  'gpt-4-turbo': { input: 10, output: 30 },
-  'gpt-3.5-turbo': { input: 0.5, output: 1.5 },
+const classifyTextGenerationError = (
+  error: TextGenerationError,
+): EmbeddingErrorCause => {
+  const msg = error.message.toLowerCase()
+
+  if (
+    msg.includes('429') ||
+    msg.includes('rate limit') ||
+    msg.includes('too many requests')
+  ) {
+    return 'RateLimit'
+  }
+
+  if (
+    msg.includes('quota') ||
+    msg.includes('insufficient') ||
+    msg.includes('billing')
+  ) {
+    return 'QuotaExceeded'
+  }
+
+  if (
+    msg.includes('econnrefused') ||
+    msg.includes('timeout') ||
+    msg.includes('etimedout') ||
+    msg.includes('network') ||
+    msg.includes('enotfound') ||
+    msg.includes('connection')
+  ) {
+    return 'Network'
+  }
+
+  if (
+    msg.includes('model') &&
+    (msg.includes('not found') ||
+      msg.includes('not exist') ||
+      msg.includes('invalid'))
+  ) {
+    return 'ModelError'
+  }
+
+  return 'Unknown'
+}
+
+/**
+ * Convert a terminal runtime `TextGenerationError` into the consumer-facing
+ * `EmbeddingError`. HyDE reuses the embedding error type for CLI parity:
+ * the user only cares whether the LLM call succeeded, not which capability
+ * it failed on.
+ */
+const toConsumerError = (error: TextGenerationError): ConsumerEmbeddingError =>
+  new ConsumerEmbeddingError({
+    reason: classifyTextGenerationError(error),
+    message: error.message,
+    provider: error.provider,
+    cause: error.cause,
+  })
+
+// ============================================================================
+// Client Factory
+// ============================================================================
+
+/**
+ * Construct a generateText client for the given HyDE provider.
+ *
+ * Bridges the runtime's `createGenerateTextClient` and remaps the runtime's
+ * `MissingApiKey` into the centralized `ApiKeyMissingError` so the CLI error
+ * handler keeps producing the same exit codes and suggestions.
+ *
+ * Optional `apiKey` and `baseURL` overrides flow through to the runtime
+ * factory; both are honored on a per-call basis. The runtime resolves the
+ * env var only when `apiKey` is omitted, fixing finding #1 (openrouter
+ * provider works with only `OPENROUTER_API_KEY` set).
+ *
+ * Bypasses the runtime registry. ALP-1703 will move this onto registry-based
+ * dispatch with proper fail-fast wiring.
+ */
+const createHydeClient = (
+  id: HydeProviderName,
+  overrides?: {
+    readonly baseURL?: string | undefined
+    readonly apiKey?: string | undefined
+  },
+) => {
+  const result = createGenerateTextClient(id, overrides)
+  return result.pipe(
+    Effect.mapError(
+      (e: MissingApiKey) =>
+        new ApiKeyMissingError({
+          provider: e.provider,
+          envVar: e.envVar,
+        }),
+    ),
+  )
+}
+
+// ============================================================================
+// Cost calculation
+// ============================================================================
+
+/**
+ * Compute the dollar cost of a generateText call from token usage and the
+ * pricing table. Returns 0 for unknown models — local providers (ollama,
+ * lm-studio) and any custom remote model that isn't listed in pricing.json
+ * report zero rather than fabricating a cost from a fallback model. Fixes
+ * finding #3.
+ */
+const computeCost = (
+  model: string,
+  inputTokens: number,
+  outputTokens: number,
+): number => {
+  const pricing = lookupPricing('generateText', model)
+  if (pricing === undefined) return 0
+  const outputRate = pricing.output ?? 0
+  return (
+    (inputTokens / 1_000_000) * pricing.input +
+    (outputTokens / 1_000_000) * outputRate
+  )
 }
 
 // ============================================================================
@@ -163,119 +289,74 @@ const LLM_PRICING: Record<string, { input: number; output: number }> = {
  * @param options - HyDE configuration options
  * @returns The generated hypothetical document
  *
- * @throws ApiKeyMissingError - When OPENAI_API_KEY is not set
- * @throws EmbeddingError - When LLM call fails (reusing error type for consistency)
+ * @throws ApiKeyMissingError - When the resolved provider's API key env
+ *                              var is unset and no explicit `apiKey` is
+ *                              provided in `options`.
+ * @throws EmbeddingError - When the LLM call fails (reusing the embedding
+ *                          error type for CLI parity).
  */
 export const generateHypotheticalDocument = (
   query: string,
   options: HydeOptions = {},
-): Effect.Effect<HydeResult, ApiKeyMissingError | EmbeddingError> =>
+): Effect.Effect<HydeResult, ApiKeyMissingError | ConsumerEmbeddingError> =>
   Effect.gen(function* () {
-    // Get API key - resolve from options or environment, normalize to Redacted
-    const rawApiKey = options.apiKey ?? process.env.OPENAI_API_KEY
-    if (!rawApiKey) {
-      return yield* Effect.fail(
-        new ApiKeyMissingError({
-          provider: 'OpenAI',
-          envVar: 'OPENAI_API_KEY',
-        }),
-      )
-    }
-
-    // Wrap in Redacted if it's a plain string
-    const redactedApiKey = Redacted.isRedacted(rawApiKey)
-      ? rawApiKey
-      : Redacted.make(rawApiKey)
-
     const provider = options.provider ?? DEFAULT_PROVIDER
-    const baseURL = options.baseURL ?? DEFAULT_BASE_URLS_BY_PROVIDER[provider]
-
-    const client = new OpenAI({
-      apiKey: Redacted.value(redactedApiKey), // Only expose when creating client
-      baseURL,
-    })
-
     const model = options.model ?? DEFAULT_MODELS_BY_PROVIDER[provider]
     const maxTokens = options.maxTokens ?? DEFAULT_MAX_TOKENS
     const temperature = options.temperature ?? DEFAULT_TEMPERATURE
     const systemPrompt = options.systemPrompt ?? DEFAULT_SYSTEM_PROMPT
 
-    // Generate hypothetical document
-    const response = yield* Effect.tryPromise({
-      try: async () =>
-        client.chat.completions.create({
-          model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: query },
-          ],
-          max_tokens: maxTokens,
-          temperature,
-        }),
-      catch: (error) =>
-        new EmbeddingError({
-          reason: classifyLLMError(error),
-          message: error instanceof Error ? error.message : String(error),
-          provider: 'openai',
-          cause: error,
-        }),
+    // Unwrap an explicit apiKey override into a plain string for the
+    // runtime. When unset, the runtime resolves the credential from the
+    // provider's env var (OPENAI_API_KEY for openai, OPENROUTER_API_KEY
+    // for openrouter, etc.) — fixes finding #1.
+    const explicitApiKey =
+      options.apiKey === undefined
+        ? undefined
+        : Redacted.isRedacted(options.apiKey)
+          ? Redacted.value(options.apiKey)
+          : options.apiKey
+
+    const client = yield* createHydeClient(provider, {
+      ...(options.baseURL !== undefined ? { baseURL: options.baseURL } : {}),
+      ...(explicitApiKey !== undefined ? { apiKey: explicitApiKey } : {}),
     })
 
-    const content = response.choices[0]?.message?.content ?? ''
-    const inputTokens = response.usage?.prompt_tokens ?? 0
-    const outputTokens = response.usage?.completion_tokens ?? 0
+    const result = yield* client
+      .generateText(query, {
+        model,
+        maxTokens,
+        temperature,
+        systemPrompt,
+      })
+      .pipe(Effect.mapError(toConsumerError))
+
+    const inputTokens = result.usage?.inputTokens ?? 0
+    const outputTokens = result.usage?.outputTokens ?? 0
     const totalTokens = inputTokens + outputTokens
 
-    // Calculate cost
-    const pricing = LLM_PRICING[model] ?? LLM_PRICING['gpt-4o-mini']!
-    const cost =
-      (inputTokens / 1_000_000) * pricing.input +
-      (outputTokens / 1_000_000) * pricing.output
-
     return {
-      hypotheticalDocument: content,
+      hypotheticalDocument: result.text,
       originalQuery: query,
-      model,
+      model: result.model,
       tokensUsed: totalTokens,
-      cost,
+      cost: computeCost(result.model, inputTokens, outputTokens),
     }
   })
 
 /**
- * Classify an LLM error into a known category.
- */
-const classifyLLMError = (
-  error: unknown,
-): 'RateLimit' | 'QuotaExceeded' | 'Network' | 'ModelError' | 'Unknown' => {
-  if (error instanceof OpenAI.RateLimitError) {
-    return 'RateLimit'
-  }
-  if (error instanceof OpenAI.BadRequestError) {
-    const msg = (error.message || '').toLowerCase()
-    if (msg.includes('model')) return 'ModelError'
-  }
-  if (error instanceof OpenAI.APIConnectionError) {
-    return 'Network'
-  }
-
-  if (!(error instanceof Error)) return 'Unknown'
-  const msg = error.message.toLowerCase()
-
-  if (msg.includes('429') || msg.includes('rate limit')) return 'RateLimit'
-  if (msg.includes('quota') || msg.includes('billing')) return 'QuotaExceeded'
-  if (msg.includes('econnrefused') || msg.includes('network')) return 'Network'
-  if (msg.includes('model') && msg.includes('not found')) return 'ModelError'
-
-  return 'Unknown'
-}
-
-/**
- * Check if HyDE is available (API key is set).
+ * Check if HyDE is available (any supported provider's API key is set).
  *
- * @returns true if HyDE can be used
+ * Local providers (ollama, lm-studio) are intentionally not considered
+ * here because their availability depends on whether the local server is
+ * running, which this synchronous check cannot verify. Callers that pin
+ * HyDE to a local provider should rely on the call itself failing fast
+ * with a connection error.
+ *
+ * @returns true if HyDE can be used with at least one remote provider
  */
 export const isHydeAvailable = (): boolean => {
-  return Boolean(process.env.OPENAI_API_KEY)
+  return Boolean(process.env.OPENAI_API_KEY ?? process.env.OPENROUTER_API_KEY)
 }
 
 /**

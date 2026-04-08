@@ -7,8 +7,6 @@
 import { Effect, Redacted } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  DEFAULT_BASE_URLS_BY_PROVIDER,
-  DEFAULT_MODELS_BY_PROVIDER,
   generateHypotheticalDocument,
   type HydeOptions,
   type HydeProviderName,
@@ -38,6 +36,7 @@ interface MockChatCompletionsCreate {
   (
     payload: MockChatCreatePayload,
   ): Promise<{
+    model: string
     choices: Array<{ message: { content: string } }>
     usage: { prompt_tokens: number; completion_tokens: number }
   }>
@@ -50,7 +49,11 @@ interface MockOpenAIConstructorArgs {
   baseURL?: string
 }
 
-const mockChatCreate = vi.fn(async (_payload: MockChatCreatePayload) => ({
+// Echo the requested model back in the response so the runtime's
+// `result.model` matches what the consumer asked for. Real OpenAI
+// responses always include a `model` field.
+const mockChatCreate = vi.fn(async (payload: MockChatCreatePayload) => ({
+  model: payload.model,
   choices: [{ message: { content: 'mock hypothetical document' } }],
   usage: { prompt_tokens: 10, completion_tokens: 20 },
 })) as unknown as MockChatCompletionsCreate
@@ -58,18 +61,23 @@ const mockChatCreate = vi.fn(async (_payload: MockChatCreatePayload) => ({
 const mockConstructorCalls: MockOpenAIConstructorArgs[] = []
 
 vi.mock('openai', () => {
-  // Minimal stub of the OpenAI client surface that hyde.ts touches.
+  // Minimal stub of the OpenAI client surface that the runtime's
+  // `openai-compatible` transport touches when HyDE goes through it.
   class MockOpenAI {
     chat: { completions: { create: MockChatCompletionsCreate } }
+    embeddings: { create: () => Promise<unknown> }
     constructor(args: MockOpenAIConstructorArgs) {
       mockConstructorCalls.push(args)
       this.chat = { completions: { create: mockChatCreate } }
+      // Embeddings is unused by HyDE but the transport's surface expects
+      // both clients to exist on the same OpenAI instance.
+      this.embeddings = { create: async () => ({ data: [] }) }
     }
   }
 
-  // Static error classes referenced by classifyLLMError. The runtime code
-  // uses `instanceof` checks; an empty class is enough to keep those
-  // branches reachable without triggering false positives.
+  // Static error classes are exposed for any caller that still relies on
+  // `instanceof OpenAI.RateLimitError`. The runtime catches errors via
+  // string-matching on `error.message`, so an empty subclass is enough.
   class MockBaseError extends Error {}
 
   return {
@@ -202,37 +210,6 @@ describe('HyDE Query Expansion', () => {
     it('should allow empty options', () => {
       const options: HydeOptions = {}
       expect(options).toEqual({})
-    })
-  })
-
-  describe('per-provider defaults', () => {
-    it('exposes a default model for every supported provider', () => {
-      expect(DEFAULT_MODELS_BY_PROVIDER.openai).toBe('gpt-4o-mini')
-      expect(DEFAULT_MODELS_BY_PROVIDER.ollama).toBe('llama3.2')
-      expect(DEFAULT_MODELS_BY_PROVIDER['lm-studio']).toBe('local-model')
-      expect(DEFAULT_MODELS_BY_PROVIDER.openrouter).toBe('openai/gpt-4o-mini')
-    })
-
-    it('exposes a default baseURL for every supported provider', () => {
-      // openai is intentionally undefined so the OpenAI SDK default applies.
-      expect(DEFAULT_BASE_URLS_BY_PROVIDER.openai).toBeUndefined()
-      expect(DEFAULT_BASE_URLS_BY_PROVIDER.ollama).toBe(
-        'http://localhost:11434/v1',
-      )
-      expect(DEFAULT_BASE_URLS_BY_PROVIDER['lm-studio']).toBe(
-        'http://localhost:1234/v1',
-      )
-      expect(DEFAULT_BASE_URLS_BY_PROVIDER.openrouter).toBe(
-        'https://openrouter.ai/api/v1',
-      )
-    })
-
-    it('keeps model and baseURL maps in sync on provider keys', () => {
-      // Belt-and-suspenders: any provider added to HydeProviderName must be
-      // covered by both default maps. Compare the key sets directly.
-      const modelKeys = Object.keys(DEFAULT_MODELS_BY_PROVIDER).sort()
-      const baseURLKeys = Object.keys(DEFAULT_BASE_URLS_BY_PROVIDER).sort()
-      expect(modelKeys).toEqual(baseURLKeys)
     })
   })
 
@@ -382,20 +359,28 @@ describe('HyDE Query Expansion', () => {
 })
 
 describe('generateHypotheticalDocument runtime forwarding', () => {
-  let originalEnvKey: string | undefined
+  let originalOpenAiKey: string | undefined
+  let originalOpenrouterKey: string | undefined
 
   beforeEach(() => {
     mockChatCreate.mockClear()
     mockConstructorCalls.length = 0
-    originalEnvKey = process.env.OPENAI_API_KEY
+    originalOpenAiKey = process.env.OPENAI_API_KEY
+    originalOpenrouterKey = process.env.OPENROUTER_API_KEY
     process.env.OPENAI_API_KEY = 'sk-env-fallback'
+    process.env.OPENROUTER_API_KEY = 'sk-or-env-fallback'
   })
 
   afterEach(() => {
-    if (originalEnvKey === undefined) {
+    if (originalOpenAiKey === undefined) {
       delete process.env.OPENAI_API_KEY
     } else {
-      process.env.OPENAI_API_KEY = originalEnvKey
+      process.env.OPENAI_API_KEY = originalOpenAiKey
+    }
+    if (originalOpenrouterKey === undefined) {
+      delete process.env.OPENROUTER_API_KEY
+    } else {
+      process.env.OPENROUTER_API_KEY = originalOpenrouterKey
     }
   })
 
@@ -525,6 +510,76 @@ describe('generateHypotheticalDocument runtime forwarding', () => {
     await Effect.runPromise(generateHypotheticalDocument('no explicit key'))
 
     expect(mockConstructorCalls[0]?.apiKey).toBe('sk-env-only')
+  })
+
+  it('uses OPENROUTER_API_KEY for openrouter without needing OPENAI_API_KEY (finding #1)', async () => {
+    // Finding #1: HyDE used to read OPENAI_API_KEY unconditionally, so a
+    // caller running with provider=openrouter and only OPENROUTER_API_KEY
+    // set would crash with ApiKeyMissingError pointing at the wrong env var.
+    // The runtime now resolves the credential from the provider's actual
+    // env var.
+    delete process.env.OPENAI_API_KEY
+    process.env.OPENROUTER_API_KEY = 'sk-or-only'
+
+    await Effect.runPromise(
+      generateHypotheticalDocument('routed via openrouter', {
+        provider: 'openrouter',
+      }),
+    )
+
+    expect(mockConstructorCalls[0]?.apiKey).toBe('sk-or-only')
+    expect(mockConstructorCalls[0]?.baseURL).toBe(
+      'https://openrouter.ai/api/v1',
+    )
+  })
+
+  it('fails with ApiKeyMissingError pointing at OPENROUTER_API_KEY when openrouter has no key', async () => {
+    delete process.env.OPENROUTER_API_KEY
+
+    const result = await Effect.runPromise(
+      generateHypotheticalDocument('no key for openrouter', {
+        provider: 'openrouter',
+      }).pipe(Effect.either),
+    )
+
+    expect(result._tag).toBe('Left')
+    if (result._tag === 'Left') {
+      expect(result.left._tag).toBe('ApiKeyMissingError')
+      if (result.left._tag === 'ApiKeyMissingError') {
+        expect(result.left.envVar).toBe('OPENROUTER_API_KEY')
+      }
+    }
+  })
+
+  it('reports cost: 0 for a model that is not in the pricing table (finding #3)', async () => {
+    // Finding #3: the previous LLM_PRICING fallback fabricated a cost
+    // from gpt-4o-mini's rates whenever the requested model was unknown.
+    // The new path looks up pricing per model and reports 0 on a miss,
+    // so local providers and custom models do not get charged a fake
+    // dollar value.
+    const result = await Effect.runPromise(
+      generateHypotheticalDocument('unknown model query', {
+        model: 'completely-unknown-custom-model',
+      }),
+    )
+
+    expect(result.cost).toBe(0)
+    expect(result.model).toBe('completely-unknown-custom-model')
+    // The token counts still come back from the mock, so the consumer
+    // sees real usage data alongside the zero cost.
+    expect(result.tokensUsed).toBe(30)
+  })
+
+  it('reports cost: 0 for the local ollama provider', async () => {
+    // Local providers are absent from the pricing table by design. The
+    // computeCost path returns 0 cleanly rather than throwing.
+    const result = await Effect.runPromise(
+      generateHypotheticalDocument('local ollama query', {
+        provider: 'ollama',
+      }),
+    )
+
+    expect(result.cost).toBe(0)
   })
 })
 

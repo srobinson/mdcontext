@@ -20,7 +20,7 @@
 
 import { Redacted } from 'effect'
 import { describe, expect, it } from 'vitest'
-import { resolveHydeOptions } from './semantic-search.js'
+import { resolveHydeOptions } from './hyde-options.js'
 import type { SemanticSearchOptions } from './types.js'
 
 describe('resolveHydeOptions provider resolution', () => {
@@ -79,6 +79,26 @@ describe('resolveHydeOptions baseURL resolution', () => {
         provider: 'ollama',
         baseURL: 'http://my-ollama:11434/v1',
       },
+    }
+
+    const resolved = resolveHydeOptions(options)
+    expect(resolved.provider).toBe('ollama')
+    expect(resolved.baseURL).toBe('http://my-ollama:11434/v1')
+  })
+
+  it('inherits baseURL when HyDE provider is explicitly pinned to the embedding provider', () => {
+    // Finding #2: a caller that explicitly sets hydeOptions.provider to
+    // the same value as the embedding provider should still get the
+    // embedding side's custom baseURL. The previous resolver gated
+    // inheritance on `hydeOptions?.provider === undefined`, which
+    // silently dropped the baseURL the moment the caller named the
+    // provider — even though it was the same provider.
+    const options: SemanticSearchOptions = {
+      providerConfig: {
+        provider: 'ollama',
+        baseURL: 'http://my-ollama:11434/v1',
+      },
+      hydeOptions: { provider: 'ollama' },
     }
 
     const resolved = resolveHydeOptions(options)
