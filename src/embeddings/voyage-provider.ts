@@ -16,7 +16,7 @@ import {
   ApiKeyMissingError,
   EmbeddingError,
 } from '../errors/index.js'
-import pricingData from './pricing.json' with { type: 'json' }
+import { lookupPricing } from '../providers/pricing.js'
 import type {
   EmbeddingProvider,
   EmbeddingProviderWithMetadata,
@@ -48,39 +48,18 @@ interface VoyageEmbeddingResponse {
 const VOYAGE_API_BASE = 'https://api.voyageai.com/v1'
 
 /**
- * Voyage AI model specifications.
- * Pricing loaded from pricing.json for easy updates.
+ * Voyage AI model dimensions.
+ * Pricing is resolved through {@link lookupPricing} at call time;
+ * this table only carries the model-specific output dimension.
  */
-const voyagePricing = pricingData.voyage as Record<string, number>
-export const VOYAGE_MODELS: Record<
-  string,
-  { dimensions: number; pricePerMillion: number }
-> = {
-  'voyage-3.5-lite': {
-    dimensions: 1024,
-    pricePerMillion: voyagePricing['voyage-3.5-lite'] ?? 0.02,
-  },
-  'voyage-3': {
-    dimensions: 1024,
-    pricePerMillion: voyagePricing['voyage-3'] ?? 0.06,
-  },
-  'voyage-code-3': {
-    dimensions: 1024,
-    pricePerMillion: voyagePricing['voyage-code-3'] ?? 0.18,
-  },
+export const VOYAGE_MODELS: Record<string, { dimensions: number }> = {
+  'voyage-3.5-lite': { dimensions: 1024 },
+  'voyage-3': { dimensions: 1024 },
+  'voyage-code-3': { dimensions: 1024 },
   // Legacy models
-  'voyage-2': {
-    dimensions: 1024,
-    pricePerMillion: voyagePricing['voyage-2'] ?? 0.1,
-  },
-  'voyage-large-2': {
-    dimensions: 1536,
-    pricePerMillion: voyagePricing['voyage-large-2'] ?? 0.12,
-  },
-  'voyage-code-2': {
-    dimensions: 1536,
-    pricePerMillion: voyagePricing['voyage-code-2'] ?? 0.12,
-  },
+  'voyage-2': { dimensions: 1024 },
+  'voyage-large-2': { dimensions: 1536 },
+  'voyage-code-2': { dimensions: 1536 },
 } as const
 
 export const DEFAULT_VOYAGE_MODEL = 'voyage-3.5-lite'
@@ -255,8 +234,9 @@ export class VoyageProvider implements EmbeddingProviderWithMetadata {
       })
     }
 
-    // Calculate cost
-    const pricePerMillion = VOYAGE_MODELS[this.model]?.pricePerMillion ?? 0.02
+    // Calculate cost. lookupPricing returns undefined for unknown
+    // voyage models, which map to cost: 0.
+    const pricePerMillion = lookupPricing('embed', this.model)?.input ?? 0
     const cost = (totalTokens / 1_000_000) * pricePerMillion
 
     return {

@@ -34,6 +34,13 @@ export {
   MissingApiKey,
   ProviderNotFound,
 } from './errors.js'
+// Pricing lookup
+export {
+  checkPricingFreshness,
+  getPricingDate,
+  lookupPricing,
+  type ModelPricing,
+} from './pricing.js'
 // Registry
 export {
   clearRegistry,

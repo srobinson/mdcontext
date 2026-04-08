@@ -9,7 +9,7 @@ import {
   ApiKeyMissingError,
   EmbeddingError,
 } from '../errors/index.js'
-import pricingData from './pricing.json' with { type: 'json' }
+import { lookupPricing } from '../providers/pricing.js'
 import {
   getRecommendedDimensions,
   inferProviderFromUrl,
@@ -21,55 +21,6 @@ import type {
   EmbeddingResult,
   EmbedOptions,
 } from './types.js'
-
-// ============================================================================
-// Cost Constants
-// ============================================================================
-
-/**
- * OpenAI embedding model pricing data.
- *
- * Prices per 1M tokens. Loaded from pricing.json for easy updates.
- *
- * Maintenance: Update src/embeddings/pricing.json quarterly from
- * https://platform.openai.com/docs/pricing
- */
-export const PRICING_DATA = {
-  /** Last update date in YYYY-MM format */
-  lastUpdated: pricingData.lastUpdated,
-  /** Source URL for verification */
-  source: pricingData.sources.openai,
-  /** Prices per 1M tokens by model */
-  prices: pricingData.openai as Record<string, number>,
-}
-
-/**
- * Check if pricing data is stale (>90 days old).
- *
- * @returns Warning message if stale, null otherwise
- */
-export const checkPricingFreshness = (): string | null => {
-  const [year, month] = PRICING_DATA.lastUpdated.split('-').map(Number)
-  if (!year || !month) return null
-
-  const lastUpdated = new Date(year, month - 1, 1) // Month is 0-indexed
-  const now = new Date()
-  const daysSince = Math.floor(
-    (now.getTime() - lastUpdated.getTime()) / (1000 * 60 * 60 * 24),
-  )
-
-  if (daysSince > 90) {
-    return `Pricing data is ${daysSince} days old. May not reflect current rates.`
-  }
-  return null
-}
-
-/**
- * Get the pricing date for display.
- *
- * @returns Formatted string like "2024-09"
- */
-export const getPricingDate = (): string => PRICING_DATA.lastUpdated
 
 // ============================================================================
 // OpenAI Provider
@@ -285,11 +236,9 @@ export class OpenAIProvider implements EmbeddingProvider {
       })
     }
 
-    // Calculate cost (only for paid providers)
-    const pricePerMillion =
-      this.providerName === 'openai' || this.providerName === 'openrouter'
-        ? (PRICING_DATA.prices[this.model] ?? 0.02)
-        : 0 // Local providers are free
+    // Calculate cost. lookupPricing returns undefined for unknown models
+    // and for local providers (ollama, lm-studio), which map to cost: 0.
+    const pricePerMillion = lookupPricing('embed', this.model)?.input ?? 0
     const cost = (totalTokens / 1_000_000) * pricePerMillion
 
     return {

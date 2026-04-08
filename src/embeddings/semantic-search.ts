@@ -22,6 +22,11 @@ import {
   loadSectionIndex,
 } from '../index/storage.js'
 import type { SectionEntry } from '../index/types.js'
+import {
+  checkPricingFreshness,
+  getPricingDate,
+  lookupPricing,
+} from '../providers/pricing.js'
 import { matchPath } from '../search/path-matcher.js'
 import {
   type ActiveProvider,
@@ -34,12 +39,7 @@ import {
   type HydeOptions,
   type HydeProviderName,
 } from './hyde.js'
-import {
-  checkPricingFreshness,
-  getPricingDate,
-  PRICING_DATA,
-  wrapEmbedding,
-} from './openai-provider.js'
+import { wrapEmbedding } from './openai-provider.js'
 import {
   createEmbeddingProviderDirect,
   type ProviderFactoryConfig,
@@ -148,9 +148,9 @@ const generateEmbeddingText = (
 // Cost Estimation
 // ============================================================================
 
-// Price per 1M tokens for text-embedding-3-small (from PRICING_DATA)
+// Price per 1M tokens for text-embedding-3-small (canonical estimator model)
 const EMBEDDING_PRICE_PER_MILLION =
-  PRICING_DATA.prices['text-embedding-3-small'] ?? 0.02
+  lookupPricing('embed', 'text-embedding-3-small')?.input ?? 0.02
 
 // Re-export pricing utilities for CLI use
 export { checkPricingFreshness, getPricingDate }
