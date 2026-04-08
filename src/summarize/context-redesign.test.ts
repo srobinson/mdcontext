@@ -8,15 +8,15 @@
  * - assembleContext packs in input order with brief fallback
  */
 
-import { Effect } from 'effect'
 import * as path from 'node:path'
+import { Effect } from 'effect'
 import { describe, expect, it } from 'vitest'
 import { formatSummary } from './formatters.js'
 import {
   assembleContext,
-  summarizeFile,
   type CompressionLevel,
   type SectionSummary,
+  summarizeFile,
 } from './summarizer.js'
 
 const FIXTURES_DIR = path.join(process.cwd(), 'tests/fixtures/cli')
@@ -33,9 +33,7 @@ describe('summarizeFile produces all sections at every level', () => {
 
   for (const level of levels) {
     it(`${level}: includes every section without truncation`, async () => {
-      const result = await Effect.runPromise(
-        summarizeFile(README, { level }),
-      )
+      const result = await Effect.runPromise(summarizeFile(README, { level }))
 
       // Should have sections
       expect(result.sections.length).toBeGreaterThan(0)
@@ -141,11 +139,10 @@ describe('assembleContext budget and ordering', () => {
 
   it('respects input order (reversed)', async () => {
     const result = await Effect.runPromise(
-      assembleContext(
-        FIXTURES_DIR,
-        [GETTING_STARTED, API_REF, README],
-        { budget: 10000, level: 'brief' },
-      ),
+      assembleContext(FIXTURES_DIR, [GETTING_STARTED, API_REF, README], {
+        budget: 10000,
+        level: 'brief',
+      }),
     )
 
     expect(result.sources[0]!.path).toBe('getting-started.md')
@@ -158,11 +155,10 @@ describe('assembleContext budget and ordering', () => {
 
     for (const budget of budgets) {
       const result = await Effect.runPromise(
-        assembleContext(
-          FIXTURES_DIR,
-          [README, API_REF, GETTING_STARTED],
-          { budget, level: 'brief' },
-        ),
+        assembleContext(FIXTURES_DIR, [README, API_REF, GETTING_STARTED], {
+          budget,
+          level: 'brief',
+        }),
       )
 
       expect(result.totalTokens).toBeLessThanOrEqual(budget)
@@ -172,11 +168,10 @@ describe('assembleContext budget and ordering', () => {
   it('monotonic: larger budgets include at least as many files', async () => {
     const run = (budget: number) =>
       Effect.runPromise(
-        assembleContext(
-          FIXTURES_DIR,
-          [README, API_REF, GETTING_STARTED],
-          { budget, level: 'brief' },
-        ),
+        assembleContext(FIXTURES_DIR, [README, API_REF, GETTING_STARTED], {
+          budget,
+          level: 'brief',
+        }),
       )
 
     const [small, large] = await Promise.all([run(200), run(5000)])
@@ -187,11 +182,10 @@ describe('assembleContext budget and ordering', () => {
   it('overflows files that do not fit', async () => {
     // Very tight budget: should overflow some files
     const result = await Effect.runPromise(
-      assembleContext(
-        FIXTURES_DIR,
-        [README, API_REF, GETTING_STARTED],
-        { budget: 50, level: 'brief' },
-      ),
+      assembleContext(FIXTURES_DIR, [README, API_REF, GETTING_STARTED], {
+        budget: 50,
+        level: 'brief',
+      }),
     )
 
     // With budget of 50, at least some files should overflow
@@ -202,11 +196,10 @@ describe('assembleContext budget and ordering', () => {
   it('retries at brief when summary does not fit', async () => {
     // Use summary level with a tight budget
     const summaryResult = await Effect.runPromise(
-      assembleContext(
-        FIXTURES_DIR,
-        [README, API_REF, GETTING_STARTED],
-        { budget: 500, level: 'summary' },
-      ),
+      assembleContext(FIXTURES_DIR, [README, API_REF, GETTING_STARTED], {
+        budget: 500,
+        level: 'summary',
+      }),
     )
 
     // The assembler should have attempted brief fallback for files that
@@ -216,19 +209,16 @@ describe('assembleContext budget and ordering', () => {
 
   it('does not retry brief fallback when already at brief level', async () => {
     const briefResult = await Effect.runPromise(
-      assembleContext(
-        FIXTURES_DIR,
-        [README, API_REF, GETTING_STARTED],
-        { budget: 100, level: 'brief' },
-      ),
+      assembleContext(FIXTURES_DIR, [README, API_REF, GETTING_STARTED], {
+        budget: 100,
+        level: 'brief',
+      }),
     )
 
     // At brief level, files that don't fit go straight to overflow
     expect(briefResult.totalTokens).toBeLessThanOrEqual(100)
     // Total sources + overflow should equal input count
-    expect(
-      briefResult.sources.length + briefResult.overflow.length,
-    ).toBe(3)
+    expect(briefResult.sources.length + briefResult.overflow.length).toBe(3)
   })
 
   it('handles non-existent files gracefully', async () => {
@@ -261,12 +251,8 @@ describe('level density ordering across real files', () => {
         Effect.runPromise(summarizeFile(file, { level: 'full' })),
       ])
 
-      expect(brief.summaryTokens).toBeLessThanOrEqual(
-        summary.summaryTokens,
-      )
-      expect(summary.summaryTokens).toBeLessThanOrEqual(
-        full.summaryTokens,
-      )
+      expect(brief.summaryTokens).toBeLessThanOrEqual(summary.summaryTokens)
+      expect(summary.summaryTokens).toBeLessThanOrEqual(full.summaryTokens)
     }
   })
 })
@@ -299,11 +285,10 @@ describe('edge case matrix', () => {
 
   it('full level multi-file with large budget includes everything', async () => {
     const result = await Effect.runPromise(
-      assembleContext(
-        FIXTURES_DIR,
-        [README, API_REF, GETTING_STARTED],
-        { budget: 100000, level: 'full' },
-      ),
+      assembleContext(FIXTURES_DIR, [README, API_REF, GETTING_STARTED], {
+        budget: 100000,
+        level: 'full',
+      }),
     )
 
     expect(result.sources).toHaveLength(3)

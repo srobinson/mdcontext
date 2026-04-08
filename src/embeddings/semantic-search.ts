@@ -29,7 +29,11 @@ import {
   getActiveNamespace,
   writeActiveProvider,
 } from './embedding-namespace.js'
-import { generateHypotheticalDocument } from './hyde.js'
+import {
+  generateHypotheticalDocument,
+  type HydeOptions,
+  type HydeProviderName,
+} from './hyde.js'
 import {
   checkPricingFreshness,
   getPricingDate,
@@ -40,11 +44,7 @@ import {
   createEmbeddingProviderDirect,
   type ProviderFactoryConfig,
 } from './provider-factory.js'
-import {
-  calculateFileImportanceBoost,
-  calculateHeadingBoost,
-  preprocessQuery,
-} from './ranking.js'
+import { calculateRankingBoost, preprocessQuery } from './ranking.js'
 import {
   type EmbeddingProvider,
   hasProviderMetadata,
@@ -749,6 +749,72 @@ interface SearchPipelineContext {
   readonly limit: number
   readonly threshold: number
   readonly efSearch: number | undefined
+  /**
+   * Multiplier applied to `limit` when fetching raw candidates from the
+   * vector store. HyDE benefits from a larger pool because its main value is
+   * surfacing chunks that sit lexically further from the original query, and
+   * those candidates need to enter the ranking stage to begin with.
+   */
+  readonly candidateMultiplier: number
+}
+
+/** Candidate pool multipliers for the dense-retrieval stage. */
+const CANDIDATE_MULTIPLIER_DEFAULT = 2
+const CANDIDATE_MULTIPLIER_HYDE = 10
+
+/**
+ * Resolve the effective HyDE options for a given search call.
+ *
+ * Precedence (highest first):
+ *  1. `options.hydeOptions.*` explicit overrides (provider, baseURL, apiKey,
+ *     systemPrompt, model, maxTokens, temperature).
+ *  2. The embedding-side `options.providerConfig` for the carry-across
+ *     fields (`provider`, `baseURL`). The embedding-side `apiKey` is not
+ *     exposed publicly and is intentionally not consulted here, see notes
+ *     in the docs for {@link SemanticSearchOptions.hydeOptions}.
+ *  3. Per-provider defaults inside {@link generateHypotheticalDocument}.
+ *
+ * Voyage cannot serve chat completions, so when the embedding side is voyage
+ * and `hydeOptions.provider` is unset, the resolved provider falls back to
+ * `'openai'`. Callers that hit this fallback see a debug log emitted from
+ * `prepareSearchPipeline` so the substitution is observable.
+ *
+ * Returns the object that should be passed verbatim to
+ * `generateHypotheticalDocument`.
+ */
+export const resolveHydeOptions = (
+  options: SemanticSearchOptions,
+): HydeOptions => {
+  const hydeOptions = options.hydeOptions
+  const embeddingProviderName = options.providerConfig?.provider
+
+  // Voyage embedding side cannot serve chat, fall back to openai unless the
+  // user explicitly pinned a HyDE provider.
+  const inheritedProvider: HydeProviderName | undefined =
+    embeddingProviderName === 'voyage' ? undefined : embeddingProviderName
+
+  const provider: HydeProviderName =
+    hydeOptions?.provider ?? inheritedProvider ?? 'openai'
+
+  // Only inherit the embedding-side baseURL when HyDE is using the same
+  // provider as the embedding side; mixing baseURLs across providers would
+  // point the chat client at the wrong host.
+  const inheritedBaseURL =
+    hydeOptions?.provider === undefined &&
+    inheritedProvider !== undefined &&
+    inheritedProvider === provider
+      ? options.providerConfig?.baseURL
+      : undefined
+
+  return {
+    provider,
+    baseURL: hydeOptions?.baseURL ?? inheritedBaseURL,
+    apiKey: hydeOptions?.apiKey,
+    systemPrompt: hydeOptions?.systemPrompt,
+    model: hydeOptions?.model,
+    maxTokens: hydeOptions?.maxTokens,
+    temperature: hydeOptions?.temperature,
+  }
 }
 
 /**
@@ -845,12 +911,28 @@ const prepareSearchPipeline = (
     let textToEmbed: string
 
     if (options.hyde) {
-      // Generate hypothetical document using LLM
-      const hydeResult = yield* generateHypotheticalDocument(query, {
-        model: options.hydeOptions?.model,
-        maxTokens: options.hydeOptions?.maxTokens,
-        temperature: options.hydeOptions?.temperature,
-      })
+      // Resolve effective HyDE provider, baseURL, and credentials with the
+      // following precedence:
+      //   1. Explicit hydeOptions.* takes priority.
+      //   2. Otherwise inherit from the embedding-side providerConfig where
+      //      the field can be carried across (provider, baseURL).
+      //   3. Otherwise fall back to per-provider defaults inside hyde.ts.
+      // Voyage cannot serve chat completions, so when the embedding side is
+      // voyage and the user did not pin a HyDE provider explicitly we
+      // silently fall back to openai for the LLM call.
+      if (
+        options.providerConfig?.provider === 'voyage' &&
+        options.hydeOptions?.provider === undefined
+      ) {
+        yield* Effect.logDebug(
+          'HyDE: voyage embedding provider does not support chat completions, falling back to openai for HyDE generation',
+        )
+      }
+      const resolvedHydeOptions = resolveHydeOptions(options)
+      const hydeResult = yield* generateHypotheticalDocument(
+        query,
+        resolvedHydeOptions,
+      )
       textToEmbed = hydeResult.hypotheticalDocument
       yield* Effect.logDebug(
         `HyDE generated ${hydeResult.tokensUsed} tokens ($${hydeResult.cost.toFixed(6)})`,
@@ -882,6 +964,9 @@ const prepareSearchPipeline = (
     const efSearch = options.quality
       ? QUALITY_EF_SEARCH[options.quality]
       : undefined
+    const candidateMultiplier = options.hyde
+      ? CANDIDATE_MULTIPLIER_HYDE
+      : CANDIDATE_MULTIPLIER_DEFAULT
 
     return {
       resolvedRoot,
@@ -890,6 +975,7 @@ const prepareSearchPipeline = (
       limit,
       threshold,
       efSearch,
+      candidateMultiplier,
     }
   })
 
@@ -917,7 +1003,10 @@ const postProcessResults = (
       )
     }
 
-    // Apply ranking boost (heading + file importance, enabled by default)
+    // Apply ranking boost (heading + file importance, enabled by default).
+    // calculateRankingBoost already clamps the total to TOTAL_BOOST_CAP so
+    // cosine similarity stays the primary ranking signal. See ranking.ts
+    // for the rationale.
     const applyBoost = options.headingBoost !== false
     const boostedResults = applyBoost
       ? filteredResults.map((r) => ({
@@ -925,8 +1014,7 @@ const postProcessResults = (
           similarity: Math.min(
             1,
             r.similarity +
-              calculateHeadingBoost(r.heading, query) +
-              calculateFileImportanceBoost(r.documentPath),
+              calculateRankingBoost(r.heading, query, r.documentPath),
           ),
         }))
       : filteredResults
@@ -1014,7 +1102,7 @@ export const semanticSearch = (
 
     const searchResults = yield* ctx.vectorStore.search(
       ctx.queryVector,
-      ctx.limit * 2,
+      ctx.limit * ctx.candidateMultiplier,
       ctx.threshold,
       { efSearch: ctx.efSearch },
     )
@@ -1067,7 +1155,7 @@ export const semanticSearchWithStats = (
 
     const searchResultWithStats = yield* ctx.vectorStore.searchWithStats(
       ctx.queryVector,
-      ctx.limit * 2,
+      ctx.limit * ctx.candidateMultiplier,
       ctx.threshold,
       { efSearch: ctx.efSearch },
     )

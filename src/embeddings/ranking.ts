@@ -16,6 +16,19 @@ const HEADING_BOOST_FACTOR = 0.05
 const FILE_IMPORTANCE_BOOST = 0.03
 
 /**
+ * Hard cap on the total additive ranking boost for a single result.
+ *
+ * The dense-retrieval cosine similarity gap between adjacent candidates
+ * typically sits in the 0.005–0.03 range. Without a cap, the heading and
+ * file-importance boosts (which can sum to ~0.18 on a multi-term query that
+ * lands on a README heading) trivially overrode any embedding-driven
+ * reordering, including the reordering produced by HyDE. Capping the total
+ * boost at 0.08 keeps similarity as the primary ranking signal while still
+ * letting heading and file-importance hints break ties.
+ */
+export const TOTAL_BOOST_CAP = 0.08
+
+/**
  * Important file patterns that get ranking boost.
  * These are typically entry points or high-value documentation.
  */
@@ -75,12 +88,13 @@ export const calculateHeadingBoost = (
 
 /**
  * Calculate combined ranking boost for a search result.
- * Combines heading match boost and file importance boost.
+ * Combines heading match boost and file importance boost, then clamps the
+ * total to {@link TOTAL_BOOST_CAP} so similarity remains the primary signal.
  *
  * @param heading - Section heading
  * @param query - Search query
  * @param documentPath - Path to the document
- * @returns Combined boost value (0.0 to ~0.18 typically)
+ * @returns Combined boost value, clamped to TOTAL_BOOST_CAP
  */
 export const calculateRankingBoost = (
   heading: string,
@@ -89,7 +103,7 @@ export const calculateRankingBoost = (
 ): number => {
   const headingBoost = calculateHeadingBoost(heading, query)
   const fileBoost = calculateFileImportanceBoost(documentPath)
-  return headingBoost + fileBoost
+  return Math.min(headingBoost + fileBoost, TOTAL_BOOST_CAP)
 }
 
 // ============================================================================

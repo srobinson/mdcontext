@@ -10,6 +10,7 @@ import {
   calculateFileImportanceBoost,
   calculateHeadingBoost,
   calculateRankingBoost,
+  TOTAL_BOOST_CAP,
 } from './ranking.js'
 import type { SemanticSearchOptions } from './types.js'
 
@@ -191,6 +192,28 @@ describe('File Importance Boost', () => {
         'docs/api.md',
       )
       expect(boost).toBe(0)
+    })
+
+    it('should clamp the total boost at TOTAL_BOOST_CAP', () => {
+      // Heading match for every query term plus an important README file
+      // would otherwise yield 5 * 0.05 + 0.03 = 0.28, far above the cap.
+      // Without the cap the additive boost dominates the cosine similarity
+      // gap between adjacent dense-retrieval candidates and HyDE-driven
+      // reordering becomes a no-op. Verify the clamp keeps the boost at
+      // TOTAL_BOOST_CAP regardless of how many heading terms match.
+      const boost = calculateRankingBoost(
+        'authentication authorization session token refresh',
+        'authentication authorization session token refresh',
+        'README.md',
+      )
+      expect(boost).toBe(TOTAL_BOOST_CAP)
+    })
+
+    it('should expose TOTAL_BOOST_CAP at 0.08', () => {
+      // The cap is intentionally small relative to typical cosine
+      // similarity (0.3-0.9) so heading and file-importance hints break
+      // ties without overruling embedding similarity.
+      expect(TOTAL_BOOST_CAP).toBe(0.08)
     })
   })
 })

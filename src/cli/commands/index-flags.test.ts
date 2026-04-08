@@ -190,7 +190,7 @@ describe('index --all flag', () => {
   it('--all skips non-existent source directories', async () => {
     const missingDir = path.join(
       fakeHome,
-      'no-such-source-' + Date.now().toString(36),
+      `no-such-source-${Date.now().toString(36)}`,
     )
     writeGlobalConfig([
       { path: tempDir, name: 'exists' },

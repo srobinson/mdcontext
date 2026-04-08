@@ -21,15 +21,37 @@ import { ApiKeyMissingError, EmbeddingError } from '../errors/index.js'
 // ============================================================================
 
 /**
+ * LLM providers supported for HyDE generation.
+ *
+ * Voyage is intentionally excluded because Voyage AI does not expose a chat
+ * completion API. When the embedding side uses voyage and HyDE is enabled
+ * without an explicit provider override, the runtime falls back to openai.
+ *
+ * All listed providers expose OpenAI-compatible chat completion endpoints,
+ * so a single OpenAI SDK client works against all of them once given the
+ * correct baseURL.
+ */
+export type HydeProviderName = 'openai' | 'ollama' | 'lm-studio' | 'openrouter'
+
+/**
  * Configuration for HyDE query expansion.
  */
 export interface HydeOptions {
   /**
-   * OpenAI API key. Can be a plain string or Redacted<string>.
+   * LLM provider for HyDE generation. Determines which OpenAI-compatible
+   * endpoint to call and which default model to use when `model` is unset.
+   * Default: 'openai'.
+   */
+  readonly provider?: HydeProviderName | undefined
+  /**
+   * API key for the chosen provider. Can be a plain string or Redacted<string>.
    * Falls back to OPENAI_API_KEY env var if not provided.
    */
   readonly apiKey?: string | Redacted.Redacted<string> | undefined
-  /** Model to use for hypothetical document generation. Default: gpt-4o-mini */
+  /**
+   * Model to use for hypothetical document generation. When unset, the
+   * provider-specific default from {@link DEFAULT_MODELS_BY_PROVIDER} is used.
+   */
   readonly model?: string | undefined
   /** Maximum tokens for the generated document. Default: 256 */
   readonly maxTokens?: number | undefined
@@ -37,7 +59,10 @@ export interface HydeOptions {
   readonly temperature?: number | undefined
   /** Custom system prompt for document generation */
   readonly systemPrompt?: string | undefined
-  /** Base URL for OpenAI-compatible API (for local models) */
+  /**
+   * Base URL for the chat completion endpoint. When unset, the provider's
+   * default baseURL is used (see {@link DEFAULT_BASE_URLS_BY_PROVIDER}).
+   */
   readonly baseURL?: string | undefined
 }
 
@@ -61,9 +86,43 @@ export interface HydeResult {
 // Constants
 // ============================================================================
 
-const DEFAULT_MODEL = 'gpt-4o-mini'
+const DEFAULT_PROVIDER: HydeProviderName = 'openai'
 const DEFAULT_MAX_TOKENS = 256
 const DEFAULT_TEMPERATURE = 0.3
+
+/**
+ * Per-provider default model for HyDE generation. The local providers
+ * (ollama, lm-studio) use generic small-model names that the operator is
+ * expected to override; the remote providers point at their cheapest
+ * capable chat model.
+ *
+ * Exported so tests and downstream tooling can introspect the defaults
+ * without instantiating an OpenAI client.
+ */
+export const DEFAULT_MODELS_BY_PROVIDER: Record<HydeProviderName, string> = {
+  openai: 'gpt-4o-mini',
+  ollama: 'llama3.2',
+  'lm-studio': 'local-model',
+  openrouter: 'openai/gpt-4o-mini',
+}
+
+/**
+ * Per-provider default baseURL. Mirrors PROVIDER_BASE_URLS in
+ * provider-constants.ts but is duplicated here to avoid an import cycle
+ * between hyde.ts and the embedding-provider plumbing. Update both maps
+ * together if a new provider is added.
+ *
+ * - openai: undefined lets the OpenAI SDK use its built-in default.
+ */
+export const DEFAULT_BASE_URLS_BY_PROVIDER: Record<
+  HydeProviderName,
+  string | undefined
+> = {
+  openai: undefined,
+  ollama: 'http://localhost:11434/v1',
+  'lm-studio': 'http://localhost:1234/v1',
+  openrouter: 'https://openrouter.ai/api/v1',
+}
 
 /**
  * Default system prompt for generating hypothetical documents.
@@ -128,12 +187,15 @@ export const generateHypotheticalDocument = (
       ? rawApiKey
       : Redacted.make(rawApiKey)
 
+    const provider = options.provider ?? DEFAULT_PROVIDER
+    const baseURL = options.baseURL ?? DEFAULT_BASE_URLS_BY_PROVIDER[provider]
+
     const client = new OpenAI({
       apiKey: Redacted.value(redactedApiKey), // Only expose when creating client
-      baseURL: options.baseURL,
+      baseURL,
     })
 
-    const model = options.model ?? DEFAULT_MODEL
+    const model = options.model ?? DEFAULT_MODELS_BY_PROVIDER[provider]
     const maxTokens = options.maxTokens ?? DEFAULT_MAX_TOKENS
     const temperature = options.temperature ?? DEFAULT_TEMPERATURE
     const systemPrompt = options.systemPrompt ?? DEFAULT_SYSTEM_PROMPT
