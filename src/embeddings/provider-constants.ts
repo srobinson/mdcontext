@@ -182,25 +182,10 @@ export const PROVIDER_PORTS: Record<string, number> = (() => {
 
 /**
  * Infer the provider name from a base URL.
- * Uses PROVIDER_BASE_URLS as the source of truth.
  *
- * @param baseURL - The base URL to check
- * @returns The inferred provider name, or 'openai' as default
+ * Canonical implementation lives in the runtime transport at
+ * `src/providers/transports/openai-compatible.ts`. This re-export
+ * preserves the old import path for unmigrated consumers until
+ * ALP-1705 deletes the old embedding provider stack.
  */
-export const inferProviderFromUrl = (
-  baseURL: string | undefined,
-): EmbeddingProviderName => {
-  if (!baseURL) return 'openai'
-
-  // Check each provider's base URL
-  for (const [provider, providerUrl] of Object.entries(PROVIDER_BASE_URLS)) {
-    if (providerUrl && baseURL.includes(providerUrl.replace('/v1', ''))) {
-      return provider as EmbeddingProviderName
-    }
-  }
-
-  // Fallback check for partial URL matches (e.g., custom ports)
-  if (baseURL.includes('openrouter')) return 'openrouter'
-
-  return 'openai'
-}
+export { inferProviderFromUrl } from '../providers/transports/openai-compatible.js'

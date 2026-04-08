@@ -35,7 +35,13 @@ export {
   ProviderNotFound,
 } from './errors.js'
 // Registry
-export { clearRegistry, getProvider, registerProvider } from './registry.js'
+export {
+  clearRegistry,
+  DEFAULT_PROVIDER_IDS,
+  getProvider,
+  registerDefaultProviders,
+  registerProvider,
+} from './registry.js'
 // Runtime types and dispatch
 export type {
   Capability,
@@ -43,3 +49,16 @@ export type {
   ProviderRuntime,
 } from './runtime.js'
 export { getCapability } from './runtime.js'
+// Transports
+export {
+  createEmbedClient,
+  createGenerateTextClient,
+  getProviderBaseURL,
+  inferProviderFromUrl,
+  OPENAI_COMPATIBLE_PROVIDER_IDS,
+  type OpenAICompatibleProviderId,
+} from './transports/openai-compatible.js'
+export {
+  createVoyageEmbedClient,
+  getVoyageBaseURL,
+} from './transports/voyage.js'

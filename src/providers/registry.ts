@@ -1,14 +1,28 @@
 /**
  * Provider registry.
  *
- * Module-private `Map<ProviderId, ProviderRuntime>`. Empty at scaffold
- * time; transport implementations register themselves as they are
- * brought onto the runtime in later sub-issues.
+ * Module-private `Map<ProviderId, ProviderRuntime>`. The default
+ * registration is wired by `registerDefaultProviders()` — it is not
+ * invoked at module load so test suites and bootstrap code keep
+ * control of when the registry is populated.
  */
 
 import { Effect } from 'effect'
-import { ProviderNotFound } from './errors.js'
+import type { EmbeddingClient } from './capabilities/embed.js'
+import type { TextClient } from './capabilities/generate-text.js'
+import { MissingApiKey, ProviderNotFound } from './errors.js'
 import type { ProviderId, ProviderRuntime } from './runtime.js'
+import {
+  createEmbedClient,
+  createGenerateTextClient,
+  getProviderBaseURL,
+  OPENAI_COMPATIBLE_PROVIDER_IDS,
+  type OpenAICompatibleProviderId,
+} from './transports/openai-compatible.js'
+import {
+  createVoyageEmbedClient,
+  getVoyageBaseURL,
+} from './transports/voyage.js'
 
 const registry = new Map<ProviderId, ProviderRuntime>()
 
@@ -47,3 +61,91 @@ export function getProvider(
 export function clearRegistry(): void {
   registry.clear()
 }
+
+// ============================================================================
+// Default provider wiring
+// ============================================================================
+
+/**
+ * Register the default provider runtimes: all four OpenAI-compatible
+ * providers plus Voyage (embed only). Each provider is registered
+ * independently — when an API key is missing for one provider, the
+ * runtime still registers the providers whose keys are present.
+ *
+ * Invoked explicitly by bootstrap code once consumers migrate onto the
+ * runtime. Never fails: missing keys produce skipped registrations,
+ * not errors. Callers who need a provider that was skipped hit
+ * `ProviderNotFound` at lookup time and see the actionable list of
+ * known providers in the error message.
+ */
+export const registerDefaultProviders = (): Effect.Effect<void, never> =>
+  Effect.all(
+    [
+      registerOpenAICompatible('openai'),
+      registerOpenAICompatible('openrouter'),
+      registerOpenAICompatible('ollama'),
+      registerOpenAICompatible('lm-studio'),
+      registerVoyage(),
+    ],
+    { discard: true },
+  )
+
+const registerOpenAICompatible = (
+  id: OpenAICompatibleProviderId,
+): Effect.Effect<void, never> =>
+  Effect.gen(function* () {
+    const embedResult = yield* Effect.either(createEmbedClient(id))
+    const textResult = yield* Effect.either(createGenerateTextClient(id))
+    commitProvider(id, getProviderBaseURL(id), embedResult, textResult)
+  })
+
+const registerVoyage = (): Effect.Effect<void, never> =>
+  Effect.gen(function* () {
+    const embedResult = yield* Effect.either(createVoyageEmbedClient())
+    commitProvider('voyage', getVoyageBaseURL(), embedResult, {
+      _tag: 'Left',
+      left: new MissingApiKey({ provider: 'voyage', envVar: 'unused' }),
+    })
+  })
+
+type EitherResult<A> =
+  | { readonly _tag: 'Right'; readonly right: A }
+  | { readonly _tag: 'Left'; readonly left: MissingApiKey }
+
+/**
+ * Commit a provider runtime to the registry if any capability
+ * succeeded. Voyage only ever has `embed`; the `generateText` slot is
+ * intentionally left empty so consumers hit `CapabilityNotSupported`
+ * rather than a silent fallback.
+ */
+const commitProvider = (
+  id: ProviderId,
+  baseURL: string | undefined,
+  embed: EitherResult<EmbeddingClient>,
+  generateText: EitherResult<TextClient>,
+): void => {
+  if (embed._tag === 'Left' && generateText._tag === 'Left') {
+    return // Nothing to register — every capability failed construction.
+  }
+  const capabilities: ProviderRuntime['capabilities'] = {
+    ...(embed._tag === 'Right' ? { embed: embed.right } : {}),
+    ...(generateText._tag === 'Right'
+      ? { generateText: generateText.right }
+      : {}),
+  }
+  registerProvider({
+    id,
+    ...(baseURL !== undefined ? { baseURL } : {}),
+    capabilities,
+  })
+}
+
+/**
+ * Provider ids this registry knows how to wire up when
+ * `registerDefaultProviders` is called. Exposed so tests and bootstrap
+ * code can iterate the full set.
+ */
+export const DEFAULT_PROVIDER_IDS: readonly ProviderId[] = [
+  ...OPENAI_COMPATIBLE_PROVIDER_IDS,
+  'voyage',
+]
