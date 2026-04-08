@@ -69,8 +69,8 @@ export interface HydeOptions {
    */
   readonly apiKey?: string | Redacted.Redacted<string> | undefined
   /**
-   * Model to use for hypothetical document generation. When unset, the
-   * provider-specific default from {@link DEFAULT_MODELS_BY_PROVIDER} is used.
+   * Model to use for hypothetical document generation. When unset, a
+   * provider-specific default model is used.
    */
   readonly model?: string | undefined
   /** Maximum tokens for the generated document. Default: 256 */
