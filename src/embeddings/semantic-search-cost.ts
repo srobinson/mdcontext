@@ -26,7 +26,7 @@ import { matchPath } from '../search/path-matcher.js'
  * no-fallback rule.
  */
 export const EMBEDDING_PRICE_PER_MILLION =
-  lookupPricing('embed', 'text-embedding-3-small')?.input ?? 0.02
+  lookupPricing('embed', 'text-embedding-3-small')?.input ?? 0
 
 export interface DirectoryEstimate {
   readonly directory: string
