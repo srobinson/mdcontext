@@ -1,5 +1,13 @@
 # markdown-matters
 
+## [0.3.2](https://github.com/srobinson/markdown-matters/compare/v0.3.1...v0.3.2) (2026-04-08)
+
+
+### Bug Fixes
+
+* correct md_context MCP tool definition and update docs ([24e7261](https://github.com/srobinson/markdown-matters/commit/24e726159d0a152e69fc402b5cf6339869e8d575))
+* **embeddings:** hyde no longer a no-op in semantic search ([#23](https://github.com/srobinson/markdown-matters/issues/23)) ([18d9240](https://github.com/srobinson/markdown-matters/commit/18d924009c4aa35e77b24ab3bd295c11855691c8))
+
 ## [0.3.1](https://github.com/srobinson/markdown-matters/compare/v0.3.0...v0.3.1) (2026-03-17)
 
 
