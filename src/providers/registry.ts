@@ -121,12 +121,10 @@ export function getCapability<C extends Capability>(
 
 /**
  * Return the registered provider ids whose runtime exposes the given
- * capability. Used by `getCapability` to populate
- * `CapabilityNotSupported.supportedAlternatives` and exposed for
- * consumers (HyDE) that need to assemble the alternative list before
- * any registry lookup happens.
+ * capability. Used internally by `getCapability` to populate
+ * `CapabilityNotSupported.supportedAlternatives`.
  */
-export function listProvidersSupporting(
+function listProvidersSupporting(
   capability: Capability,
 ): readonly ProviderId[] {
   return Array.from(registry.values())

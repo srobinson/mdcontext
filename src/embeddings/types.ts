@@ -183,14 +183,16 @@ export interface SemanticSearchOptions {
    *
    * Voyage is intentionally absent from `provider` because Voyage AI does
    * not expose a chat completion API. If the embedding side uses voyage,
-   * HyDE silently falls back to openai for generation.
+   * callers must pin `hydeOptions.provider` explicitly; otherwise the
+   * resolver fails fast with `CapabilityNotSupported` before any HTTP
+   * call is made.
    */
   readonly hydeOptions?:
     | {
         /**
          * LLM provider for HyDE generation. Defaults to the embedding-side
-         * provider (`providerConfig.provider`) when not set, or `'openai'`
-         * when the embedding side uses voyage (which has no chat API).
+         * provider (`providerConfig.provider`) when not set. Required when
+         * the embedding side uses voyage, which has no chat completion API.
          */
         readonly provider?: HydeProviderName | undefined
         /**

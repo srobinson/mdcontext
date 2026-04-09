@@ -44,7 +44,8 @@ import {
  *
  * Voyage is intentionally excluded because Voyage AI does not expose a chat
  * completion API. When the embedding side uses voyage and HyDE is enabled
- * without an explicit provider override, the runtime falls back to openai.
+ * without an explicit provider override, `resolveHydeOptions` fails fast
+ * with `CapabilityNotSupported` before any HTTP call is made.
  *
  * The set is derived from `OpenAICompatibleProviderId` so any provider added
  * to the runtime's OpenAI-compatible transport automatically becomes a
