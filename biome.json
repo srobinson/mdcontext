@@ -31,6 +31,12 @@
     }
   },
   "files": {
-    "includes": ["src/**", "tests/**", "*.json", "*.ts"]
+    "includes": [
+      "src/**",
+      "tests/**",
+      "*.json",
+      "*.ts",
+      "!tests/fixtures/cli/.mdm/**"
+    ]
   }
 }
