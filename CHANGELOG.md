@@ -11,6 +11,15 @@
 
 * `providerConfig.baseURL` is now honored on the embedding path for the four OpenAI-compatible providers (openai, openrouter, ollama, lm-studio). Previously the field was documented as "carried for HyDE inheritance only" and the embed path silently routed to the transport default. Private ollama hosts, self-hosted lm-studio instances, and openrouter proxies now receive embedding traffic on the configured URL during both index build and query. Vector-store metadata also records the endpoint the runtime actually dialled rather than the caller-supplied override, so on-disk observability matches the requests that were sent.
 
+## [0.3.2](https://github.com/srobinson/markdown-matters/compare/v0.3.1...v0.3.2) (2026-04-09)
+
+
+### Bug Fixes
+
+* correct md_context MCP tool definition and update docs ([24e7261](https://github.com/srobinson/markdown-matters/commit/24e726159d0a152e69fc402b5cf6339869e8d575))
+* **embeddings:** hyde no longer a no-op in semantic search ([#23](https://github.com/srobinson/markdown-matters/issues/23)) ([18d9240](https://github.com/srobinson/markdown-matters/commit/18d924009c4aa35e77b24ab3bd295c11855691c8))
+* **providers:** extract use case agnostic provider runtime for embeddings and HyDE ([#29](https://github.com/srobinson/markdown-matters/issues/29)) ([aa52f29](https://github.com/srobinson/markdown-matters/commit/aa52f29cb2cf838e20f05d327fa16e1f3e5acb88))
+
 ## [0.3.1](https://github.com/srobinson/markdown-matters/compare/v0.3.0...v0.3.1) (2026-03-17)
 
 
