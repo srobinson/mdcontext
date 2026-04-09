@@ -112,7 +112,7 @@ export function getCapability<C extends Capability>(
       new CapabilityNotSupported({
         provider: runtime.id,
         capability,
-        supportedAlternatives: listProvidersSupporting(capability),
+        supportedAlternatives: getProvidersForCapability(capability),
       }),
     )
   }
@@ -121,10 +121,16 @@ export function getCapability<C extends Capability>(
 
 /**
  * Return the registered provider ids whose runtime exposes the given
- * capability. Used internally by `getCapability` to populate
- * `CapabilityNotSupported.supportedAlternatives`.
+ * capability, in registration (insertion) order.
+ *
+ * The runtime is the source of truth for capability availability, so
+ * feature-layer consumers that need to present an actionable
+ * "use one of" list (for example the HyDE voyage fail-fast in
+ * `resolveHydeOptions`) read it from here rather than from a static
+ * provider constant. Also used internally by `getCapability` to
+ * populate `CapabilityNotSupported.supportedAlternatives`.
  */
-function listProvidersSupporting(
+export function getProvidersForCapability(
   capability: Capability,
 ): readonly ProviderId[] {
   return Array.from(registry.values())

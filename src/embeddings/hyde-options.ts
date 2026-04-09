@@ -11,7 +11,7 @@
 import { Effect } from 'effect'
 import {
   CapabilityNotSupported,
-  OPENAI_COMPATIBLE_PROVIDER_IDS,
+  getProvidersForCapability,
 } from '../providers/index.js'
 import type { HydeOptions, HydeProviderName } from './hyde.js'
 import type { SemanticSearchOptions } from './types.js'
@@ -54,7 +54,7 @@ export const resolveHydeOptions = (
         new CapabilityNotSupported({
           provider: 'voyage',
           capability: 'generateText',
-          supportedAlternatives: OPENAI_COMPATIBLE_PROVIDER_IDS,
+          supportedAlternatives: getProvidersForCapability('generateText'),
         }),
       )
     }

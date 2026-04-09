@@ -47,6 +47,7 @@ export {
   DEFAULT_PROVIDER_IDS,
   getCapability,
   getProvider,
+  getProvidersForCapability,
   registerDefaultProviders,
   registerProvider,
 } from './registry.js'

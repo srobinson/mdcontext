@@ -21,8 +21,13 @@
  */
 
 import { Effect, Redacted } from 'effect'
-import { describe, expect, it } from 'vitest'
-import { CapabilityNotSupported } from '../providers/index.js'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import {
+  CapabilityNotSupported,
+  clearRegistry,
+  registerProvider,
+  type TextClient,
+} from '../providers/index.js'
 import { resolveHydeOptions } from './hyde-options.js'
 import type { SemanticSearchOptions } from './types.js'
 
@@ -54,6 +59,8 @@ describe('resolveHydeOptions provider resolution', () => {
     // silently substituted openai, which surfaced as a misleading
     // OPENAI_API_KEY error inside HyDE for users running voyage-only.
     // ALP-1703 contract: fail fast with the actionable capability error.
+    // The alternatives payload is asserted separately against the live
+    // registry in the "voyage fail-fast alternatives" describe block.
     const options: SemanticSearchOptions = {
       providerConfig: { provider: 'voyage' },
     }
@@ -64,15 +71,6 @@ describe('resolveHydeOptions provider resolution', () => {
       expect(result.left).toBeInstanceOf(CapabilityNotSupported)
       expect(result.left.provider).toBe('voyage')
       expect(result.left.capability).toBe('generateText')
-      // The supportedAlternatives list at this layer is the static set
-      // of OpenAI-compatible providers (registry contents are computed
-      // at runtime lookup time, not at resolve time).
-      expect(result.left.supportedAlternatives).toEqual([
-        'openai',
-        'openrouter',
-        'ollama',
-        'lm-studio',
-      ])
     }
   })
 
@@ -269,5 +267,103 @@ describe('resolveHydeOptions credential and prompt forwarding', () => {
     // resolveHydeOptions intentionally leaves model unset; the default lookup
     // happens inside generateHypotheticalDocument to keep both layers honest.
     expect(resolved.model).toBeUndefined()
+  })
+})
+
+describe('resolveHydeOptions voyage fail-fast alternatives (runtime-derived)', () => {
+  // ALP-1711: the `supportedAlternatives` payload for the voyage
+  // fail-fast is read from `getProvidersForCapability('generateText')`
+  // at resolve time, not from a static constant. This block installs a
+  // deliberate subset of provider runtimes so the assertion proves the
+  // list reflects the live registry — a static source would still
+  // include all four default OpenAI-compatible providers.
+  const fakeTextClient: TextClient = {
+    generateText: () =>
+      Effect.succeed({
+        text: 'unused',
+        model: 'fake',
+      }),
+  }
+
+  beforeEach(() => {
+    clearRegistry()
+    registerProvider({
+      id: 'openai',
+      capabilities: { generateText: fakeTextClient },
+    })
+    registerProvider({
+      id: 'ollama',
+      capabilities: { generateText: fakeTextClient },
+    })
+  })
+
+  afterEach(() => {
+    clearRegistry()
+  })
+
+  it('carries exactly the registered providers that support generateText', () => {
+    const options: SemanticSearchOptions = {
+      providerConfig: { provider: 'voyage' },
+    }
+
+    const result = runResolveEither(options)
+    expect(result._tag).toBe('Left')
+    if (
+      result._tag === 'Left' &&
+      result.left instanceof CapabilityNotSupported
+    ) {
+      expect(result.left.supportedAlternatives).toEqual(['openai', 'ollama'])
+    }
+  })
+
+  it('reflects a registry where the set changes between calls', () => {
+    // Add a third provider mid-test and re-resolve: the new error must
+    // carry the expanded list. Proves the lookup is live, not cached.
+    registerProvider({
+      id: 'lm-studio',
+      capabilities: { generateText: fakeTextClient },
+    })
+
+    const options: SemanticSearchOptions = {
+      providerConfig: { provider: 'voyage' },
+    }
+
+    const result = runResolveEither(options)
+    expect(result._tag).toBe('Left')
+    if (
+      result._tag === 'Left' &&
+      result.left instanceof CapabilityNotSupported
+    ) {
+      expect(result.left.supportedAlternatives).toEqual([
+        'openai',
+        'ollama',
+        'lm-studio',
+      ])
+    }
+  })
+
+  it('returns an empty alternatives list when no generateText providers are registered', () => {
+    // Wipe the two fakes installed in beforeEach and register only an
+    // embed-only provider (voyage-shaped). The fail-fast should still
+    // trigger but the actionable list is legitimately empty: the caller
+    // has no other choice in this registry.
+    clearRegistry()
+    registerProvider({
+      id: 'voyage',
+      capabilities: {},
+    })
+
+    const options: SemanticSearchOptions = {
+      providerConfig: { provider: 'voyage' },
+    }
+
+    const result = runResolveEither(options)
+    expect(result._tag).toBe('Left')
+    if (
+      result._tag === 'Left' &&
+      result.left instanceof CapabilityNotSupported
+    ) {
+      expect(result.left.supportedAlternatives).toEqual([])
+    }
   })
 })
