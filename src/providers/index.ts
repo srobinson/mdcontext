@@ -62,26 +62,29 @@ export type {
 } from './runtime.js'
 // Transports
 //
-// `createEmbedClient` and `createGenerateTextClient` are intentionally
-// NOT re-exported here. After the ALP-1709 refactor the transport
-// factories are an implementation detail of the runtime boundary:
-// the only code that legitimately calls them is `registry.ts` (for
-// default registration) and `resolve-client.ts` (for the override
-// path), both of which import from `./transports/openai-compatible.js`
-// directly. Consumers route through `resolveClient` so they cannot
-// accidentally bypass the registry fast path or the `MissingApiKey`
-// remap by reaching into the transport layer.
+// The transport factories (`createEmbedClient`, `createGenerateTextClient`,
+// `createVoyageEmbedClient`) and their per-provider metadata helpers
+// (`getProviderBaseURL`, `getProviderEnvVar`, `getVoyageBaseURL`,
+// `inferProviderFromUrl`) are intentionally NOT re-exported here. They
+// are implementation details of the runtime boundary. The only code
+// that legitimately calls them is `registry.ts` (for default
+// registration) and `resolve-client.ts` (for the override path), both
+// of which import from `./transports/*.js` directly. Consumers route
+// through `resolveClient`, `getProvider`, and the other runtime-level
+// APIs in this barrel so they cannot accidentally bypass the registry
+// fast path or the `MissingApiKey` remap by reaching into transport
+// internals.
+//
+// The only transport exports kept on the public surface are the ones
+// that are stable runtime contracts: `ClientOverrides` (shape of the
+// override path) and `OpenAICompatibleProviderId` (type alias used by
+// consumers that need to name an openai-compatible provider in their
+// own public API).
 export {
   type ClientOverrides,
   getEffectiveBaseURL,
   getProviderBaseURL,
-  getProviderEnvVar,
   hasAnyRemoteApiKey,
-  inferProviderFromUrl,
   OPENAI_COMPATIBLE_PROVIDER_IDS,
   type OpenAICompatibleProviderId,
 } from './transports/openai-compatible.js'
-export {
-  createVoyageEmbedClient,
-  getVoyageBaseURL,
-} from './transports/voyage.js'
