@@ -6,16 +6,9 @@
  * API-based providers (pay-per-use via Vercel AI SDK).
  */
 
-import { Data } from 'effect'
-
-// Re-export provider name types from canonical location
-export type {
-  APIProviderName,
-  CLIProviderName,
-} from '../config/schema.js'
-
-// Import for local use
 import type { APIProviderName, CLIProviderName } from '../config/schema.js'
+
+export type { APIProviderName, CLIProviderName }
 
 /**
  * Summarization mode - CLI providers are free, API providers cost money
@@ -147,29 +140,3 @@ export interface AISummarizationConfig {
 export type SummarizerFactory = (
   config: AISummarizationConfig,
 ) => Promise<Summarizer>
-
-/**
- * Error codes specific to summarization
- */
-export type SummarizationErrorCode =
-  | 'PROVIDER_NOT_FOUND'
-  | 'PROVIDER_NOT_AVAILABLE'
-  | 'CLI_EXECUTION_FAILED'
-  | 'API_REQUEST_FAILED'
-  | 'RATE_LIMITED'
-  | 'INVALID_RESPONSE'
-  | 'TIMEOUT'
-  | 'NO_API_KEY'
-
-/**
- * Summarization error as Data.TaggedError for Effect integration.
- *
- * Can be caught with Effect.catchTag('SummarizationError', ...) and
- * is part of the MdmError union.
- */
-export class SummarizationError extends Data.TaggedError('SummarizationError')<{
-  readonly message: string
-  readonly code: SummarizationErrorCode
-  readonly provider?: string
-  readonly cause?: Error
-}> {}

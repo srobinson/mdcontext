@@ -5,6 +5,7 @@
  * CLI providers are checked first (free), then API providers (paid).
  */
 
+import { SummarizationError } from '../errors/index.js'
 import { ClaudeCLISummarizer } from './cli-providers/claude.js'
 import { getCLIInfo, isCLIInstalled } from './cli-providers/detection.js'
 import type {
@@ -13,7 +14,6 @@ import type {
   CLIProviderName,
   Summarizer,
 } from './types.js'
-import { SummarizationError } from './types.js'
 
 /**
  * Create a CLI-based summarizer.

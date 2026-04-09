@@ -93,10 +93,8 @@ export type {
   CLIProviderName,
   StreamingSummarizer,
   StreamOptions,
-  SummarizationErrorCode,
   SummarizationMode,
   Summarizer,
   SummarizerFactory,
   SummaryResult,
 } from './types.js'
-export { SummarizationError } from './types.js'

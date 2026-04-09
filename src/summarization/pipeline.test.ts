@@ -4,6 +4,7 @@
 
 import { Effect } from 'effect'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { SummarizationError } from '../errors/index.js'
 import {
   formatResultsForSummary,
   type PipelineOptions,
@@ -12,7 +13,6 @@ import {
   summarizeResults,
 } from './pipeline.js'
 import type { SearchContext } from './prompts.js'
-import { SummarizationError } from './types.js'
 
 vi.mock('./provider-factory.js', () => ({
   createSummarizer: vi.fn(),

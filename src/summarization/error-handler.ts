@@ -5,7 +5,10 @@
  * Ensures summarization failures don't crash the CLI.
  */
 
-import { SummarizationError, type SummarizationErrorCode } from './types.js'
+import {
+  SummarizationError,
+  type SummarizationErrorCode,
+} from '../errors/index.js'
 
 /**
  * Error message templates for different error codes.

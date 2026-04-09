@@ -63,7 +63,6 @@
  */
 
 import { Data } from 'effect'
-import type { SummarizationError } from '../summarization/types.js'
 
 // ============================================================================
 // Error Codes
@@ -490,6 +489,32 @@ export class CliValidationError extends Data.TaggedError('CliValidationError')<{
   }
 }
 
+/**
+ * Error codes specific to summarization
+ */
+export type SummarizationErrorCode =
+  | 'PROVIDER_NOT_FOUND'
+  | 'PROVIDER_NOT_AVAILABLE'
+  | 'CLI_EXECUTION_FAILED'
+  | 'API_REQUEST_FAILED'
+  | 'RATE_LIMITED'
+  | 'INVALID_RESPONSE'
+  | 'TIMEOUT'
+  | 'NO_API_KEY'
+
+/**
+ * Summarization error as Data.TaggedError for Effect integration.
+ *
+ * Can be caught with Effect.catchTag('SummarizationError', ...) and
+ * is part of the MdmError union.
+ */
+export class SummarizationError extends Data.TaggedError('SummarizationError')<{
+  readonly message: string
+  readonly code: SummarizationErrorCode
+  readonly provider?: string
+  readonly cause?: Error
+}> {}
+
 // ============================================================================
 // Union Types
 // ============================================================================
@@ -539,6 +564,3 @@ export type MdmError =
   | WatchError
   | CliValidationError
   | SummarizationError
-
-// Re-export SummarizationError for centralized error handling
-export { SummarizationError } from '../summarization/types.js'
