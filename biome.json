@@ -36,7 +36,7 @@
       "tests/**",
       "*.json",
       "*.ts",
-      "!tests/fixtures/cli/.mdm/**"
+      "!tests/fixtures/cli/.mdm"
     ]
   }
 }
