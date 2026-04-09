@@ -216,7 +216,9 @@ export const prepareSearchPipeline = (
     const currentProviderName: ProviderId = queryProviderConfig.provider
     const queryModel = queryProviderConfig.model ?? 'text-embedding-3-small'
     const dimensions = getRecommendedDimensions(queryModel) ?? 512
-    const client = yield* createEmbeddingClient(currentProviderName)
+    const client = yield* createEmbeddingClient(currentProviderName, {
+      baseURL: queryProviderConfig.baseURL,
+    })
 
     // Verify dimensions match the active namespace
     if (dimensions !== activeProvider.dimensions) {

@@ -29,11 +29,12 @@ import type {
   SectionEntry,
   SectionIndex,
 } from '../index/types.js'
-import type {
-  CapabilityNotSupported,
-  EmbeddingClient,
-  ProviderId,
-  ProviderNotFound,
+import {
+  type CapabilityNotSupported,
+  type EmbeddingClient,
+  getEffectiveBaseURL,
+  type ProviderId,
+  type ProviderNotFound,
 } from '../providers/index.js'
 import { lookupPricing } from '../providers/pricing.js'
 import { matchPath } from '../search/path-matcher.js'
@@ -72,13 +73,17 @@ export interface EmbeddingBatchProgress {
 /**
  * Provider config accepted by `buildEmbeddings` and `prepareSearchPipeline`.
  *
- * `provider` and `model` flow into the runtime client. `baseURL` is
- * carried for HyDE inheritance only — the runtime hardcodes per-provider
- * base URLs and ignores this field on the embed path. `dimensions` is
- * forwarded to the transport when set; otherwise the consumer derives a
- * recommended value from the model. `timeout` is currently ignored on
- * the embed path; the transport uses the OpenAI SDK default. Both no-ops
- * are tracked for ALP-1705 cleanup.
+ * `provider` and `model` flow into the runtime client. `baseURL` overrides
+ * the per-provider transport default for embedding requests; honored by
+ * the four OpenAI-compatible providers (openai, openrouter, ollama,
+ * lm-studio) so private hosts, self-hosted instances, and proxies route
+ * correctly. Voyage has no custom-host concept and ignores this field.
+ * HyDE inherits this value via `resolveHydeOptions` so a custom host
+ * applied here automatically carries across to query expansion.
+ * `dimensions` is forwarded to the transport when set; otherwise the
+ * consumer derives a recommended value from the model. `timeout` is
+ * currently ignored on the embed path; the transport uses the OpenAI
+ * SDK default.
  */
 export interface EmbeddingProviderConfig {
   readonly provider: ProviderId
@@ -358,7 +363,10 @@ export const buildEmbeddings = (
       512
 
     const client =
-      options.client ?? (yield* createEmbeddingClient(providerName))
+      options.client ??
+      (yield* createEmbeddingClient(providerName, {
+        baseURL: providerConfig.baseURL,
+      }))
 
     // Create namespaced vector store for this provider/model/dimensions combination
     const vectorStore = createNamespacedVectorStore(
@@ -369,10 +377,17 @@ export const buildEmbeddings = (
       options.hnswOptions,
     )
 
-    // Set provider metadata. baseURL is carried from providerConfig when set
-    // for downstream observability; the runtime client itself uses the
-    // transport-default base URL for the provider id.
-    vectorStore.setProvider(providerName, providerModel, providerConfig.baseURL)
+    // Record the endpoint the runtime actually dialled. For openai-compatible
+    // providers this is the caller override (when set) or the per-provider
+    // transport default; for voyage the field is left empty because voyage
+    // has no custom-host concept.
+    const effectiveBaseURL =
+      providerName === 'voyage'
+        ? undefined
+        : getEffectiveBaseURL(providerName, {
+            baseURL: providerConfig.baseURL,
+          })
+    vectorStore.setProvider(providerName, providerModel, effectiveBaseURL)
 
     // Load existing vectors for delta computation (skip on --force)
     let embeddedIds = new Set<string>()

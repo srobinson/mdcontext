@@ -28,10 +28,13 @@ import {
 } from '../errors/index.js'
 import {
   type CapabilityNotSupported,
+  type ClientOverrides,
+  createEmbedClient,
   type EmbeddingClient,
   type EmbeddingResult,
   getCapability,
   getProvider,
+  type MissingApiKey,
   type ProviderId,
   type ProviderNotFound,
   type EmbeddingError as RuntimeEmbeddingError,
@@ -232,35 +235,58 @@ const embedBatchWithRetry = (
 // ============================================================================
 
 /**
- * Construct an `EmbeddingClient` for the given provider id through the
- * runtime registry. Remaps the registry's `MissingApiKey` into the
- * centralized `ApiKeyMissingError` so the CLI error handler keeps
- * producing the same actionable "Set X_API_KEY" suggestions.
+ * Translate the runtime's `MissingApiKey` into the centralized
+ * `ApiKeyMissingError` so the CLI error handler keeps producing the
+ * same actionable "Set X_API_KEY" suggestions regardless of which
+ * `createEmbeddingClient` code path raised the failure.
+ */
+const remapMissingApiKey = (
+  e: MissingApiKey,
+): Effect.Effect<never, ApiKeyMissingError> =>
+  Effect.fail(
+    new ApiKeyMissingError({ provider: e.provider, envVar: e.envVar }),
+  )
+
+/**
+ * Resolve an `EmbeddingClient` for the given provider id.
  *
- * `registerDefaultProviders()` must have been invoked at CLI bootstrap
- * before this helper resolves any provider. Callers hit
- * `ProviderNotFound` if bootstrap was skipped, and `CapabilityNotSupported`
- * if the provider exists but lacks an embed capability.
+ * No overrides → fast path: returns the client registered at startup
+ * via `registerDefaultProviders()`. The registry must have been
+ * bootstrapped or callers will hit `ProviderNotFound`;
+ * `CapabilityNotSupported` surfaces when the provider exists but lacks
+ * an embed capability.
+ *
+ * Overrides present → bypass the registered (static) client and
+ * construct a fresh one through the openai-compatible transport so the
+ * caller's `baseURL` / `apiKey` reach the underlying SDK. The override
+ * contract is openai-compatible only; voyage has no custom-host
+ * concept and continues to use the registered client even when
+ * overrides are passed.
+ *
+ * Both paths funnel `MissingApiKey` through `remapMissingApiKey` so
+ * the surfaced error type is identical.
  */
 export const createEmbeddingClient = (
   id: ProviderId,
+  overrides?: ClientOverrides,
 ): Effect.Effect<
   EmbeddingClient,
   ApiKeyMissingError | CapabilityNotSupported | ProviderNotFound
-> =>
-  Effect.gen(function* () {
+> => {
+  const hasOverrides =
+    overrides?.baseURL !== undefined || overrides?.apiKey !== undefined
+  if (hasOverrides && id !== 'voyage') {
+    return createEmbedClient(id, overrides).pipe(
+      Effect.catchTag('MissingApiKey', remapMissingApiKey),
+    )
+  }
+  return Effect.gen(function* () {
     const runtime = yield* getProvider(id).pipe(
-      Effect.catchTag('MissingApiKey', (e) =>
-        Effect.fail(
-          new ApiKeyMissingError({
-            provider: e.provider,
-            envVar: e.envVar,
-          }),
-        ),
-      ),
+      Effect.catchTag('MissingApiKey', remapMissingApiKey),
     )
     return yield* getCapability(runtime, 'embed')
   })
+}
 
 // ============================================================================
 // Public API

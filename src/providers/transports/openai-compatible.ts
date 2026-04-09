@@ -70,12 +70,37 @@ const PROVIDER_CONFIGS: Record<OpenAICompatibleProviderId, ProviderConfig> = {
 }
 
 /**
+ * Per-call override shape accepted by every OpenAI-compatible factory.
+ *
+ * `baseURL` replaces the transport default for the lifetime of the
+ * returned client. `apiKey` bypasses env-var resolution entirely. Both
+ * factories (`createEmbedClient`, `createGenerateTextClient`) accept
+ * this same shape so consumers can share override plumbing.
+ */
+export interface ClientOverrides {
+  readonly baseURL?: string | undefined
+  readonly apiKey?: string | undefined
+}
+
+/**
  * Base URL each provider advertises. Mirrored for consumers that need
  * the value without going through the transport factories.
  */
 export const getProviderBaseURL = (
   id: OpenAICompatibleProviderId,
 ): string | undefined => PROVIDER_CONFIGS[id].baseURL
+
+/**
+ * Resolve the base URL that a transport will actually use after
+ * applying overrides. Callers that need to record the "endpoint used"
+ * in persistent metadata (e.g. vector-store namespaces) should use
+ * this helper so the stored value matches the URL the transport
+ * actually dialled.
+ */
+export const getEffectiveBaseURL = (
+  id: OpenAICompatibleProviderId,
+  overrides?: ClientOverrides,
+): string | undefined => overrides?.baseURL ?? PROVIDER_CONFIGS[id].baseURL
 
 /**
  * Env var each remote provider reads its credential from. Returns
@@ -167,18 +192,14 @@ const resolveApiKey = (
 
 const buildOpenAIClient = (
   id: OpenAICompatibleProviderId,
-  overrides?: {
-    readonly baseURL?: string | undefined
-    readonly apiKey?: string | undefined
-  },
+  overrides?: ClientOverrides,
 ): Effect.Effect<OpenAI, MissingApiKey> =>
   Effect.gen(function* () {
     const apiKey =
       overrides?.apiKey !== undefined
         ? overrides.apiKey
         : yield* resolveApiKey(id)
-    const config = PROVIDER_CONFIGS[id]
-    const baseURL = overrides?.baseURL ?? config.baseURL
+    const baseURL = getEffectiveBaseURL(id, overrides)
     return new OpenAI({
       apiKey,
       ...(baseURL !== undefined ? { baseURL } : {}),
@@ -195,11 +216,21 @@ const buildOpenAIClient = (
  * Fails with `MissingApiKey` when the provider requires a key and the
  * env var is unset. Local providers (ollama, lm-studio) never fail
  * construction because they use a sentinel key.
+ *
+ * Optional `overrides.baseURL` replaces the provider's default endpoint
+ * for the lifetime of the returned client. Used by consumers that
+ * point at a private host (self-hosted ollama, lm-studio on a non
+ * default port, an openrouter proxy) while still routing through the
+ * runtime's credential resolution. `overrides.apiKey` bypasses env var
+ * resolution entirely and is accepted for symmetry with
+ * `createGenerateTextClient`, though no embed consumer exposes it on
+ * its caller-facing config today.
  */
 export const createEmbedClient = (
   id: OpenAICompatibleProviderId,
+  overrides?: ClientOverrides,
 ): Effect.Effect<EmbeddingClient, MissingApiKey> =>
-  Effect.map(buildOpenAIClient(id), (openai) => ({
+  Effect.map(buildOpenAIClient(id, overrides), (openai) => ({
     embed: (texts, options) => invokeEmbed(openai, id, texts, options),
   }))
 
@@ -269,17 +300,12 @@ const invokeEmbed = (
  * resolution.
  *
  * Optional `overrides.apiKey` bypasses env var resolution entirely and
- * uses the provided string. The override is intentionally kept on the
- * generateText factory and not the embed factory because HyDE is the
- * only consumer that exposes a per-call apiKey override on its options
- * surface; embeddings always go through the registered env var.
+ * uses the provided string. HyDE exposes this via `HydeOptions.apiKey`
+ * for per-call key rotation.
  */
 export const createGenerateTextClient = (
   id: OpenAICompatibleProviderId,
-  overrides?: {
-    readonly baseURL?: string | undefined
-    readonly apiKey?: string | undefined
-  },
+  overrides?: ClientOverrides,
 ): Effect.Effect<TextClient, MissingApiKey> =>
   Effect.map(buildOpenAIClient(id, overrides), (openai) => ({
     generateText: (prompt, options) =>

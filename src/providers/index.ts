@@ -59,8 +59,10 @@ export type {
 } from './runtime.js'
 // Transports
 export {
+  type ClientOverrides,
   createEmbedClient,
   createGenerateTextClient,
+  getEffectiveBaseURL,
   getProviderBaseURL,
   getProviderEnvVar,
   hasAnyRemoteApiKey,
