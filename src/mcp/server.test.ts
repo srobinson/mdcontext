@@ -13,7 +13,7 @@ import { Effect } from 'effect'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { defaultConfig } from '../config/schema.js'
 import { buildIndex } from '../index/indexer.js'
-import { createServer, resolveAndValidatePath } from './server.js'
+import { resolveAndValidatePath, startMcpServer } from './server.js'
 
 // ============================================================================
 // Fixtures
@@ -32,11 +32,14 @@ const getText = (result: Record<string, unknown>): string => {
 // ============================================================================
 
 /**
- * Create a connected MCP client/server pair for testing.
- * Uses InMemoryTransport so no real I/O occurs.
+ * Create a connected MCP client/server pair for testing. Uses
+ * `startMcpServer` (matching the production entrypoint) so the provider
+ * runtime is bootstrapped before the tightened `md_search` regression
+ * test runs, rather than depending on the import-time side effect of
+ * `main()`. InMemoryTransport keeps it stdio-free.
  */
 const createTestClientServer = async (rootPath: string) => {
-  const server = createServer(rootPath, defaultConfig)
+  const server = await startMcpServer(rootPath, defaultConfig)
   const [clientTransport, serverTransport] =
     InMemoryTransport.createLinkedPair()
 
