@@ -12,6 +12,7 @@ import {
   getEffectiveBaseURL,
   getProviderEnvVar,
   hasAnyRemoteApiKey,
+  inferProviderFromErrorMessage,
 } from './openai-compatible.js'
 
 const REMOTE_KEYS = ['OPENAI_API_KEY', 'OPENROUTER_API_KEY'] as const
@@ -123,5 +124,38 @@ describe('getEffectiveBaseURL', () => {
     expect(
       getEffectiveBaseURL('ollama', { baseURL: 'http://localhost:11434/v1' }),
     ).toBe('http://localhost:11434/v1')
+  })
+})
+
+describe('inferProviderFromErrorMessage', () => {
+  it('detects ollama from its default port (11434)', () => {
+    expect(
+      inferProviderFromErrorMessage('connect ECONNREFUSED 127.0.0.1:11434'),
+    ).toBe('ollama')
+  })
+
+  it('detects lm-studio from its default port (1234)', () => {
+    expect(
+      inferProviderFromErrorMessage('connect ECONNREFUSED 127.0.0.1:1234'),
+    ).toBe('lm-studio')
+  })
+
+  it('returns undefined for messages without a recognized port', () => {
+    expect(
+      inferProviderFromErrorMessage('connect ECONNREFUSED 127.0.0.1:8080'),
+    ).toBeUndefined()
+  })
+
+  it('returns undefined for messages with no port at all', () => {
+    // Remote providers (openai, openrouter) have implicit standard
+    // ports, so they can never be identified via port-string matching.
+    // The helper must fail closed rather than guessing.
+    expect(
+      inferProviderFromErrorMessage('401 Unauthorized from api.openai.com'),
+    ).toBeUndefined()
+  })
+
+  it('returns undefined for an empty message', () => {
+    expect(inferProviderFromErrorMessage('')).toBeUndefined()
   })
 })

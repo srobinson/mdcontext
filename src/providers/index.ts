@@ -75,15 +75,16 @@ export type {
 // fast path or the `MissingApiKey` remap by reaching into transport
 // internals.
 //
-// The only transport exports kept on the public surface are the ones
-// that are stable runtime contracts: `ClientOverrides` (shape of the
-// override path) and `OpenAICompatibleProviderId` (type alias used by
+// The transport exports kept on the public surface are the ones that
+// are stable runtime contracts: `ClientOverrides` (shape of the
+// override path), `OpenAICompatibleProviderId` (type alias used by
 // consumers that need to name an openai-compatible provider in their
-// own public API).
+// own public API), `hasAnyRemoteApiKey` (credential gate), and
+// `inferProviderFromErrorMessage` (provider identification for errors
+// whose provider context has been lost).
 export {
   type ClientOverrides,
-  getProviderBaseURL,
   hasAnyRemoteApiKey,
-  OPENAI_COMPATIBLE_PROVIDER_IDS,
+  inferProviderFromErrorMessage,
   type OpenAICompatibleProviderId,
 } from './transports/openai-compatible.js'

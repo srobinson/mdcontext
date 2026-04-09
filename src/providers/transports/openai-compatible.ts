@@ -164,6 +164,43 @@ export const inferProviderFromUrl = (
   return 'openai'
 }
 
+/**
+ * Infer the provider id from an error message that mentions a local
+ * provider's default port (for example `ECONNREFUSED 127.0.0.1:11434`
+ * on the ollama default, or `:1234` on the lm-studio default).
+ *
+ * Used by `src/embeddings/provider-errors.ts` to classify errors whose
+ * provider context has been lost (the error bubbled up without a
+ * provider id attached). Remote providers (openai, openrouter) have
+ * implicit standard ports, so `URL.port` returns an empty string for
+ * them and they are naturally excluded from the match. Only local
+ * providers with explicit ports in their baseURL can be identified
+ * this way.
+ *
+ * Lives in the runtime so the set of ports-to-providers stays in a
+ * single place: adding a fifth openai-compatible provider to
+ * `PROVIDER_CONFIGS` extends this check automatically without touching
+ * the feature layer.
+ */
+export const inferProviderFromErrorMessage = (
+  message: string,
+): OpenAICompatibleProviderId | undefined => {
+  for (const id of OPENAI_COMPATIBLE_PROVIDER_IDS) {
+    const baseURL = PROVIDER_CONFIGS[id].baseURL
+    if (baseURL === undefined) continue
+    let port: string
+    try {
+      port = new URL(baseURL).port
+    } catch {
+      continue
+    }
+    if (port !== '' && message.includes(port)) {
+      return id
+    }
+  }
+  return undefined
+}
+
 // ============================================================================
 // Credential resolution
 // ============================================================================

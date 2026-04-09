@@ -29,10 +29,7 @@
  */
 
 import type { EmbeddingProviderName } from '../config/schema.js'
-import {
-  getProviderBaseURL,
-  OPENAI_COMPATIBLE_PROVIDER_IDS,
-} from '../providers/index.js'
+import { inferProviderFromErrorMessage } from '../providers/index.js'
 
 // ============================================================================
 // Provider Error Types
@@ -69,38 +66,6 @@ export interface ProviderError {
   readonly message: string
   readonly model?: string | undefined
   readonly originalError: unknown
-}
-
-// ============================================================================
-// Port Detection
-// ============================================================================
-
-/**
- * Detect which provider an error is from based on port number. The
- * port for each provider is parsed out of the runtime's
- * `getProviderBaseURL(id)` so the transport module remains the single
- * source of truth. Remote providers (openai, openrouter) use implicit
- * standard ports, so `URL.port` returns an empty string for them and
- * they are naturally excluded from the match.
- */
-const detectProviderFromPort = (
-  error: Error,
-): EmbeddingProviderName | undefined => {
-  const message = error.message
-  for (const id of OPENAI_COMPATIBLE_PROVIDER_IDS) {
-    const baseURL = getProviderBaseURL(id)
-    if (baseURL === undefined) continue
-    let port: string
-    try {
-      port = new URL(baseURL).port
-    } catch {
-      continue
-    }
-    if (port !== '' && message.includes(port)) {
-      return id as EmbeddingProviderName
-    }
-  }
-  return undefined
 }
 
 // ============================================================================
@@ -401,12 +366,18 @@ export const detectProviderError = (
 
 /**
  * Auto-detect provider from error (for cases where provider context is lost)
+ *
+ * Delegates to the runtime-layer `inferProviderFromErrorMessage` so the
+ * port-to-provider mapping stays in a single place. Only local
+ * providers with explicit ports in their baseURL (ollama, lm-studio)
+ * can be identified this way; remote providers use implicit standard
+ * ports and are naturally excluded.
  */
 export const detectProviderFromError = (
   error: unknown,
 ): EmbeddingProviderName | undefined => {
   if (error instanceof Error) {
-    return detectProviderFromPort(error)
+    return inferProviderFromErrorMessage(error.message)
   }
   return undefined
 }
