@@ -12,8 +12,9 @@ import { Effect } from 'effect'
 import {
   CapabilityNotSupported,
   getProvidersForCapability,
+  type OpenAICompatibleProviderId,
 } from '../providers/index.js'
-import type { HydeOptions, HydeProviderName } from './hyde.js'
+import type { HydeOptions } from './hyde.js'
 import type { SemanticSearchOptions } from './types.js'
 
 /**
@@ -59,10 +60,10 @@ export const resolveHydeOptions = (
       )
     }
 
-    const inheritedProvider: HydeProviderName | undefined =
+    const inheritedProvider: OpenAICompatibleProviderId | undefined =
       embeddingProviderName === 'voyage' ? undefined : embeddingProviderName
 
-    const provider: HydeProviderName =
+    const provider: OpenAICompatibleProviderId =
       hydeOptions?.provider ?? inheritedProvider ?? 'openai'
 
     // Inherit the embedding-side baseURL whenever the resolved HyDE provider

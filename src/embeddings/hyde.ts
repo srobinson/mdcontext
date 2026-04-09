@@ -44,20 +44,6 @@ import {
 // ============================================================================
 
 /**
- * LLM providers supported for HyDE generation.
- *
- * Voyage is intentionally excluded because Voyage AI does not expose a chat
- * completion API. When the embedding side uses voyage and HyDE is enabled
- * without an explicit provider override, `resolveHydeOptions` fails fast
- * with `CapabilityNotSupported` before any HTTP call is made.
- *
- * The set is derived from `OpenAICompatibleProviderId` so any provider added
- * to the runtime's OpenAI-compatible transport automatically becomes a
- * candidate for HyDE generation.
- */
-export type HydeProviderName = OpenAICompatibleProviderId
-
-/**
  * Configuration for HyDE query expansion.
  */
 export interface HydeOptions {
@@ -65,8 +51,15 @@ export interface HydeOptions {
    * LLM provider for HyDE generation. Determines which OpenAI-compatible
    * endpoint to call and which default model to use when `model` is unset.
    * Default: 'openai'.
+   *
+   * Voyage is intentionally excluded because Voyage AI does not expose a
+   * chat completion API. When the embedding side uses voyage and HyDE is
+   * enabled without an explicit provider override, `resolveHydeOptions`
+   * fails fast with `CapabilityNotSupported` before any HTTP call is made.
+   * The provider set tracks `OpenAICompatibleProviderId` so any new
+   * OpenAI-compatible provider automatically becomes a HyDE candidate.
    */
-  readonly provider?: HydeProviderName | undefined
+  readonly provider?: OpenAICompatibleProviderId | undefined
   /**
    * API key for the chosen provider. Can be a plain string or Redacted<string>.
    * When unset, the runtime resolves the credential from the provider's env
@@ -112,25 +105,35 @@ export interface HydeResult {
 // Constants
 // ============================================================================
 
-const DEFAULT_PROVIDER: HydeProviderName = 'openai'
+const DEFAULT_PROVIDER: OpenAICompatibleProviderId = 'openai'
 const DEFAULT_MAX_TOKENS = 256
 const DEFAULT_TEMPERATURE = 0.3
 
 /**
- * Per-provider default model for HyDE generation. The local providers
- * (ollama, lm-studio) use generic small-model names that the operator is
- * expected to override; the remote providers point at their cheapest
- * capable chat model.
+ * Resolve the default chat model for a given HyDE provider.
  *
- * The runtime intentionally does not own model defaults — picking a
- * sensible chat model is a use-case decision and lives at the consumer
- * layer alongside the prompt template.
+ * Picking a sensible chat model is a use-case decision and lives at the
+ * consumer layer alongside the prompt template — the provider runtime is
+ * deliberately model-agnostic. The local providers (ollama, lm-studio)
+ * return generic small-model names that the operator is expected to
+ * override via `options.model`; the remote providers point at their
+ * cheapest capable chat model.
+ *
+ * Exhaustive `switch` over `OpenAICompatibleProviderId` so adding a new
+ * OpenAI-compatible transport forces a compile error here, flagging the
+ * need for a default rather than silently falling through.
  */
-const DEFAULT_MODELS_BY_PROVIDER: Record<HydeProviderName, string> = {
-  openai: 'gpt-4o-mini',
-  ollama: 'llama3.2',
-  'lm-studio': 'local-model',
-  openrouter: 'openai/gpt-4o-mini',
+const hydeDefaultModel = (provider: OpenAICompatibleProviderId): string => {
+  switch (provider) {
+    case 'openai':
+      return 'gpt-4o-mini'
+    case 'ollama':
+      return 'llama3.2'
+    case 'lm-studio':
+      return 'local-model'
+    case 'openrouter':
+      return 'openai/gpt-4o-mini'
+  }
 }
 
 /**
@@ -232,7 +235,7 @@ const toConsumerError = (error: TextGenerationError): ConsumerEmbeddingError =>
  * so embed and HyDE produce the same consumer error surface.
  */
 const createHydeClient = (
-  id: HydeProviderName,
+  id: OpenAICompatibleProviderId,
   overrides?: ClientOverrides,
 ): Effect.Effect<
   TextClient,
@@ -301,7 +304,7 @@ export const generateHypotheticalDocument = (
 > =>
   Effect.gen(function* () {
     const provider = options.provider ?? DEFAULT_PROVIDER
-    const model = options.model ?? DEFAULT_MODELS_BY_PROVIDER[provider]
+    const model = options.model ?? hydeDefaultModel(provider)
     const maxTokens = options.maxTokens ?? DEFAULT_MAX_TOKENS
     const temperature = options.temperature ?? DEFAULT_TEMPERATURE
     const systemPrompt = options.systemPrompt ?? DEFAULT_SYSTEM_PROMPT

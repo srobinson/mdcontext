@@ -35,7 +35,6 @@ import {
 import {
   generateHypotheticalDocument,
   type HydeOptions,
-  type HydeProviderName,
   type HydeResult,
   isHydeAvailable,
   shouldUseHyde,
@@ -224,7 +223,7 @@ describe('HyDE Query Expansion', () => {
     it('should accept each supported provider', () => {
       // Compile-time assertion: each provider name is assignable to the
       // public union. The runtime expect just keeps vitest happy.
-      const providers: HydeProviderName[] = [
+      const providers: OpenAICompatibleProviderId[] = [
         'openai',
         'ollama',
         'lm-studio',
@@ -237,9 +236,10 @@ describe('HyDE Query Expansion', () => {
     })
 
     it('should reject voyage at the type level', () => {
-      // Voyage AI has no chat completions API. The type system must keep
-      // it out of HydeProviderName so callers cannot pin HyDE to voyage.
-      // @ts-expect-error voyage is intentionally excluded from HydeProviderName
+      // Voyage AI has no chat completions API. The HydeOptions.provider
+      // type (OpenAICompatibleProviderId) must keep voyage out so callers
+      // cannot pin HyDE to voyage.
+      // @ts-expect-error voyage is intentionally excluded from OpenAICompatibleProviderId
       const _options: HydeOptions = { provider: 'voyage' }
       // Reference _options to silence noUnusedLocals.
       expect(_options.provider).toBe('voyage')

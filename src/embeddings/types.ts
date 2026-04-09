@@ -4,7 +4,7 @@
 
 import type { Redacted } from 'effect'
 import type { ContextLine } from '../core/types.js'
-import type { HydeProviderName } from './hyde.js'
+import type { OpenAICompatibleProviderId } from '../providers/index.js'
 
 export type { ContextLine } from '../core/types.js'
 
@@ -198,7 +198,7 @@ export interface SemanticSearchOptions {
          * provider (`providerConfig.provider`) when not set. Required when
          * the embedding side uses voyage, which has no chat completion API.
          */
-        readonly provider?: HydeProviderName | undefined
+        readonly provider?: OpenAICompatibleProviderId | undefined
         /**
          * Base URL for the chat completion endpoint. Defaults to the
          * embedding-side `baseURL` when HyDE inherits the embedding
