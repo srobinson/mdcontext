@@ -2,11 +2,19 @@
  * HyDE (Hypothetical Document Embeddings) Tests
  *
  * Tests for HyDE query expansion functionality. Runtime-forwarding
- * tests drive `generateHypotheticalDocument` through a fake
- * `TextClient` installed by mocking `createGenerateTextClient` on the
- * providers barrel. The test operates at the runtime boundary — the
- * `TextClient` interface — rather than the OpenAI SDK boundary, so a
- * refactor of the transport cannot silently regress HyDE's contract.
+ * tests drive `generateHypotheticalDocument` through fake `TextClient`
+ * instances installed at both the registry (fast path) and at the
+ * transport-factory mock (override path). HyDE calls with no overrides
+ * go through the registry, so tests populate the registry in
+ * `beforeEach` with a per-provider fake client that records the
+ * provider id via closure. HyDE calls with a `baseURL` or `apiKey`
+ * override bypass the registry and invoke the mocked
+ * `createGenerateTextClient` directly; those tests assert against
+ * `clientConstructionCalls`.
+ *
+ * The tests operate at the runtime boundary — the `TextClient`
+ * interface — rather than the OpenAI SDK boundary, so a refactor of
+ * the transport cannot silently regress HyDE's contract.
  *
  * Tests that exercise the pure HyDE logic (query pattern detection,
  * options types, exports) do not interact with the mock and continue
@@ -16,9 +24,11 @@
 import { Effect, Redacted } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  clearRegistry,
   type GenerateTextOptions,
   MissingApiKey,
   type OpenAICompatibleProviderId,
+  registerProvider,
   type TextClient,
   type TextGenerationResult,
 } from '../providers/index.js'
@@ -69,6 +79,7 @@ interface ClientConstructionCall {
 }
 
 interface GenerateTextCall {
+  readonly provider: OpenAICompatibleProviderId
   readonly prompt: string
   readonly options: Readonly<GenerateTextOptions> | undefined
 }
@@ -76,26 +87,54 @@ interface GenerateTextCall {
 const clientConstructionCalls: ClientConstructionCall[] = []
 const generateTextCalls: GenerateTextCall[] = []
 
-// The fake client echoes the requested model back so HyDE's cost
-// calculation runs against the real model name the caller pinned.
+// Build a fake `TextClient` that tags each call with the provider id
+// via closure. Per-provider tagging lets fast-path tests verify that
+// HyDE dispatched through the correct registry entry without relying
+// on the transport factory mock (which the fast path does not touch).
 // Token counts are fixed across every call so assertions on
-// `tokensUsed` and `cost` stay deterministic.
-const fakeTextClient: TextClient = {
+// `tokensUsed` and `cost` stay deterministic, and the model is echoed
+// back so HyDE's cost calculation runs against the real model name
+// the caller pinned.
+const makeFakeTextClient = (
+  provider: OpenAICompatibleProviderId,
+): TextClient => ({
   generateText: (prompt, options) => {
-    generateTextCalls.push({ prompt, options })
+    generateTextCalls.push({ provider, prompt, options })
     return Effect.succeed({
       text: 'mock hypothetical document',
       model: options?.model ?? 'unknown',
       usage: { inputTokens: 10, outputTokens: 20 },
     } satisfies TextGenerationResult)
   },
-}
+})
+
+const ALL_HYDE_PROVIDERS: readonly OpenAICompatibleProviderId[] = [
+  'openai',
+  'ollama',
+  'lm-studio',
+  'openrouter',
+]
 
 const installFakeClient = (): void => {
   createGenerateTextClientMock.mockImplementation((id, overrides) => {
     clientConstructionCalls.push({ id, overrides })
-    return Effect.succeed(fakeTextClient)
+    return Effect.succeed(makeFakeTextClient(id))
   })
+}
+
+// Populate the registry with a fake runtime per HyDE provider. The
+// fast path (no overrides) reads from the registry, so tests need a
+// deterministic fake client there. Uses `clearRegistry` first to
+// drop any state leaked from other test files sharing the same
+// module-level registry Map.
+const registerFakeRuntimes = (): void => {
+  clearRegistry()
+  for (const id of ALL_HYDE_PROVIDERS) {
+    registerProvider({
+      id,
+      capabilities: { generateText: makeFakeTextClient(id) },
+    })
+  }
 }
 
 describe('HyDE Query Expansion', () => {
@@ -349,25 +388,25 @@ describe('generateHypotheticalDocument runtime forwarding', () => {
     generateTextCalls.length = 0
     createGenerateTextClientMock.mockReset()
     installFakeClient()
+    registerFakeRuntimes()
   })
 
   afterEach(() => {
     createGenerateTextClientMock.mockReset()
+    clearRegistry()
   })
 
-  it('constructs a generateText client for the default openai provider', async () => {
+  it('dispatches through the registered openai runtime by default', async () => {
     const result = await Effect.runPromise(
       generateHypotheticalDocument('how do I configure auth'),
     )
 
     expect(result.hypotheticalDocument).toBe('mock hypothetical document')
-    expect(clientConstructionCalls).toHaveLength(1)
-    expect(clientConstructionCalls[0]?.id).toBe('openai')
-    // With no overrides, the transport applies its own per-provider
-    // defaults for baseURL and credential resolution.
-    expect(clientConstructionCalls[0]?.overrides).toEqual({})
-
+    // Fast path: the transport factory mock is NOT invoked; the
+    // registered openai runtime is reused from the registry.
+    expect(clientConstructionCalls).toHaveLength(0)
     expect(generateTextCalls).toHaveLength(1)
+    expect(generateTextCalls[0]?.provider).toBe('openai')
     expect(generateTextCalls[0]?.options?.model).toBe('gpt-4o-mini')
   })
 
@@ -376,8 +415,8 @@ describe('generateHypotheticalDocument runtime forwarding', () => {
       generateHypotheticalDocument('configure ollama', { provider: 'ollama' }),
     )
 
-    expect(clientConstructionCalls[0]?.id).toBe('ollama')
-    expect(clientConstructionCalls[0]?.overrides).toEqual({})
+    expect(clientConstructionCalls).toHaveLength(0)
+    expect(generateTextCalls[0]?.provider).toBe('ollama')
     expect(generateTextCalls[0]?.options?.model).toBe('llama3.2')
   })
 
@@ -388,8 +427,8 @@ describe('generateHypotheticalDocument runtime forwarding', () => {
       }),
     )
 
-    expect(clientConstructionCalls[0]?.id).toBe('lm-studio')
-    expect(clientConstructionCalls[0]?.overrides).toEqual({})
+    expect(clientConstructionCalls).toHaveLength(0)
+    expect(generateTextCalls[0]?.provider).toBe('lm-studio')
     expect(generateTextCalls[0]?.options?.model).toBe('local-model')
   })
 
@@ -400,8 +439,8 @@ describe('generateHypotheticalDocument runtime forwarding', () => {
       }),
     )
 
-    expect(clientConstructionCalls[0]?.id).toBe('openrouter')
-    expect(clientConstructionCalls[0]?.overrides).toEqual({})
+    expect(clientConstructionCalls).toHaveLength(0)
+    expect(generateTextCalls[0]?.provider).toBe('openrouter')
     expect(generateTextCalls[0]?.options?.model).toBe('openai/gpt-4o-mini')
   })
 
@@ -475,25 +514,26 @@ describe('generateHypotheticalDocument runtime forwarding', () => {
     expect(clientConstructionCalls[0]?.overrides?.apiKey).toBe('sk-redacted')
   })
 
-  it('passes no apiKey override when none is supplied (finding #1)', async () => {
-    // Finding #1: HyDE used to read OPENAI_API_KEY unconditionally, so a
-    // caller running with provider=openrouter and only OPENROUTER_API_KEY
-    // set would crash with ApiKeyMissingError pointing at the wrong env
-    // var. The new path hands the provider id to the runtime factory
-    // without any apiKey override, so the transport resolves the
-    // credential from the provider's actual env var
-    // (OPENROUTER_API_KEY for openrouter).
+  it('dispatches to the registered openrouter runtime without fabricating credentials (finding #1)', async () => {
+    // Finding #1: HyDE used to read OPENAI_API_KEY unconditionally, so
+    // a caller running with provider=openrouter and only
+    // OPENROUTER_API_KEY set would crash with an error pointing at the
+    // wrong env var. The new path dispatches through the registry when
+    // no apiKey/baseURL override is supplied, so HyDE never fabricates
+    // a credential at call time; credential resolution happens exactly
+    // once, at `registerDefaultProviders` time, via the transport's
+    // per-provider env-var lookup.
     await Effect.runPromise(
       generateHypotheticalDocument('routed via openrouter', {
         provider: 'openrouter',
       }),
     )
 
-    expect(clientConstructionCalls[0]?.id).toBe('openrouter')
-    expect(clientConstructionCalls[0]?.overrides?.apiKey).toBeUndefined()
-    // No baseURL override either — the transport uses
-    // https://openrouter.ai/api/v1 on its own.
-    expect(clientConstructionCalls[0]?.overrides?.baseURL).toBeUndefined()
+    expect(generateTextCalls).toHaveLength(1)
+    expect(generateTextCalls[0]?.provider).toBe('openrouter')
+    // Fast path: the transport factory is NOT invoked at call time, so
+    // no ad-hoc apiKey or baseURL can leak in from the consumer side.
+    expect(clientConstructionCalls).toHaveLength(0)
   })
 
   it('remaps runtime MissingApiKey into ApiKeyMissingError labeled with the pinned provider (finding #1)', async () => {
@@ -502,6 +542,12 @@ describe('generateHypotheticalDocument runtime forwarding', () => {
     // surface the CLI-facing `ApiKeyMissingError` carrying the
     // openrouter label and OPENROUTER_API_KEY env var — never the
     // openai fallback.
+    //
+    // Forces the override path via `baseURL` because the registry
+    // fast path cannot raise a transport-level `MissingApiKey` at call
+    // time (the registered client was already constructed at
+    // bootstrap). The error-remapping logic lives in the shared
+    // resolve-runtime-client helper and is identical on both paths.
     createGenerateTextClientMock.mockReturnValueOnce(
       Effect.fail(
         new MissingApiKey({
@@ -514,6 +560,7 @@ describe('generateHypotheticalDocument runtime forwarding', () => {
     const result = await Effect.runPromise(
       generateHypotheticalDocument('no key for openrouter', {
         provider: 'openrouter',
+        baseURL: 'https://openrouter.ai/api/v1',
       }).pipe(Effect.either),
     )
 
@@ -528,6 +575,8 @@ describe('generateHypotheticalDocument runtime forwarding', () => {
   })
 
   it('remaps runtime MissingApiKey into ApiKeyMissingError for the default openai provider', async () => {
+    // Forces the override path via `baseURL` for the same reason as
+    // the openrouter case above.
     createGenerateTextClientMock.mockReturnValueOnce(
       Effect.fail(
         new MissingApiKey({
@@ -538,7 +587,9 @@ describe('generateHypotheticalDocument runtime forwarding', () => {
     )
 
     const result = await Effect.runPromise(
-      generateHypotheticalDocument('test query').pipe(Effect.either),
+      generateHypotheticalDocument('test query', {
+        baseURL: 'https://api.openai.com/v1',
+      }).pipe(Effect.either),
     )
 
     expect(result._tag).toBe('Left')

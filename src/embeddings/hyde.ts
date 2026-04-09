@@ -23,18 +23,22 @@
 
 import { Effect, Redacted } from 'effect'
 import {
-  ApiKeyMissingError,
+  type ApiKeyMissingError,
   EmbeddingError as ConsumerEmbeddingError,
   type EmbeddingErrorCause,
 } from '../errors/index.js'
 import {
+  type CapabilityNotSupported,
+  type ClientOverrides,
   createGenerateTextClient,
   hasAnyRemoteApiKey,
   lookupPricing,
-  type MissingApiKey,
   type OpenAICompatibleProviderId,
+  type ProviderNotFound,
+  type TextClient,
   type TextGenerationError,
 } from '../providers/index.js'
+import { resolveCapabilityClient } from './resolve-runtime-client.js'
 
 // ============================================================================
 // Types
@@ -218,38 +222,29 @@ const toConsumerError = (error: TextGenerationError): ConsumerEmbeddingError =>
 // ============================================================================
 
 /**
- * Construct a generateText client for the given HyDE provider.
+ * Resolve a `TextClient` for the given HyDE provider through the
+ * shared runtime-resolution helper.
  *
- * Bridges the runtime's `createGenerateTextClient` and remaps the runtime's
- * `MissingApiKey` into the centralized `ApiKeyMissingError` so the CLI error
- * handler keeps producing the same exit codes and suggestions.
- *
- * Optional `apiKey` and `baseURL` overrides flow through to the runtime
- * factory; both are honored on a per-call basis. The runtime resolves the
- * env var only when `apiKey` is omitted, fixing finding #1 (openrouter
- * provider works with only `OPENROUTER_API_KEY` set).
- *
- * Bypasses the runtime registry. ALP-1703 will move this onto registry-based
- * dispatch with proper fail-fast wiring.
+ * No overrides → registry fast path; the client registered at startup
+ * via `registerDefaultProviders()` is returned. With overrides the
+ * openai-compatible transport is invoked directly so the caller's
+ * `baseURL` / `apiKey` reach the SDK. Error remapping
+ * (`MissingApiKey` → `ApiKeyMissingError`) lives in the shared helper
+ * so embed and HyDE produce the same consumer error surface.
  */
 const createHydeClient = (
   id: HydeProviderName,
-  overrides?: {
-    readonly baseURL?: string | undefined
-    readonly apiKey?: string | undefined
-  },
-) => {
-  const result = createGenerateTextClient(id, overrides)
-  return result.pipe(
-    Effect.mapError(
-      (e: MissingApiKey) =>
-        new ApiKeyMissingError({
-          provider: e.provider,
-          envVar: e.envVar,
-        }),
-    ),
+  overrides?: ClientOverrides,
+): Effect.Effect<
+  TextClient,
+  ApiKeyMissingError | CapabilityNotSupported | ProviderNotFound
+> =>
+  resolveCapabilityClient(
+    id,
+    'generateText',
+    createGenerateTextClient,
+    overrides,
   )
-}
 
 // ============================================================================
 // Cost calculation
@@ -294,13 +289,23 @@ const computeCost = (
  * @throws ApiKeyMissingError - When the resolved provider's API key env
  *                              var is unset and no explicit `apiKey` is
  *                              provided in `options`.
+ * @throws CapabilityNotSupported - When the resolved provider does not
+ *                                  expose a generateText capability.
+ * @throws ProviderNotFound - When the resolved provider id is unknown
+ *                            to the runtime registry.
  * @throws EmbeddingError - When the LLM call fails (reusing the embedding
  *                          error type for CLI parity).
  */
 export const generateHypotheticalDocument = (
   query: string,
   options: HydeOptions = {},
-): Effect.Effect<HydeResult, ApiKeyMissingError | ConsumerEmbeddingError> =>
+): Effect.Effect<
+  HydeResult,
+  | ApiKeyMissingError
+  | CapabilityNotSupported
+  | ConsumerEmbeddingError
+  | ProviderNotFound
+> =>
   Effect.gen(function* () {
     const provider = options.provider ?? DEFAULT_PROVIDER
     const model = options.model ?? DEFAULT_MODELS_BY_PROVIDER[provider]

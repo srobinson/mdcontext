@@ -22,7 +22,7 @@
 import { Effect } from 'effect'
 import {
   ApiKeyInvalidError,
-  ApiKeyMissingError,
+  type ApiKeyMissingError,
   EmbeddingError as ConsumerEmbeddingError,
   type EmbeddingErrorCause,
 } from '../errors/index.js'
@@ -32,13 +32,11 @@ import {
   createEmbedClient,
   type EmbeddingClient,
   type EmbeddingResult,
-  getCapability,
-  getProvider,
-  type MissingApiKey,
   type ProviderId,
   type ProviderNotFound,
   type EmbeddingError as RuntimeEmbeddingError,
 } from '../providers/index.js'
+import { resolveCapabilityClient } from './resolve-runtime-client.js'
 
 // ============================================================================
 // Types
@@ -235,36 +233,12 @@ const embedBatchWithRetry = (
 // ============================================================================
 
 /**
- * Translate the runtime's `MissingApiKey` into the centralized
- * `ApiKeyMissingError` so the CLI error handler keeps producing the
- * same actionable "Set X_API_KEY" suggestions regardless of which
- * `createEmbeddingClient` code path raised the failure.
- */
-const remapMissingApiKey = (
-  e: MissingApiKey,
-): Effect.Effect<never, ApiKeyMissingError> =>
-  Effect.fail(
-    new ApiKeyMissingError({ provider: e.provider, envVar: e.envVar }),
-  )
-
-/**
  * Resolve an `EmbeddingClient` for the given provider id.
  *
- * No overrides → fast path: returns the client registered at startup
- * via `registerDefaultProviders()`. The registry must have been
- * bootstrapped or callers will hit `ProviderNotFound`;
- * `CapabilityNotSupported` surfaces when the provider exists but lacks
- * an embed capability.
- *
- * Overrides present → bypass the registered (static) client and
- * construct a fresh one through the openai-compatible transport so the
- * caller's `baseURL` / `apiKey` reach the underlying SDK. The override
- * contract is openai-compatible only; voyage has no custom-host
- * concept and continues to use the registered client even when
- * overrides are passed.
- *
- * Both paths funnel `MissingApiKey` through `remapMissingApiKey` so
- * the surfaced error type is identical.
+ * Thin wrapper over the shared `resolveCapabilityClient` helper so both
+ * embed and HyDE consumers go through a single resolution mechanism.
+ * See `resolve-runtime-client.ts` for the full fast-path vs
+ * override-path contract.
  */
 export const createEmbeddingClient = (
   id: ProviderId,
@@ -272,21 +246,7 @@ export const createEmbeddingClient = (
 ): Effect.Effect<
   EmbeddingClient,
   ApiKeyMissingError | CapabilityNotSupported | ProviderNotFound
-> => {
-  const hasOverrides =
-    overrides?.baseURL !== undefined || overrides?.apiKey !== undefined
-  if (hasOverrides && id !== 'voyage') {
-    return createEmbedClient(id, overrides).pipe(
-      Effect.catchTag('MissingApiKey', remapMissingApiKey),
-    )
-  }
-  return Effect.gen(function* () {
-    const runtime = yield* getProvider(id).pipe(
-      Effect.catchTag('MissingApiKey', remapMissingApiKey),
-    )
-    return yield* getCapability(runtime, 'embed')
-  })
-}
+> => resolveCapabilityClient(id, 'embed', createEmbedClient, overrides)
 
 // ============================================================================
 // Public API

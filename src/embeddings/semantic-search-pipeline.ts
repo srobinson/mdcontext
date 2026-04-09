@@ -143,6 +143,7 @@ const resolveQueryText = (
   | ApiKeyInvalidError
   | EmbeddingError
   | CapabilityNotSupported
+  | ProviderNotFound
 > =>
   Effect.gen(function* () {
     if (!options.hyde) {
