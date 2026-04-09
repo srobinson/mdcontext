@@ -16,9 +16,11 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js'
+import { Effect } from 'effect'
 import { load } from '../config/loader.js'
 import type { MdmConfig } from '../config/schema.js'
 import { defaultConfig } from '../config/schema.js'
+import { registerDefaultProviders } from '../providers/index.js'
 
 import {
   handleMdBacklinks,
@@ -118,6 +120,13 @@ const main = async () => {
 
   // Load config: env vars > config file > defaults
   const config = await loadConfig(rootPath)
+
+  // Bootstrap the provider runtime before any tool handler can run.
+  // Mirrors the CLI entrypoint (src/cli/main.ts) so md_search reaches
+  // a populated registry. Never fails: missing credentials produce
+  // skipped registrations that surface as actionable MissingApiKey at
+  // tool-invocation time rather than ProviderNotFound.
+  await Effect.runPromise(registerDefaultProviders())
 
   const server = createServer(rootPath, config)
   const transport = new StdioServerTransport()
