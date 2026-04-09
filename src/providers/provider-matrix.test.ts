@@ -33,6 +33,7 @@ import {
   clearRegistry,
   getCapability,
   getProvider,
+  MissingApiKey,
   registerDefaultProviders,
 } from './index.js'
 import type { Capability, ProviderId } from './runtime.js'
@@ -116,6 +117,43 @@ const MATRIX: readonly MatrixCell[] = [
   },
 ]
 
+/**
+ * Expected outcome for every `(provider, capability)` pair when NO
+ * remote credentials are set. The local transports (`ollama`,
+ * `lm-studio`) do not need keys and must still construct; every
+ * remote provider must fail at `getProvider` with `MissingApiKey`
+ * regardless of which capability was asked for.
+ *
+ * This is the parity claim the matrix is here to prove: embed and
+ * generateText share one resolution surface, so the error raised by
+ * the same precondition (missing key) is consistent across
+ * capabilities.
+ */
+const NO_CREDENTIALS_MATRIX: readonly {
+  readonly provider: ProviderId
+  readonly capability: Capability
+  readonly expected: 'constructs' | 'MissingApiKey'
+}[] = [
+  { provider: 'openai', capability: 'embed', expected: 'MissingApiKey' },
+  { provider: 'openai', capability: 'generateText', expected: 'MissingApiKey' },
+  { provider: 'openrouter', capability: 'embed', expected: 'MissingApiKey' },
+  {
+    provider: 'openrouter',
+    capability: 'generateText',
+    expected: 'MissingApiKey',
+  },
+  { provider: 'ollama', capability: 'embed', expected: 'constructs' },
+  { provider: 'ollama', capability: 'generateText', expected: 'constructs' },
+  { provider: 'lm-studio', capability: 'embed', expected: 'constructs' },
+  { provider: 'lm-studio', capability: 'generateText', expected: 'constructs' },
+  { provider: 'voyage', capability: 'embed', expected: 'MissingApiKey' },
+  {
+    provider: 'voyage',
+    capability: 'generateText',
+    expected: 'MissingApiKey',
+  },
+]
+
 // ============================================================================
 // Matrix body
 // ============================================================================
@@ -169,6 +207,66 @@ describe('provider-capability matrix (all credentials set)', () => {
     expect(result._tag).toBe('Left')
     if (result._tag === 'Left') {
       expect(result.left).toBeInstanceOf(CapabilityNotSupported)
+    }
+  })
+})
+
+describe('provider-capability matrix (no remote credentials)', () => {
+  let envSnapshot: Record<string, string | undefined>
+
+  beforeEach(() => {
+    clearRegistry()
+    envSnapshot = snapshotEnv()
+    for (const key of TRACKED_ENV_KEYS) {
+      delete process.env[key]
+    }
+    Effect.runSync(registerDefaultProviders())
+  })
+
+  afterEach(() => {
+    clearRegistry()
+    restoreEnv(envSnapshot)
+  })
+
+  it.each(NO_CREDENTIALS_MATRIX)('$provider + $capability -> $expected', ({
+    provider,
+    capability,
+    expected,
+  }) => {
+    const providerResult = Effect.runSync(Effect.either(getProvider(provider)))
+
+    if (expected === 'MissingApiKey') {
+      // The parity claim: embed and generateText share the same
+      // resolution surface, so the same precondition (no remote
+      // credentials) produces the same error for both capabilities.
+      // The error surfaces at `getProvider` — it never reaches
+      // `getCapability` — because the runtime is never registered.
+      expect(providerResult._tag).toBe('Left')
+      if (providerResult._tag === 'Left') {
+        expect(providerResult.left).toBeInstanceOf(MissingApiKey)
+      }
+      return
+    }
+
+    // Local providers (ollama, lm-studio) do not need credentials;
+    // both capabilities must still resolve via the same pipeline.
+    expect(providerResult._tag).toBe('Right')
+    if (providerResult._tag === 'Right') {
+      const capResult = Effect.runSync(
+        Effect.either(getCapability(providerResult.right, capability)),
+      )
+      expect(capResult._tag).toBe('Right')
+      if (capResult._tag === 'Right') {
+        if (capability === 'embed') {
+          expect(typeof (capResult.right as EmbeddingClient).embed).toBe(
+            'function',
+          )
+        } else if (capability === 'generateText') {
+          expect(typeof (capResult.right as TextClient).generateText).toBe(
+            'function',
+          )
+        }
+      }
     }
   })
 })
