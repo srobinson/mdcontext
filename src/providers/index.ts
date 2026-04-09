@@ -41,21 +41,23 @@ export {
   lookupPricing,
   type ModelPricing,
 } from './pricing.js'
-// Registry
+// Registry and capability dispatch
 export {
   clearRegistry,
   DEFAULT_PROVIDER_IDS,
+  getCapability,
   getProvider,
+  listProvidersSupporting,
   registerDefaultProviders,
   registerProvider,
 } from './registry.js'
-// Runtime types and dispatch
+// Runtime types
 export type {
   Capability,
+  ClientFor,
   ProviderId,
   ProviderRuntime,
 } from './runtime.js'
-export { getCapability } from './runtime.js'
 // Transports
 export {
   createEmbedClient,

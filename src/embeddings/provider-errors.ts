@@ -487,7 +487,6 @@ export const getProviderSuggestions = (error: ProviderError): string[] => {
       return [
         'Get an API key: https://openrouter.ai/keys',
         'Set the key: export OPENROUTER_API_KEY=sk-or-...',
-        'Or set: export OPENAI_API_KEY=sk-or-...',
         'Note: OpenRouter keys start with sk-or-',
       ]
 

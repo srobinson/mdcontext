@@ -634,7 +634,7 @@ describe('getProviderSuggestions', () => {
       expect(suggestions).toContain(
         'Set the key: export OPENROUTER_API_KEY=sk-or-...',
       )
-      expect(suggestions).toContain('Or set: export OPENAI_API_KEY=sk-or-...')
+      expect(suggestions.join('|')).not.toContain('OPENAI_API_KEY')
       expect(suggestions).toContain('Note: OpenRouter keys start with sk-or-')
     })
 

@@ -8,6 +8,11 @@
  * decision.
  */
 
+import { Effect } from 'effect'
+import {
+  CapabilityNotSupported,
+  OPENAI_COMPATIBLE_PROVIDER_IDS,
+} from '../providers/index.js'
 import type { HydeOptions, HydeProviderName } from './hyde.js'
 import type { SemanticSearchOptions } from './types.js'
 
@@ -23,45 +28,60 @@ import type { SemanticSearchOptions } from './types.js'
  *     in the docs for {@link SemanticSearchOptions.hydeOptions}.
  *  3. Per-provider defaults inside {@link generateHypotheticalDocument}.
  *
- * Voyage cannot serve chat completions, so when the embedding side is voyage
- * and `hydeOptions.provider` is unset, the resolved provider falls back to
- * `'openai'`. Callers that hit this fallback see a debug log emitted from
- * `prepareSearchPipeline` so the substitution is observable.
- *
- * Returns the object that should be passed verbatim to
- * `generateHypotheticalDocument`.
+ * Voyage cannot serve chat completions. When the embedding side is voyage
+ * and the user did not pin a HyDE provider explicitly, this fails fast
+ * with `CapabilityNotSupported` rather than silently substituting openai.
+ * The previous silent fallback was a footgun: a caller running with only
+ * `VOYAGE_API_KEY` set would crash inside HyDE with `OPENAI_API_KEY is
+ * not set`, hiding the real cause behind a misleading error.
  */
 export const resolveHydeOptions = (
   options: SemanticSearchOptions,
-): HydeOptions => {
-  const hydeOptions = options.hydeOptions
-  const embeddingProviderName = options.providerConfig?.provider
+): Effect.Effect<HydeOptions, CapabilityNotSupported> =>
+  Effect.gen(function* () {
+    const hydeOptions = options.hydeOptions
+    const embeddingProviderName = options.providerConfig?.provider
 
-  // Voyage embedding side cannot serve chat, fall back to openai unless the
-  // user explicitly pinned a HyDE provider.
-  const inheritedProvider: HydeProviderName | undefined =
-    embeddingProviderName === 'voyage' ? undefined : embeddingProviderName
+    // Voyage embedding + no explicit HyDE provider = fail fast.
+    // The HyDE provider type already excludes voyage, so the explicit
+    // override path (hydeOptions.provider !== undefined) cannot land
+    // on voyage and is allowed through.
+    if (
+      embeddingProviderName === 'voyage' &&
+      hydeOptions?.provider === undefined
+    ) {
+      return yield* Effect.fail(
+        new CapabilityNotSupported({
+          provider: 'voyage',
+          capability: 'generateText',
+          supportedAlternatives: OPENAI_COMPATIBLE_PROVIDER_IDS,
+        }),
+      )
+    }
 
-  const provider: HydeProviderName =
-    hydeOptions?.provider ?? inheritedProvider ?? 'openai'
+    const inheritedProvider: HydeProviderName | undefined =
+      embeddingProviderName === 'voyage' ? undefined : embeddingProviderName
 
-  // Inherit the embedding-side baseURL whenever the resolved HyDE provider
-  // matches the embedding provider. This covers both the implicit case
-  // (HyDE inherits the provider) and the explicit case (the caller pins
-  // HyDE to the same provider as the embedding side and expects the
-  // custom baseURL to carry across — fixes finding #2).
-  const inheritedBaseURL =
-    inheritedProvider !== undefined && inheritedProvider === provider
-      ? options.providerConfig?.baseURL
-      : undefined
+    const provider: HydeProviderName =
+      hydeOptions?.provider ?? inheritedProvider ?? 'openai'
 
-  return {
-    provider,
-    baseURL: hydeOptions?.baseURL ?? inheritedBaseURL,
-    apiKey: hydeOptions?.apiKey,
-    systemPrompt: hydeOptions?.systemPrompt,
-    model: hydeOptions?.model,
-    maxTokens: hydeOptions?.maxTokens,
-    temperature: hydeOptions?.temperature,
-  }
-}
+    // Inherit the embedding-side baseURL whenever the resolved HyDE provider
+    // matches the embedding provider. This covers both the implicit case
+    // (HyDE inherits the provider) and the explicit case (the caller pins
+    // HyDE to the same provider as the embedding side and expects the
+    // custom baseURL to carry across — fixes finding #2).
+    const inheritedBaseURL =
+      inheritedProvider !== undefined && inheritedProvider === provider
+        ? options.providerConfig?.baseURL
+        : undefined
+
+    return {
+      provider,
+      baseURL: hydeOptions?.baseURL ?? inheritedBaseURL,
+      apiKey: hydeOptions?.apiKey,
+      systemPrompt: hydeOptions?.systemPrompt,
+      model: hydeOptions?.model,
+      maxTokens: hydeOptions?.maxTokens,
+      temperature: hydeOptions?.temperature,
+    }
+  })

@@ -12,20 +12,29 @@
  *   1. Explicit `hydeOptions.*` always wins.
  *   2. Otherwise inherit `provider` and (when the resolved provider matches)
  *      `baseURL` from `options.providerConfig`.
- *   3. Voyage embedding provider falls back to openai because Voyage AI has
- *      no chat completions endpoint.
+ *   3. Voyage embedding provider fails fast with `CapabilityNotSupported`
+ *      when no explicit HyDE provider override is pinned. Voyage AI has no
+ *      chat completions endpoint, so silently falling back to openai used
+ *      to mask the real cause of credential errors.
  *   4. Otherwise leave the field undefined so `generateHypotheticalDocument`
  *      can apply its per-provider defaults.
  */
 
-import { Redacted } from 'effect'
+import { Effect, Redacted } from 'effect'
 import { describe, expect, it } from 'vitest'
+import { CapabilityNotSupported } from '../providers/index.js'
 import { resolveHydeOptions } from './hyde-options.js'
 import type { SemanticSearchOptions } from './types.js'
 
+const runResolve = (options: SemanticSearchOptions) =>
+  Effect.runSync(resolveHydeOptions(options))
+
+const runResolveEither = (options: SemanticSearchOptions) =>
+  Effect.runSync(Effect.either(resolveHydeOptions(options)))
+
 describe('resolveHydeOptions provider resolution', () => {
   it('defaults to openai when no provider info is set anywhere', () => {
-    const resolved = resolveHydeOptions({})
+    const resolved = runResolve({})
 
     expect(resolved.provider).toBe('openai')
     expect(resolved.baseURL).toBeUndefined()
@@ -36,28 +45,44 @@ describe('resolveHydeOptions provider resolution', () => {
       providerConfig: { provider: 'ollama' },
     }
 
-    const resolved = resolveHydeOptions(options)
+    const resolved = runResolve(options)
     expect(resolved.provider).toBe('ollama')
   })
 
-  it('falls back to openai when embedding side is voyage', () => {
-    // Voyage AI has no chat completions API, so HyDE silently rebinds to
-    // openai and the call site logs a debug message about the substitution.
+  it('fails fast with CapabilityNotSupported when embedding side is voyage', () => {
+    // Voyage AI has no chat completions API. The previous resolver
+    // silently substituted openai, which surfaced as a misleading
+    // OPENAI_API_KEY error inside HyDE for users running voyage-only.
+    // ALP-1703 contract: fail fast with the actionable capability error.
     const options: SemanticSearchOptions = {
       providerConfig: { provider: 'voyage' },
     }
 
-    const resolved = resolveHydeOptions(options)
-    expect(resolved.provider).toBe('openai')
+    const result = runResolveEither(options)
+    expect(result._tag).toBe('Left')
+    if (result._tag === 'Left') {
+      expect(result.left).toBeInstanceOf(CapabilityNotSupported)
+      expect(result.left.provider).toBe('voyage')
+      expect(result.left.capability).toBe('generateText')
+      // The supportedAlternatives list at this layer is the static set
+      // of OpenAI-compatible providers (registry contents are computed
+      // at runtime lookup time, not at resolve time).
+      expect(result.left.supportedAlternatives).toEqual([
+        'openai',
+        'openrouter',
+        'ollama',
+        'lm-studio',
+      ])
+    }
   })
 
-  it('lets explicit hydeOptions.provider override voyage fallback', () => {
+  it('lets explicit hydeOptions.provider override the voyage capability check', () => {
     const options: SemanticSearchOptions = {
       providerConfig: { provider: 'voyage' },
       hydeOptions: { provider: 'lm-studio' },
     }
 
-    const resolved = resolveHydeOptions(options)
+    const resolved = runResolve(options)
     expect(resolved.provider).toBe('lm-studio')
   })
 
@@ -67,7 +92,7 @@ describe('resolveHydeOptions provider resolution', () => {
       hydeOptions: { provider: 'openrouter' },
     }
 
-    const resolved = resolveHydeOptions(options)
+    const resolved = runResolve(options)
     expect(resolved.provider).toBe('openrouter')
   })
 })
@@ -81,7 +106,7 @@ describe('resolveHydeOptions baseURL resolution', () => {
       },
     }
 
-    const resolved = resolveHydeOptions(options)
+    const resolved = runResolve(options)
     expect(resolved.provider).toBe('ollama')
     expect(resolved.baseURL).toBe('http://my-ollama:11434/v1')
   })
@@ -101,7 +126,7 @@ describe('resolveHydeOptions baseURL resolution', () => {
       hydeOptions: { provider: 'ollama' },
     }
 
-    const resolved = resolveHydeOptions(options)
+    const resolved = runResolve(options)
     expect(resolved.provider).toBe('ollama')
     expect(resolved.baseURL).toBe('http://my-ollama:11434/v1')
   })
@@ -118,22 +143,25 @@ describe('resolveHydeOptions baseURL resolution', () => {
       hydeOptions: { provider: 'openrouter' },
     }
 
-    const resolved = resolveHydeOptions(options)
+    const resolved = runResolve(options)
     expect(resolved.provider).toBe('openrouter')
     expect(resolved.baseURL).toBeUndefined()
   })
 
-  it('does not inherit baseURL when embedding side is voyage', () => {
-    // Voyage falls back to openai for HyDE, and voyage's baseURL is the
-    // wrong host for openai chat completions.
+  it('does not inherit baseURL when voyage caller pins an alternative HyDE provider', () => {
+    // Voyage embedding side with an explicit override to a chat-capable
+    // provider: voyage's baseURL is the wrong host for openai-compatible
+    // chat completions, so it must not be inherited even though the
+    // voyage provider config carries one.
     const options: SemanticSearchOptions = {
       providerConfig: {
         provider: 'voyage',
         baseURL: 'https://api.voyageai.com/v1',
       },
+      hydeOptions: { provider: 'openai' },
     }
 
-    const resolved = resolveHydeOptions(options)
+    const resolved = runResolve(options)
     expect(resolved.provider).toBe('openai')
     expect(resolved.baseURL).toBeUndefined()
   })
@@ -149,7 +177,7 @@ describe('resolveHydeOptions baseURL resolution', () => {
       },
     }
 
-    const resolved = resolveHydeOptions(options)
+    const resolved = runResolve(options)
     expect(resolved.baseURL).toBe('http://other-host:8080/v1')
   })
 
@@ -160,7 +188,7 @@ describe('resolveHydeOptions baseURL resolution', () => {
       },
     }
 
-    const resolved = resolveHydeOptions(options)
+    const resolved = runResolve(options)
     expect(resolved.provider).toBe('openai')
     expect(resolved.baseURL).toBe('http://override-only:1234/v1')
   })
@@ -172,7 +200,7 @@ describe('resolveHydeOptions credential and prompt forwarding', () => {
       hydeOptions: { apiKey: 'sk-explicit' },
     }
 
-    const resolved = resolveHydeOptions(options)
+    const resolved = runResolve(options)
     expect(resolved.apiKey).toBe('sk-explicit')
   })
 
@@ -182,7 +210,7 @@ describe('resolveHydeOptions credential and prompt forwarding', () => {
       hydeOptions: { apiKey: redactedKey },
     }
 
-    const resolved = resolveHydeOptions(options)
+    const resolved = runResolve(options)
     expect(Redacted.isRedacted(resolved.apiKey)).toBe(true)
     if (Redacted.isRedacted(resolved.apiKey)) {
       expect(Redacted.value(resolved.apiKey)).toBe('sk-redacted')
@@ -190,7 +218,7 @@ describe('resolveHydeOptions credential and prompt forwarding', () => {
   })
 
   it('returns undefined apiKey when nothing is set, leaving env fallback to hyde.ts', () => {
-    const resolved = resolveHydeOptions({})
+    const resolved = runResolve({})
     expect(resolved.apiKey).toBeUndefined()
   })
 
@@ -202,7 +230,7 @@ describe('resolveHydeOptions credential and prompt forwarding', () => {
       providerConfig: { provider: 'openai' },
     }
 
-    const resolved = resolveHydeOptions(options)
+    const resolved = runResolve(options)
     expect(resolved.apiKey).toBeUndefined()
   })
 
@@ -213,7 +241,7 @@ describe('resolveHydeOptions credential and prompt forwarding', () => {
       },
     }
 
-    const resolved = resolveHydeOptions(options)
+    const resolved = runResolve(options)
     expect(resolved.systemPrompt).toBe('Answer in fewer than 100 words.')
   })
 
@@ -226,7 +254,7 @@ describe('resolveHydeOptions credential and prompt forwarding', () => {
       },
     }
 
-    const resolved = resolveHydeOptions(options)
+    const resolved = runResolve(options)
     expect(resolved.model).toBe('qwen2.5:14b')
     expect(resolved.maxTokens).toBe(768)
     expect(resolved.temperature).toBe(0.1)
@@ -237,7 +265,7 @@ describe('resolveHydeOptions credential and prompt forwarding', () => {
       providerConfig: { provider: 'ollama' },
     }
 
-    const resolved = resolveHydeOptions(options)
+    const resolved = runResolve(options)
     // resolveHydeOptions intentionally leaves model unset; the default lookup
     // happens inside generateHypotheticalDocument to keep both layers honest.
     expect(resolved.model).toBeUndefined()

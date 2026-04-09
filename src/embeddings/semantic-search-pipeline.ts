@@ -139,7 +139,10 @@ const resolveQueryText = (
   options: SemanticSearchOptions,
 ): Effect.Effect<
   string,
-  ApiKeyMissingError | ApiKeyInvalidError | EmbeddingError
+  | ApiKeyMissingError
+  | ApiKeyInvalidError
+  | EmbeddingError
+  | CapabilityNotSupported
 > =>
   Effect.gen(function* () {
     if (!options.hyde) {
@@ -152,18 +155,10 @@ const resolveQueryText = (
     //   2. Otherwise inherit from the embedding-side providerConfig where
     //      the field can be carried across (provider, baseURL).
     //   3. Otherwise fall back to per-provider defaults inside hyde.ts.
-    // Voyage cannot serve chat completions, so when the embedding side is
-    // voyage and the user did not pin a HyDE provider explicitly we
-    // silently fall back to openai for the LLM call.
-    if (
-      options.providerConfig?.provider === 'voyage' &&
-      options.hydeOptions?.provider === undefined
-    ) {
-      yield* Effect.logDebug(
-        'HyDE: voyage embedding provider does not support chat completions, falling back to openai for HyDE generation',
-      )
-    }
-    const resolvedHydeOptions = resolveHydeOptions(options)
+    // Voyage cannot serve chat completions; resolveHydeOptions fails fast
+    // with CapabilityNotSupported when the embedding side is voyage and
+    // no explicit HyDE provider override is pinned.
+    const resolvedHydeOptions = yield* resolveHydeOptions(options)
     const hydeResult = yield* generateHypotheticalDocument(
       query,
       resolvedHydeOptions,

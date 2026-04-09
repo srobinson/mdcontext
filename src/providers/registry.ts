@@ -5,13 +5,26 @@
  * registration is wired by `registerDefaultProviders()` — it is not
  * invoked at module load so test suites and bootstrap code keep
  * control of when the registry is populated.
+ *
+ * Capability dispatch (`getCapability`) also lives here so that
+ * `CapabilityNotSupported` can carry the live list of registered
+ * providers that satisfy the requested capability.
  */
 
 import { Effect } from 'effect'
 import type { EmbeddingClient } from './capabilities/embed.js'
 import type { TextClient } from './capabilities/generate-text.js'
-import { MissingApiKey, ProviderNotFound } from './errors.js'
-import type { ProviderId, ProviderRuntime } from './runtime.js'
+import {
+  CapabilityNotSupported,
+  MissingApiKey,
+  ProviderNotFound,
+} from './errors.js'
+import type {
+  Capability,
+  ClientFor,
+  ProviderId,
+  ProviderRuntime,
+} from './runtime.js'
 import {
   createEmbedClient,
   createGenerateTextClient,
@@ -27,28 +40,34 @@ import {
 const registry = new Map<ProviderId, ProviderRuntime>()
 
 /**
- * Providers whose construction was attempted by `registerDefaultProviders`
- * but produced a `MissingApiKey` error for every capability. Tracked so
- * `getProvider` can surface the actionable "Set X_API_KEY" message instead
- * of the opaque "Provider not found" message for known-but-unconfigured
- * providers.
+ * Permissive registration of a default provider can fail when the
+ * provider's credential is unset. We capture the `MissingApiKey` here
+ * so a subsequent `getProvider(id)` returns the actionable credential
+ * error instead of `ProviderNotFound`. Without this map a consumer who
+ * pins `provider: 'openrouter'` with `OPENROUTER_API_KEY` unset would
+ * see "Provider 'openrouter' is not registered" — which is technically
+ * true but tells the user to fix the wrong thing.
  */
 const registrationFailures = new Map<ProviderId, MissingApiKey>()
 
 /**
  * Register a provider runtime. Later registrations overwrite earlier
- * ones for the same id.
+ * ones for the same id and clear any previously recorded credential
+ * failure for the same id.
  */
 export function registerProvider(runtime: ProviderRuntime): void {
   registry.set(runtime.id, runtime)
+  registrationFailures.delete(runtime.id)
 }
 
 /**
  * Look up a registered provider runtime by id.
  *
- * Fails with `MissingApiKey` when the provider is known to the registry
- * but failed to construct because its API key is unset. Fails with
- * `ProviderNotFound` when the id is unknown entirely.
+ * Fails with `MissingApiKey` when the id is in the default provider set
+ * but was skipped during `registerDefaultProviders` because its
+ * credential env var was unset. Falls through to `ProviderNotFound`
+ * only when the id is genuinely unknown — typos like `openai-foo` or
+ * providers that have not been wired up yet.
  */
 export function getProvider(
   id: ProviderId,
@@ -70,9 +89,55 @@ export function getProvider(
 }
 
 /**
- * Test helper. Clears the registry so suites can install a fresh set
- * of providers without leaking state across cases. Also clears any
- * tracked registration failures.
+ * Resolve a capability client from a runtime.
+ *
+ * Fails with `CapabilityNotSupported` when the runtime does not expose
+ * the requested capability. The failure carries the provider id and
+ * the live list of registered providers that DO satisfy the capability,
+ * so the CLI boundary surfaces an actionable error of the form:
+ *
+ *     voyage does not support generateText. Use one of: openai, openrouter, ...
+ *
+ * The list is computed from the current registry contents on each
+ * lookup so test suites that install a custom provider set still see
+ * accurate alternatives.
+ */
+export function getCapability<C extends Capability>(
+  runtime: ProviderRuntime,
+  capability: C,
+): Effect.Effect<ClientFor<C>, CapabilityNotSupported> {
+  const client = runtime.capabilities[capability]
+  if (client === undefined) {
+    return Effect.fail(
+      new CapabilityNotSupported({
+        provider: runtime.id,
+        capability,
+        supportedAlternatives: listProvidersSupporting(capability),
+      }),
+    )
+  }
+  return Effect.succeed(client as ClientFor<C>)
+}
+
+/**
+ * Return the registered provider ids whose runtime exposes the given
+ * capability. Used by `getCapability` to populate
+ * `CapabilityNotSupported.supportedAlternatives` and exposed for
+ * consumers (HyDE) that need to assemble the alternative list before
+ * any registry lookup happens.
+ */
+export function listProvidersSupporting(
+  capability: Capability,
+): readonly ProviderId[] {
+  return Array.from(registry.values())
+    .filter((runtime) => runtime.capabilities[capability] !== undefined)
+    .map((runtime) => runtime.id)
+}
+
+/**
+ * Test helper. Clears both the live registry and the
+ * registration-failure map so suites can install a fresh set of
+ * providers without leaking state across cases.
  */
 export function clearRegistry(): void {
   registry.clear()
@@ -134,6 +199,14 @@ type EitherResult<A> =
  * succeeded. Voyage only ever has `embed`; the `generateText` slot is
  * intentionally left empty so consumers hit `CapabilityNotSupported`
  * rather than a silent fallback.
+ *
+ * When every capability failed construction we record the credential
+ * failure in `registrationFailures` so a later `getProvider(id)`
+ * surfaces `MissingApiKey` (the actionable form) rather than
+ * `ProviderNotFound` (the misleading form). The two eithers fail with
+ * the same `MissingApiKey` for OpenAI-compatible providers because
+ * embed and generateText share a single env var, so picking `embed`
+ * is arbitrary.
  */
 const commitProvider = (
   id: ProviderId,
@@ -142,16 +215,9 @@ const commitProvider = (
   generateText: EitherResult<TextClient>,
 ): void => {
   if (embed._tag === 'Left' && generateText._tag === 'Left') {
-    // Every capability failed construction. Track the failure so
-    // `getProvider` can return the actionable `MissingApiKey` error
-    // instead of the opaque `ProviderNotFound`. Prefer the embed-side
-    // error because it carries the real env var name; for Voyage the
-    // generateText slot is a synthetic placeholder.
     registrationFailures.set(id, embed.left)
     return
   }
-  // Clear any stale failure from a previous registration attempt.
-  registrationFailures.delete(id)
   const capabilities: ProviderRuntime['capabilities'] = {
     ...(embed._tag === 'Right' ? { embed: embed.right } : {}),
     ...(generateText._tag === 'Right'
