@@ -86,11 +86,11 @@ const detectOllamaError = (error: unknown): ProviderError | null => {
     message.includes('connect econnrefused') ||
     message.includes('connection refused')
   ) {
-    // Check if it's Ollama's port
-    if (
-      error.message.includes('11434') ||
-      error.message.includes('localhost:11434')
-    ) {
+    // Confirm the connection-refused error came from ollama's default
+    // port via the runtime port-to-provider map. Avoids hardcoding
+    // `11434` here so adding a new openai-compatible provider in
+    // PROVIDER_CONFIGS automatically extends this check.
+    if (inferProviderFromErrorMessage(error.message) === 'ollama') {
       return {
         type: 'daemon-not-running',
         provider: 'ollama',
@@ -156,10 +156,11 @@ const detectLMStudioError = (error: unknown): ProviderError | null => {
     message.includes('connect econnrefused') ||
     message.includes('connection refused')
   ) {
-    if (
-      error.message.includes('1234') ||
-      error.message.includes('localhost:1234')
-    ) {
+    // Confirm the connection-refused error came from lm-studio's
+    // default port via the runtime port-to-provider map. Avoids
+    // hardcoding `1234` here so adding a new openai-compatible
+    // provider in PROVIDER_CONFIGS automatically extends this check.
+    if (inferProviderFromErrorMessage(error.message) === 'lm-studio') {
       return {
         type: 'gui-not-running',
         provider: 'lm-studio',
