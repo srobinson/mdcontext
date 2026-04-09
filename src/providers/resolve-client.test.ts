@@ -39,7 +39,7 @@ import type {
 } from './capabilities/generate-text.js'
 import { MissingApiKey } from './errors.js'
 import { clearRegistry, registerProvider } from './registry.js'
-import { resolveClient } from './resolve-client.js'
+import { getResolvedBaseURL, resolveClient } from './resolve-client.js'
 import type { OpenAICompatibleProviderId } from './transports/openai-compatible.js'
 
 // ============================================================================
@@ -398,5 +398,56 @@ describe('resolveClient', () => {
         expect(result.left._tag).toBe('CapabilityNotSupported')
       }
     })
+  })
+})
+
+describe('getResolvedBaseURL', () => {
+  // Sync helper; no registry or mock state needed. These tests lock in
+  // the "voyage has no custom-host concept" contract so feature-layer
+  // callers like `semantic-search-build.ts:vectorStore.setProvider` can
+  // hand off the decision entirely to the runtime.
+
+  it('returns the caller override when set for an openai-compatible provider', () => {
+    expect(
+      getResolvedBaseURL('openai', { baseURL: 'https://proxy.example/v1' }),
+    ).toBe('https://proxy.example/v1')
+  })
+
+  it('returns the transport default when no override is supplied for a provider that has one', () => {
+    expect(getResolvedBaseURL('ollama')).toBe('http://localhost:11434/v1')
+    expect(getResolvedBaseURL('lm-studio')).toBe('http://localhost:1234/v1')
+    expect(getResolvedBaseURL('openrouter')).toBe(
+      'https://openrouter.ai/api/v1',
+    )
+  })
+
+  it('returns undefined for openai which has no transport default', () => {
+    // The upstream SDK picks its own default for openai, so the
+    // provider's transport default is undefined. Persisted metadata
+    // records that "no explicit endpoint" was used.
+    expect(getResolvedBaseURL('openai')).toBeUndefined()
+  })
+
+  it('returns undefined for voyage even when a baseURL override is supplied', () => {
+    // Voyage has no custom-host concept at the vector-store-metadata
+    // layer. The runtime hides this from feature callers so they do
+    // not need a `providerName === 'voyage'` branch of their own.
+    expect(
+      getResolvedBaseURL('voyage', { baseURL: 'https://ignored.example/v1' }),
+    ).toBeUndefined()
+  })
+
+  it('returns undefined for voyage with no overrides', () => {
+    expect(getResolvedBaseURL('voyage')).toBeUndefined()
+  })
+
+  it('treats { baseURL: undefined } the same as no override', () => {
+    // Consumers commonly spread `providerConfig` into the overrides
+    // object, leaving baseURL as an explicit undefined when the caller
+    // did not set one. The helper must fall back to the transport
+    // default in that case, not return undefined.
+    expect(getResolvedBaseURL('ollama', { baseURL: undefined })).toBe(
+      'http://localhost:11434/v1',
+    )
   })
 })

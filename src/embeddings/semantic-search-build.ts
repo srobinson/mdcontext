@@ -32,7 +32,7 @@ import type {
 import {
   type CapabilityNotSupported,
   type EmbeddingClient,
-  getEffectiveBaseURL,
+  getResolvedBaseURL,
   type ProviderId,
   type ProviderNotFound,
 } from '../providers/index.js'
@@ -377,16 +377,13 @@ export const buildEmbeddings = (
       options.hnswOptions,
     )
 
-    // Record the endpoint the runtime actually dialled. For openai-compatible
-    // providers this is the caller override (when set) or the per-provider
-    // transport default; for voyage the field is left empty because voyage
-    // has no custom-host concept.
-    const effectiveBaseURL =
-      providerName === 'voyage'
-        ? undefined
-        : getEffectiveBaseURL(providerName, {
-            baseURL: providerConfig.baseURL,
-          })
+    // Record the endpoint the runtime actually dialled. The runtime
+    // owns the per-provider "is there a custom-host concept?" decision
+    // — voyage returns undefined, openai-compatible returns the caller
+    // override (when set) or the transport default.
+    const effectiveBaseURL = getResolvedBaseURL(providerName, {
+      baseURL: providerConfig.baseURL,
+    })
     vectorStore.setProvider(providerName, providerModel, effectiveBaseURL)
 
     // Load existing vectors for delta computation (skip on --force)

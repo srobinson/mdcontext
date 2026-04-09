@@ -52,7 +52,7 @@ export {
   registerProvider,
 } from './registry.js'
 // Runtime entry point (capability resolution with optional overrides)
-export { resolveClient } from './resolve-client.js'
+export { getResolvedBaseURL, resolveClient } from './resolve-client.js'
 // Runtime types
 export type {
   Capability,
@@ -82,7 +82,6 @@ export type {
 // own public API).
 export {
   type ClientOverrides,
-  getEffectiveBaseURL,
   getProviderBaseURL,
   hasAnyRemoteApiKey,
   OPENAI_COMPATIBLE_PROVIDER_IDS,

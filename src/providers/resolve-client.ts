@@ -42,6 +42,7 @@ import {
   type ClientOverrides,
   createEmbedClient,
   createGenerateTextClient,
+  getEffectiveBaseURL,
   type OpenAICompatibleProviderId,
 } from './transports/openai-compatible.js'
 
@@ -128,4 +129,30 @@ export const resolveClient = <C extends Capability>(
     )
     return yield* getCapability(runtime, capability)
   })
+}
+
+/**
+ * Return the base URL to persist as endpoint metadata for a given
+ * provider, or `undefined` if the provider has no custom-host concept.
+ *
+ * For OpenAI-compatible providers this is the caller's override if set,
+ * otherwise the transport default advertised by the provider. For
+ * voyage (and any future non-openai-compatible provider that exposes no
+ * custom-host concept) the result is `undefined`, so the metadata layer
+ * records "no endpoint" rather than a sentinel URL the caller could
+ * never have overridden.
+ *
+ * Lives under `src/providers/` so consumers like vector-store
+ * persistence do not need to branch on provider id themselves. Sync
+ * because it only reads transport-layer constants and the caller's
+ * supplied overrides.
+ */
+export const getResolvedBaseURL = (
+  id: ProviderId,
+  overrides?: ClientOverrides,
+): string | undefined => {
+  if (!isOpenAICompatible(id)) {
+    return undefined
+  }
+  return getEffectiveBaseURL(id, overrides)
 }
