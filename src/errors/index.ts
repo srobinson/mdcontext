@@ -604,31 +604,31 @@ export type MdmError =
  * you add a new `MdmError` variant, update both this set and
  * `formatError`.
  */
-const MDM_ERROR_TAGS: ReadonlySet<MdmError['_tag']> = new Set<MdmError['_tag']>(
-  [
-    'FileReadError',
-    'FileWriteError',
-    'DirectoryCreateError',
-    'DirectoryWalkError',
-    'ParseError',
-    'ApiKeyMissingError',
-    'ApiKeyInvalidError',
-    'EmbeddingError',
-    'CapabilityNotSupported',
-    'ProviderNotFound',
-    'IndexNotFoundError',
-    'IndexCorruptedError',
-    'IndexBuildError',
-    'DocumentNotFoundError',
-    'EmbeddingsNotFoundError',
-    'DimensionMismatchError',
-    'VectorStoreError',
-    'ConfigError',
-    'WatchError',
-    'CliValidationError',
-    'SummarizationError',
-  ],
-)
+export const MDM_ERROR_TAGS: ReadonlySet<MdmError['_tag']> = new Set<
+  MdmError['_tag']
+>([
+  'FileReadError',
+  'FileWriteError',
+  'DirectoryCreateError',
+  'DirectoryWalkError',
+  'ParseError',
+  'ApiKeyMissingError',
+  'ApiKeyInvalidError',
+  'EmbeddingError',
+  'CapabilityNotSupported',
+  'ProviderNotFound',
+  'IndexNotFoundError',
+  'IndexCorruptedError',
+  'IndexBuildError',
+  'DocumentNotFoundError',
+  'EmbeddingsNotFoundError',
+  'DimensionMismatchError',
+  'VectorStoreError',
+  'ConfigError',
+  'WatchError',
+  'CliValidationError',
+  'SummarizationError',
+])
 
 /**
  * Runtime type guard that narrows `unknown` to `MdmError`.

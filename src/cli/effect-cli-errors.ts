@@ -9,20 +9,38 @@
  */
 
 /**
+ * The discriminant tags emitted by `@effect/cli` when it raises a
+ * validation error. Exported so the top-level CLI error dispatcher
+ * test in `error-handler.test.ts` can mechanically assert that this
+ * set is disjoint from `MDM_ERROR_TAGS` — a future `@effect/cli`
+ * release that introduced a colliding `_tag` would fail that test
+ * instead of silently misrouting errors at runtime.
+ */
+export type EffectCliErrorTag =
+  | 'ValidationError'
+  | 'MissingValue'
+  | 'InvalidValue'
+  | 'CommandDirective'
+
+export const EFFECT_CLI_ERROR_TAGS: ReadonlySet<EffectCliErrorTag> =
+  new Set<EffectCliErrorTag>([
+    'ValidationError',
+    'MissingValue',
+    'InvalidValue',
+    'CommandDirective',
+  ])
+
+/**
  * Check if an error is an Effect CLI validation error.
  * Used during transition to catch @effect/cli errors.
  */
 export const isEffectCliValidationError = (error: unknown): boolean => {
-  if (error && typeof error === 'object') {
-    const err = error as Record<string, unknown>
-    return (
-      err._tag === 'ValidationError' ||
-      err._tag === 'MissingValue' ||
-      err._tag === 'InvalidValue' ||
-      err._tag === 'CommandDirective'
-    )
-  }
-  return false
+  if (!error || typeof error !== 'object') return false
+  const tag = (error as { readonly _tag?: unknown })._tag
+  return (
+    typeof tag === 'string' &&
+    (EFFECT_CLI_ERROR_TAGS as ReadonlySet<string>).has(tag)
+  )
 }
 
 /**

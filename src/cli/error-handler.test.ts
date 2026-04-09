@@ -2,15 +2,21 @@
  * Unit tests for CLI error handler
  */
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { Effect } from 'effect'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   CapabilityNotSupported,
   EmbeddingError,
   isMdmError,
+  MDM_ERROR_TAGS,
   ProviderNotFound,
 } from '../errors/index.js'
-import { formatEffectCliError } from './effect-cli-errors.js'
-import { formatError } from './error-handler.js'
+import {
+  EFFECT_CLI_ERROR_TAGS,
+  formatEffectCliError,
+  isEffectCliValidationError,
+} from './effect-cli-errors.js'
+import { formatError, handleCliTopLevelError } from './error-handler.js'
 
 describe('formatEffectCliError', () => {
   let originalArgv: string[]
@@ -432,5 +438,204 @@ describe('isMdmError: CLI boundary type guard (ALP-1715)', () => {
     expect(isMdmError(undefined)).toBe(false)
     expect(isMdmError('string')).toBe(false)
     expect(isMdmError(42)).toBe(false)
+  })
+})
+
+// ============================================================================
+// Top-level CLI error dispatcher (ALP-1717)
+//
+// These tests exercise the routing logic in `handleCliTopLevelError` —
+// the three-branch dispatcher extracted from `src/cli/main.ts`. The
+// prior ALP-1715 tests above cover the `formatError` and `isMdmError`
+// contracts in isolation; they do not verify which branch of the
+// dispatcher invokes them, the exit codes that each branch emits, or
+// the disjointness between the `@effect/cli` validation branch and
+// the `MdmError` branch. This block closes those gaps.
+// ============================================================================
+
+describe('handleCliTopLevelError (ALP-1717)', () => {
+  let exitSpy: ReturnType<typeof vi.spyOn>
+  let errorSpy: ReturnType<typeof vi.spyOn>
+
+  beforeEach(() => {
+    exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation(() => undefined as never)
+    errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    exitSpy.mockRestore()
+    errorSpy.mockRestore()
+  })
+
+  const stderrOutput = (): string =>
+    errorSpy.mock.calls.map((call: unknown[]) => call.join(' ')).join('\n')
+
+  describe('branch 1: effect-cli validation errors', () => {
+    it('exits with code 1 and prints usage hint for ValidationError', async () => {
+      const error = {
+        _tag: 'ValidationError',
+        error: {
+          _tag: 'Paragraph',
+          value: { _tag: 'Text', value: 'Missing required flag --path' },
+        },
+      }
+
+      await Effect.runPromise(handleCliTopLevelError(error))
+
+      expect(exitSpy).toHaveBeenCalledWith(1)
+      const output = stderrOutput()
+      expect(output).toContain('Error: Missing required flag --path')
+      expect(output).toContain('Run "mdm --help" for usage information')
+      expect(output).not.toContain('Stack trace:')
+      expect(output).not.toContain('Unexpected error:')
+    })
+  })
+
+  describe('branch 2: typed MdmError variants', () => {
+    it('routes CapabilityNotSupported with formatter exit code and remediation', async () => {
+      const error = new CapabilityNotSupported({
+        provider: 'voyage',
+        capability: 'generateText',
+        supportedAlternatives: ['openai', 'ollama', 'lm-studio'],
+      })
+
+      await Effect.runPromise(handleCliTopLevelError(error))
+
+      const expectedExitCode = formatError(error).exitCode
+      expect(exitSpy).toHaveBeenCalledWith(expectedExitCode)
+      const output = stderrOutput()
+      expect(output).toContain('voyage does not support generateText')
+      expect(output).toContain('Use one of: openai, ollama, lm-studio')
+      expect(output).toContain('Switch provider: --provider openai')
+      expect(output).not.toContain('Unexpected error:')
+    })
+
+    it('routes ProviderNotFound with formatter exit code and known providers', async () => {
+      const error = new ProviderNotFound({
+        id: 'cohere',
+        known: ['openai', 'voyage'],
+      })
+
+      await Effect.runPromise(handleCliTopLevelError(error))
+
+      const expectedExitCode = formatError(error).exitCode
+      expect(exitSpy).toHaveBeenCalledWith(expectedExitCode)
+      const output = stderrOutput()
+      expect(output).toContain('Provider "cohere" is not registered')
+      expect(output).toContain('Known providers: openai, voyage')
+      expect(output).toContain('Use one of: openai, voyage')
+      expect(output).not.toContain('Unexpected error:')
+    })
+
+    it('routes ProviderNotFound with empty known to bootstrap hint', async () => {
+      const error = new ProviderNotFound({ id: 'openai', known: [] })
+
+      await Effect.runPromise(handleCliTopLevelError(error))
+
+      expect(exitSpy).toHaveBeenCalledWith(formatError(error).exitCode)
+      const output = stderrOutput()
+      expect(output).toContain('Provider "openai" is not registered')
+      expect(output).toContain(
+        'Ensure provider runtime bootstrap ran before this call',
+      )
+    })
+  })
+
+  describe('branch 3: unexpected errors', () => {
+    it('prints stack trace and exits with code 2 for plain Error', async () => {
+      const error = new Error('boom')
+
+      await Effect.runPromise(handleCliTopLevelError(error))
+
+      expect(exitSpy).toHaveBeenCalledWith(2)
+      const output = stderrOutput()
+      expect(output).toContain('Unexpected error:')
+      expect(output).toContain('boom')
+      expect(output).toContain('Stack trace:')
+      // The actual stack trace must include this test frame.
+      expect(output).toContain('error-handler.test')
+    })
+
+    it('uses util.inspect and exits with code 2 for string value', async () => {
+      await Effect.runPromise(handleCliTopLevelError('raw string error'))
+
+      expect(exitSpy).toHaveBeenCalledWith(2)
+      const output = stderrOutput()
+      expect(output).toContain('Unexpected error:')
+      // util.inspect quotes string values with single quotes.
+      expect(output).toContain("'raw string error'")
+      expect(output).not.toContain('Stack trace:')
+    })
+
+    it('uses util.inspect and exits with code 2 for null', async () => {
+      await Effect.runPromise(handleCliTopLevelError(null))
+
+      expect(exitSpy).toHaveBeenCalledWith(2)
+      const output = stderrOutput()
+      expect(output).toContain('Unexpected error:')
+      expect(output).toContain('null')
+    })
+
+    it('uses util.inspect and exits with code 2 for number', async () => {
+      await Effect.runPromise(handleCliTopLevelError(42))
+
+      expect(exitSpy).toHaveBeenCalledWith(2)
+      const output = stderrOutput()
+      expect(output).toContain('Unexpected error:')
+      expect(output).toContain('42')
+    })
+  })
+})
+
+// ============================================================================
+// Dispatcher predicate disjointness (ALP-1717)
+//
+// The ALP-1715 commit message claimed "Tag sets for (1) and (2) are
+// disjoint (effect-cli uses ValidationError/MissingValue/..., MdmError
+// uses ...)". The tests below back that claim mechanically. A future
+// `@effect/cli` release that introduced a `_tag` colliding with an
+// `MdmError` variant, or a new `MdmError` variant that accidentally
+// reused an effect-cli tag, would fail one of these assertions
+// instead of silently misrouting the error at runtime.
+// ============================================================================
+
+describe('dispatcher predicate disjointness (ALP-1717)', () => {
+  it('no MdmError tag is also an effect-cli validation tag', () => {
+    const collisions = [...MDM_ERROR_TAGS].filter((tag) =>
+      (EFFECT_CLI_ERROR_TAGS as ReadonlySet<string>).has(tag),
+    )
+    expect(collisions).toEqual([])
+  })
+
+  it('no effect-cli validation tag is also an MdmError tag', () => {
+    const collisions = [...EFFECT_CLI_ERROR_TAGS].filter((tag) =>
+      (MDM_ERROR_TAGS as ReadonlySet<string>).has(tag),
+    )
+    expect(collisions).toEqual([])
+  })
+
+  it('isEffectCliValidationError rejects live MdmError instances', () => {
+    const capability = new CapabilityNotSupported({
+      provider: 'voyage',
+      capability: 'generateText',
+      supportedAlternatives: [],
+    })
+    const provider = new ProviderNotFound({ id: 'cohere', known: [] })
+    const embedding = new EmbeddingError({
+      reason: 'RateLimit',
+      message: 'slow down',
+    })
+
+    expect(isEffectCliValidationError(capability)).toBe(false)
+    expect(isEffectCliValidationError(provider)).toBe(false)
+    expect(isEffectCliValidationError(embedding)).toBe(false)
+  })
+
+  it('isMdmError rejects every effect-cli validation tag shape', () => {
+    for (const tag of EFFECT_CLI_ERROR_TAGS) {
+      expect(isMdmError({ _tag: tag, error: null })).toBe(false)
+    }
   })
 })

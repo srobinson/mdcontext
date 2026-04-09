@@ -16,6 +16,7 @@
  * - 3: API error (authentication, rate limits)
  */
 
+import * as util from 'node:util'
 import { Console, Effect, Match } from 'effect'
 import type { EmbeddingProviderName } from '../config/schema.js'
 import {
@@ -23,7 +24,16 @@ import {
   getProviderErrorTitle,
   getProviderSuggestions,
 } from '../embeddings/provider-errors.js'
-import type { ConfigError, EmbeddingError, MdmError } from '../errors/index.js'
+import {
+  type ConfigError,
+  type EmbeddingError,
+  isMdmError,
+  type MdmError,
+} from '../errors/index.js'
+import {
+  formatEffectCliError,
+  isEffectCliValidationError,
+} from './effect-cli-errors.js'
 
 // ============================================================================
 // Exit Codes
@@ -477,3 +487,62 @@ export const displayError = (
 
     yield* Console.error('')
   })
+
+// ============================================================================
+// Top-Level CLI Error Dispatcher (ALP-1717)
+// ============================================================================
+
+/**
+ * Top-level CLI error dispatcher. Routes every error that escapes the
+ * effect program into one of three branches:
+ *
+ *   1. `@effect/cli` validation errors → short error + usage hint, exit 1.
+ *   2. Typed `MdmError` variants → `formatError` + `displayError` with
+ *      actionable remediation, exit code from the formatter.
+ *   3. Everything else → diagnostic `Unexpected error` dump, exit 2.
+ *
+ * Extracted from `src/cli/main.ts` so the routing logic is testable
+ * without importing the CLI entrypoint. The disjointness between
+ * branches (1) and (2) is asserted mechanically in
+ * `error-handler.test.ts` via the intersection of
+ * `EFFECT_CLI_ERROR_TAGS` and `MDM_ERROR_TAGS` — a future dependency
+ * bump that introduced a colliding `_tag` would fail that test
+ * instead of silently misrouting errors at runtime.
+ */
+export const handleCliTopLevelError = (
+  error: unknown,
+): Effect.Effect<void, never> => {
+  if (isEffectCliValidationError(error)) {
+    return Effect.sync(() => {
+      const message = formatEffectCliError(error)
+      console.error(`\nError: ${message}`)
+      console.error('\nRun "mdm --help" for usage information.')
+      process.exit(1)
+    })
+  }
+
+  if (isMdmError(error)) {
+    const formatted = formatError(error)
+    return displayError(formatted).pipe(
+      Effect.flatMap(() =>
+        Effect.sync(() => {
+          process.exit(formatted.exitCode)
+        }),
+      ),
+    )
+  }
+
+  return Effect.sync(() => {
+    console.error('\nUnexpected error:')
+    if (error instanceof Error) {
+      console.error(`  ${error.message}`)
+      if (error.stack) {
+        console.error('\nStack trace:')
+        console.error(error.stack)
+      }
+    } else {
+      console.error(util.inspect(error, { depth: null }))
+    }
+    process.exit(2)
+  })
+}
