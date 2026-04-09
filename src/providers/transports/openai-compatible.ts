@@ -77,6 +77,36 @@ export const getProviderBaseURL = (
   id: OpenAICompatibleProviderId,
 ): string | undefined => PROVIDER_CONFIGS[id].baseURL
 
+/**
+ * Env var each remote provider reads its credential from. Returns
+ * `undefined` for local providers (ollama, lm-studio) which do not
+ * need a credential. Mirrored for consumers that need to answer
+ * "does this provider need a key?" without attempting client
+ * construction.
+ */
+export const getProviderEnvVar = (
+  id: OpenAICompatibleProviderId,
+): string | undefined => PROVIDER_CONFIGS[id].envVar
+
+/**
+ * Synchronous probe: does at least one remote OpenAI-compatible
+ * provider have its credential env var set? Local providers (ollama,
+ * lm-studio) are excluded by design — their availability depends on
+ * whether the local server is running, which this synchronous check
+ * cannot verify. Callers that need to know "can I reach a cloud
+ * provider right now" should use this helper rather than reading
+ * `process.env.OPENAI_API_KEY` directly, so adding a fifth provider
+ * to `PROVIDER_CONFIGS` extends the check automatically.
+ */
+export const hasAnyRemoteApiKey = (): boolean => {
+  for (const config of Object.values(PROVIDER_CONFIGS)) {
+    if (config.envVar === undefined) continue
+    const value = process.env[config.envVar]
+    if (value !== undefined && value !== '') return true
+  }
+  return false
+}
+
 // ============================================================================
 // Provider inference
 // ============================================================================

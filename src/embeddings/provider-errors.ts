@@ -29,20 +29,10 @@
  */
 
 import type { EmbeddingProviderName } from '../config/schema.js'
-
-// ============================================================================
-// Port Mappings (inlined from former provider-constants.ts)
-// ============================================================================
-
-/**
- * Provider port mappings used to detect which provider an error originated
- * from based on the port embedded in the error message. Single source of
- * truth now lives here because port-detection is the only consumer.
- */
-const PROVIDER_PORTS: Record<string, number> = {
-  ollama: 11434,
-  'lm-studio': 1234,
-}
+import {
+  getProviderBaseURL,
+  OPENAI_COMPATIBLE_PROVIDER_IDS,
+} from '../providers/index.js'
 
 // ============================================================================
 // Provider Error Types
@@ -86,16 +76,28 @@ export interface ProviderError {
 // ============================================================================
 
 /**
- * Detect which provider an error is from based on port number.
- * Uses PROVIDER_PORTS from provider-constants.ts as single source of truth.
+ * Detect which provider an error is from based on port number. The
+ * port for each provider is parsed out of the runtime's
+ * `getProviderBaseURL(id)` so the transport module remains the single
+ * source of truth. Remote providers (openai, openrouter) use implicit
+ * standard ports, so `URL.port` returns an empty string for them and
+ * they are naturally excluded from the match.
  */
 const detectProviderFromPort = (
   error: Error,
 ): EmbeddingProviderName | undefined => {
   const message = error.message
-  for (const [provider, port] of Object.entries(PROVIDER_PORTS)) {
-    if (port && message.includes(String(port))) {
-      return provider as EmbeddingProviderName
+  for (const id of OPENAI_COMPATIBLE_PROVIDER_IDS) {
+    const baseURL = getProviderBaseURL(id)
+    if (baseURL === undefined) continue
+    let port: string
+    try {
+      port = new URL(baseURL).port
+    } catch {
+      continue
+    }
+    if (port !== '' && message.includes(port)) {
+      return id as EmbeddingProviderName
     }
   }
   return undefined

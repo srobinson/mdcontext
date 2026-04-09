@@ -29,6 +29,7 @@ import {
 } from '../errors/index.js'
 import {
   createGenerateTextClient,
+  hasAnyRemoteApiKey,
   lookupPricing,
   type MissingApiKey,
   type OpenAICompatibleProviderId,
@@ -348,17 +349,17 @@ export const generateHypotheticalDocument = (
 /**
  * Check if HyDE is available (any supported provider's API key is set).
  *
- * Local providers (ollama, lm-studio) are intentionally not considered
- * here because their availability depends on whether the local server is
+ * Delegates to `hasAnyRemoteApiKey` so the runtime's `PROVIDER_CONFIGS`
+ * table is the single source of truth for which env vars count. Local
+ * providers (ollama, lm-studio) are intentionally not considered here
+ * because their availability depends on whether the local server is
  * running, which this synchronous check cannot verify. Callers that pin
  * HyDE to a local provider should rely on the call itself failing fast
  * with a connection error.
  *
  * @returns true if HyDE can be used with at least one remote provider
  */
-export const isHydeAvailable = (): boolean => {
-  return Boolean(process.env.OPENAI_API_KEY ?? process.env.OPENROUTER_API_KEY)
-}
+export const isHydeAvailable = (): boolean => hasAnyRemoteApiKey()
 
 /**
  * Detect if a query would benefit from HyDE expansion.

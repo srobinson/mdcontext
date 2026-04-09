@@ -62,6 +62,8 @@ export {
   createEmbedClient,
   createGenerateTextClient,
   getProviderBaseURL,
+  getProviderEnvVar,
+  hasAnyRemoteApiKey,
   inferProviderFromUrl,
   OPENAI_COMPATIBLE_PROVIDER_IDS,
   type OpenAICompatibleProviderId,
