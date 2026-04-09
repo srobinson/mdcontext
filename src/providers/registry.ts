@@ -27,6 +27,15 @@ import {
 const registry = new Map<ProviderId, ProviderRuntime>()
 
 /**
+ * Providers whose construction was attempted by `registerDefaultProviders`
+ * but produced a `MissingApiKey` error for every capability. Tracked so
+ * `getProvider` can surface the actionable "Set X_API_KEY" message instead
+ * of the opaque "Provider not found" message for known-but-unconfigured
+ * providers.
+ */
+const registrationFailures = new Map<ProviderId, MissingApiKey>()
+
+/**
  * Register a provider runtime. Later registrations overwrite earlier
  * ones for the same id.
  */
@@ -37,29 +46,37 @@ export function registerProvider(runtime: ProviderRuntime): void {
 /**
  * Look up a registered provider runtime by id.
  *
- * Fails with `ProviderNotFound` when the id has not been registered.
+ * Fails with `MissingApiKey` when the provider is known to the registry
+ * but failed to construct because its API key is unset. Fails with
+ * `ProviderNotFound` when the id is unknown entirely.
  */
 export function getProvider(
   id: ProviderId,
-): Effect.Effect<ProviderRuntime, ProviderNotFound> {
+): Effect.Effect<ProviderRuntime, ProviderNotFound | MissingApiKey> {
   const runtime = registry.get(id)
-  if (runtime === undefined) {
-    return Effect.fail(
-      new ProviderNotFound({
-        id,
-        known: Array.from(registry.keys()),
-      }),
-    )
+  if (runtime !== undefined) {
+    return Effect.succeed(runtime)
   }
-  return Effect.succeed(runtime)
+  const failure = registrationFailures.get(id)
+  if (failure !== undefined) {
+    return Effect.fail(failure)
+  }
+  return Effect.fail(
+    new ProviderNotFound({
+      id,
+      known: Array.from(registry.keys()),
+    }),
+  )
 }
 
 /**
  * Test helper. Clears the registry so suites can install a fresh set
- * of providers without leaking state across cases.
+ * of providers without leaking state across cases. Also clears any
+ * tracked registration failures.
  */
 export function clearRegistry(): void {
   registry.clear()
+  registrationFailures.clear()
 }
 
 // ============================================================================
@@ -125,8 +142,16 @@ const commitProvider = (
   generateText: EitherResult<TextClient>,
 ): void => {
   if (embed._tag === 'Left' && generateText._tag === 'Left') {
-    return // Nothing to register — every capability failed construction.
+    // Every capability failed construction. Track the failure so
+    // `getProvider` can return the actionable `MissingApiKey` error
+    // instead of the opaque `ProviderNotFound`. Prefer the embed-side
+    // error because it carries the real env var name; for Voyage the
+    // generateText slot is a synthetic placeholder.
+    registrationFailures.set(id, embed.left)
+    return
   }
+  // Clear any stale failure from a previous registration attempt.
+  registrationFailures.delete(id)
   const capabilities: ProviderRuntime['capabilities'] = {
     ...(embed._tag === 'Right' ? { embed: embed.right } : {}),
     ...(generateText._tag === 'Right'

@@ -32,6 +32,7 @@ import { CliConfig, Command } from '@effect/cli'
 import { NodeContext, NodeRuntime } from '@effect/platform-node'
 import { Effect, Layer } from 'effect'
 import type { ConfigService } from '../config/service.js'
+import { registerDefaultProviders } from '../providers/index.js'
 import { preprocessArgv } from './argv-preprocessor.js'
 import {
   backlinksCommand,
@@ -118,7 +119,12 @@ const configLayer: Layer.Layer<ConfigService> = makeCliConfigLayer({
 
 const appLayers = Layer.mergeAll(NodeContext.layer, cliConfigLayer, configLayer)
 
-Effect.suspend(() => cli(filteredArgv)).pipe(
+Effect.suspend(() =>
+  Effect.gen(function* () {
+    yield* registerDefaultProviders()
+    return yield* cli(filteredArgv)
+  }),
+).pipe(
   Effect.provide(appLayers),
   Effect.tap(() =>
     Effect.sync(() => {

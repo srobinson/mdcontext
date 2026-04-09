@@ -29,7 +29,12 @@ import type {
   SectionEntry,
   SectionIndex,
 } from '../index/types.js'
-import type { EmbeddingClient, ProviderId } from '../providers/index.js'
+import type {
+  CapabilityNotSupported,
+  EmbeddingClient,
+  ProviderId,
+  ProviderNotFound,
+} from '../providers/index.js'
 import { lookupPricing } from '../providers/pricing.js'
 import { matchPath } from '../search/path-matcher.js'
 import { getRecommendedDimensions, supportsMatryoshka } from './dimensions.js'
@@ -324,6 +329,8 @@ export const buildEmbeddings = (
   | IndexCorruptedError
   | ApiKeyMissingError
   | ApiKeyInvalidError
+  | CapabilityNotSupported
+  | ProviderNotFound
   | EmbeddingError
   | VectorStoreError
   | DimensionMismatchError

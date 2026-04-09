@@ -21,6 +21,10 @@ import type {
   VectorStoreError,
 } from '../errors/index.js'
 import { createStorage, loadSectionIndex } from '../index/storage.js'
+import type {
+  CapabilityNotSupported,
+  ProviderNotFound,
+} from '../providers/index.js'
 import {
   postProcessResults,
   prepareSearchPipeline,
@@ -30,6 +34,28 @@ import type {
   SemanticSearchResult,
   SemanticSearchResultWithStats,
 } from './types.js'
+
+// ----------------------------------------------------------------------------
+// Shared error union
+// ----------------------------------------------------------------------------
+
+/**
+ * Error union for every public `semanticSearch*` entry point. All three
+ * wrappers delegate to `prepareSearchPipeline`, so they share the same
+ * failure surface: pipeline setup, provider resolution, embedding, and
+ * vector store access.
+ */
+export type SemanticSearchError =
+  | EmbeddingsNotFoundError
+  | FileReadError
+  | IndexCorruptedError
+  | ApiKeyMissingError
+  | ApiKeyInvalidError
+  | CapabilityNotSupported
+  | ProviderNotFound
+  | EmbeddingError
+  | VectorStoreError
+  | DimensionMismatchError
 
 // ----------------------------------------------------------------------------
 // Re-exports: keep the public surface stable for external callers.
@@ -78,17 +104,7 @@ export const semanticSearch = (
   rootPath: string,
   query: string,
   options: SemanticSearchOptions = {},
-): Effect.Effect<
-  readonly SemanticSearchResult[],
-  | EmbeddingsNotFoundError
-  | FileReadError
-  | IndexCorruptedError
-  | ApiKeyMissingError
-  | ApiKeyInvalidError
-  | EmbeddingError
-  | VectorStoreError
-  | DimensionMismatchError
-> =>
+): Effect.Effect<readonly SemanticSearchResult[], SemanticSearchError> =>
   Effect.gen(function* () {
     const ctx = yield* prepareSearchPipeline(rootPath, query, options)
 
@@ -131,17 +147,7 @@ export const semanticSearchWithStats = (
   rootPath: string,
   query: string,
   options: SemanticSearchOptions = {},
-): Effect.Effect<
-  SemanticSearchResultWithStats,
-  | EmbeddingsNotFoundError
-  | FileReadError
-  | IndexCorruptedError
-  | ApiKeyMissingError
-  | ApiKeyInvalidError
-  | EmbeddingError
-  | VectorStoreError
-  | DimensionMismatchError
-> =>
+): Effect.Effect<SemanticSearchResultWithStats, SemanticSearchError> =>
   Effect.gen(function* () {
     const ctx = yield* prepareSearchPipeline(rootPath, query, options)
 
@@ -190,17 +196,7 @@ export const semanticSearchWithContent = (
   rootPath: string,
   query: string,
   options: SemanticSearchOptions = {},
-): Effect.Effect<
-  readonly SemanticSearchResult[],
-  | EmbeddingsNotFoundError
-  | FileReadError
-  | IndexCorruptedError
-  | ApiKeyMissingError
-  | ApiKeyInvalidError
-  | EmbeddingError
-  | VectorStoreError
-  | DimensionMismatchError
-> =>
+): Effect.Effect<readonly SemanticSearchResult[], SemanticSearchError> =>
   Effect.gen(function* () {
     const resolvedRoot = path.resolve(rootPath)
     const results = yield* semanticSearch(resolvedRoot, query, options)

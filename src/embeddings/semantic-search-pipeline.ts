@@ -23,7 +23,11 @@ import {
 } from '../errors/index.js'
 import { createStorage, loadSectionIndex } from '../index/storage.js'
 import type { SectionEntry } from '../index/types.js'
-import type { ProviderId } from '../providers/index.js'
+import type {
+  CapabilityNotSupported,
+  ProviderId,
+  ProviderNotFound,
+} from '../providers/index.js'
 import { matchPath } from '../search/path-matcher.js'
 import { getRecommendedDimensions, supportsMatryoshka } from './dimensions.js'
 import { createEmbeddingClient } from './embed-batched.js'
@@ -192,6 +196,8 @@ export const prepareSearchPipeline = (
   | EmbeddingsNotFoundError
   | ApiKeyMissingError
   | ApiKeyInvalidError
+  | CapabilityNotSupported
+  | ProviderNotFound
   | EmbeddingError
   | VectorStoreError
   | DimensionMismatchError

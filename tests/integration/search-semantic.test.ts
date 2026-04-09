@@ -18,6 +18,7 @@ import {
   semanticSearchWithStats,
 } from '../../src/embeddings/semantic-search.js'
 import { buildIndex } from '../../src/index/indexer.js'
+import { registerDefaultProviders } from '../../src/providers/index.js'
 
 const TEST_DIR = path.join(
   process.cwd(),
@@ -44,6 +45,11 @@ describe('semantic search integration', () => {
       )
       return
     }
+
+    // `buildEmbeddings` dispatches through the runtime registry. The CLI
+    // main path calls this at bootstrap; the integration tests skip main
+    // and hit the pipeline directly, so we mirror the bootstrap here.
+    await runEffect(registerDefaultProviders())
 
     await fs.mkdir(TEST_DIR, { recursive: true })
 

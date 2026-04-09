@@ -27,14 +27,15 @@ import {
   type EmbeddingErrorCause,
 } from '../errors/index.js'
 import {
-  createEmbedClient,
+  type CapabilityNotSupported,
   type EmbeddingClient,
   type EmbeddingResult,
-  type MissingApiKey,
+  getCapability,
+  getProvider,
   type ProviderId,
+  type ProviderNotFound,
   type EmbeddingError as RuntimeEmbeddingError,
 } from '../providers/index.js'
-import { createVoyageEmbedClient } from '../providers/transports/voyage.js'
 
 // ============================================================================
 // Types
@@ -231,34 +232,35 @@ const embedBatchWithRetry = (
 // ============================================================================
 
 /**
- * Construct an `EmbeddingClient` for the given provider id.
+ * Construct an `EmbeddingClient` for the given provider id through the
+ * runtime registry. Remaps the registry's `MissingApiKey` into the
+ * centralized `ApiKeyMissingError` so the CLI error handler keeps
+ * producing the same actionable "Set X_API_KEY" suggestions.
  *
- * Bridges the runtime's per-transport factories (`createEmbedClient` for
- * OpenAI-compatible providers, `createVoyageEmbedClient` for Voyage) and
- * remaps `MissingApiKey` into the centralized `ApiKeyMissingError` so the
- * CLI error handler keeps producing the same exit codes and suggestions
- * it produced under the old `provider-factory.ts` path.
- *
- * Bypasses the runtime registry. ALP-1703 will move this onto
- * registry-based dispatch with proper fail-fast wiring; until then the
- * direct factory call gives a clean 1:1 error story without depending
- * on `registerDefaultProviders` having been called at bootstrap.
+ * `registerDefaultProviders()` must have been invoked at CLI bootstrap
+ * before this helper resolves any provider. Callers hit
+ * `ProviderNotFound` if bootstrap was skipped, and `CapabilityNotSupported`
+ * if the provider exists but lacks an embed capability.
  */
 export const createEmbeddingClient = (
   id: ProviderId,
-): Effect.Effect<EmbeddingClient, ApiKeyMissingError> => {
-  const result: Effect.Effect<EmbeddingClient, MissingApiKey> =
-    id === 'voyage' ? createVoyageEmbedClient() : createEmbedClient(id)
-  return result.pipe(
-    Effect.mapError(
-      (e) =>
-        new ApiKeyMissingError({
-          provider: e.provider,
-          envVar: e.envVar,
-        }),
-    ),
-  )
-}
+): Effect.Effect<
+  EmbeddingClient,
+  ApiKeyMissingError | CapabilityNotSupported | ProviderNotFound
+> =>
+  Effect.gen(function* () {
+    const runtime = yield* getProvider(id).pipe(
+      Effect.catchTag('MissingApiKey', (e) =>
+        Effect.fail(
+          new ApiKeyMissingError({
+            provider: e.provider,
+            envVar: e.envVar,
+          }),
+        ),
+      ),
+    )
+    return yield* getCapability(runtime, 'embed')
+  })
 
 // ============================================================================
 // Public API
