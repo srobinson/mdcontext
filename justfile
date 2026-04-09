@@ -31,7 +31,10 @@ format:
 fix:
     biome check --write .
 
-check: format fix typecheck
+loc-limit:
+    ./scripts/check-loc-limit.sh
+
+check: format fix typecheck loc-limit
 
 
 # test:

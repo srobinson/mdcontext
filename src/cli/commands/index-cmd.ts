@@ -24,6 +24,7 @@ import {
 } from '../../embeddings/semantic-search.js'
 import { buildIndex } from '../../index/indexer.js'
 import { watchDirectory } from '../../index/watcher.js'
+import { hasAnyRemoteApiKey } from '../../providers/index.js'
 import { forceOption, jsonOption, prettyOption } from '../options.js'
 import {
   createCostEstimateErrorHandler,
@@ -483,10 +484,11 @@ export const indexCommand = Command.make(
             )
 
             if (answer === 'y' || answer === 'yes') {
-              // Check for API key (only required for cloud providers)
-              // Note: When no provider is configured, we default to OpenAI which needs a key
-              // Local providers (Ollama, LM Studio) don't need API keys
-              if (!process.env.OPENAI_API_KEY) {
+              // Gate on whether any remote provider has credentials. Local
+              // providers (ollama, lm-studio) are invoked explicitly via
+              // `--provider <name>` and bypass this branch. Delegates to
+              // the runtime so the check stays aligned with the registry.
+              if (!hasAnyRemoteApiKey()) {
                 yield* Console.log('')
                 yield* Console.log('No embedding provider configured.')
                 yield* Console.log('')

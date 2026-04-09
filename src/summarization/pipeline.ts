@@ -10,6 +10,7 @@
  */
 
 import { Effect } from 'effect'
+import { SummarizationError } from '../errors/index.js'
 import type { CostEstimate } from './cost.js'
 import { estimateSummaryCost } from './cost.js'
 import {
@@ -22,7 +23,6 @@ import {
   getBestAvailableSummarizer,
 } from './provider-factory.js'
 import type { AISummarizationConfig, SummarizationMode } from './types.js'
-import { SummarizationError } from './types.js'
 
 /**
  * Search result that can be summarized.

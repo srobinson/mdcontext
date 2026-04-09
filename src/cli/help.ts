@@ -297,7 +297,7 @@ export const helpContent: Record<string, CommandHelp> = {
       'HyDE (--hyde):',
       '  Generates hypothetical document using LLM, searches with that embedding.',
       '  Best for: "how to" questions, complex queries, ambiguous searches.',
-      '  Requires: OPENAI_API_KEY (uses gpt-4o-mini by default).',
+      '  Requires a chat provider: OPENAI_API_KEY, OPENROUTER_API_KEY, or local. Default: gpt-4o-mini.',
       '  Adds ~1-2s latency, improves recall 10-30% on complex queries.',
     ],
   },

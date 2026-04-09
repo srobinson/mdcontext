@@ -4,7 +4,7 @@
 
 import type { Redacted } from 'effect'
 import type { ContextLine } from '../core/types.js'
-import type { HydeProviderName } from './hyde.js'
+import type { OpenAICompatibleProviderId } from '../providers/index.js'
 
 export type { ContextLine } from '../core/types.js'
 
@@ -177,22 +177,28 @@ export interface SemanticSearchOptions {
    *
    * Each field is optional. When unset, the value is resolved from the
    * embedding-side `providerConfig` where it makes sense (provider, baseURL)
-   * and otherwise from per-provider defaults inside `hyde.ts`. Credentials
-   * fall through to the provider's environment variable (OPENAI_API_KEY)
-   * unless `apiKey` is set explicitly.
+   * and otherwise from per-provider defaults inside `hyde.ts`. Credential
+   * lookup is provider-specific: the runtime reads `OPENAI_API_KEY` for
+   * openai and `OPENROUTER_API_KEY` for openrouter, while ollama and
+   * lm-studio use a local sentinel and need no credential. When a remote
+   * provider's env var is unset the runtime fails fast with an actionable
+   * error naming that exact variable. Set `apiKey` to bypass env lookup
+   * entirely.
    *
    * Voyage is intentionally absent from `provider` because Voyage AI does
    * not expose a chat completion API. If the embedding side uses voyage,
-   * HyDE silently falls back to openai for generation.
+   * callers must pin `hydeOptions.provider` explicitly; otherwise the
+   * resolver fails fast with `CapabilityNotSupported` before any HTTP
+   * call is made.
    */
   readonly hydeOptions?:
     | {
         /**
          * LLM provider for HyDE generation. Defaults to the embedding-side
-         * provider (`providerConfig.provider`) when not set, or `'openai'`
-         * when the embedding side uses voyage (which has no chat API).
+         * provider (`providerConfig.provider`) when not set. Required when
+         * the embedding side uses voyage, which has no chat completion API.
          */
-        readonly provider?: HydeProviderName | undefined
+        readonly provider?: OpenAICompatibleProviderId | undefined
         /**
          * Base URL for the chat completion endpoint. Defaults to the
          * embedding-side `baseURL` when HyDE inherits the embedding
@@ -201,8 +207,10 @@ export interface SemanticSearchOptions {
         readonly baseURL?: string | undefined
         /**
          * API key for the chosen provider. Accepts plain string or
-         * `Redacted<string>`. Falls back to the env var resolution chain
-         * inside `generateHypotheticalDocument` (currently OPENAI_API_KEY).
+         * `Redacted<string>`. When unset, the runtime resolves the
+         * credential from the provider-specific env var
+         * (`OPENAI_API_KEY` for openai, `OPENROUTER_API_KEY` for
+         * openrouter; ollama and lm-studio need no credential).
          */
         readonly apiKey?: string | Redacted.Redacted<string> | undefined
         /** Custom system prompt for hypothetical document generation. */

@@ -3,12 +3,12 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { SummarizationError } from '../errors/index.js'
 import {
   createSummarizer,
   getBestAvailableSummarizer,
 } from './provider-factory.js'
 import type { AISummarizationConfig } from './types.js'
-import { SummarizationError } from './types.js'
 
 vi.mock('./cli-providers/detection.js', () => ({
   isCLIInstalled: vi.fn(),

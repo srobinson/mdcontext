@@ -3,11 +3,11 @@
  */
 
 import { describe, expect, it } from 'vitest'
+import { SummarizationError } from '../errors/index.js'
 import {
   formatSummarizationError,
   isRecoverableError,
 } from './error-handler.js'
-import { SummarizationError } from './types.js'
 
 describe('formatSummarizationError', () => {
   describe('SummarizationError handling', () => {

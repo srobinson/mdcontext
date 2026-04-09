@@ -21,7 +21,6 @@
  */
 
 import { createRequire } from 'node:module'
-import * as util from 'node:util'
 
 // Read version from package.json using createRequire for ESM compatibility
 const require = createRequire(import.meta.url)
@@ -32,6 +31,7 @@ import { CliConfig, Command } from '@effect/cli'
 import { NodeContext, NodeRuntime } from '@effect/platform-node'
 import { Effect, Layer } from 'effect'
 import type { ConfigService } from '../config/service.js'
+import { registerDefaultProviders } from '../providers/index.js'
 import { preprocessArgv } from './argv-preprocessor.js'
 import {
   backlinksCommand,
@@ -47,10 +47,7 @@ import {
   treeCommand,
 } from './commands/index.js'
 import { makeCliConfigLayer } from './config-layer.js'
-import {
-  formatEffectCliError,
-  isEffectCliValidationError,
-} from './error-handler.js'
+import { handleCliTopLevelError } from './error-handler.js'
 import {
   checkBareSubcommandHelp,
   checkSubcommandHelp,
@@ -118,7 +115,12 @@ const configLayer: Layer.Layer<ConfigService> = makeCliConfigLayer({
 
 const appLayers = Layer.mergeAll(NodeContext.layer, cliConfigLayer, configLayer)
 
-Effect.suspend(() => cli(filteredArgv)).pipe(
+Effect.suspend(() =>
+  Effect.gen(function* () {
+    yield* registerDefaultProviders()
+    return yield* cli(filteredArgv)
+  }),
+).pipe(
   Effect.provide(appLayers),
   Effect.tap(() =>
     Effect.sync(() => {
@@ -128,27 +130,6 @@ Effect.suspend(() => cli(filteredArgv)).pipe(
       setImmediate(() => process.exit(0))
     }),
   ),
-  Effect.catchAll((error: unknown) =>
-    Effect.sync(() => {
-      if (isEffectCliValidationError(error)) {
-        const message = formatEffectCliError(error)
-        console.error(`\nError: ${message}`)
-        console.error('\nRun "mdm --help" for usage information.')
-        process.exit(1)
-      }
-      // Handle all other unexpected errors instead of rethrowing
-      console.error('\nUnexpected error:')
-      if (error instanceof Error) {
-        console.error(`  ${error.message}`)
-        if (error.stack) {
-          console.error(`\nStack trace:`)
-          console.error(error.stack)
-        }
-      } else {
-        console.error(util.inspect(error, { depth: null }))
-      }
-      process.exit(2)
-    }),
-  ),
+  Effect.catchAll(handleCliTopLevelError),
   NodeRuntime.runMain,
 )

@@ -39,10 +39,12 @@ import type { BuildEmbeddingsResult } from '../embeddings/semantic-search.js'
 import type {
   ApiKeyInvalidError,
   ApiKeyMissingError,
+  CapabilityNotSupported,
   EmbeddingError,
   FileReadError,
   IndexCorruptedError,
   IndexNotFoundError,
+  ProviderNotFound,
   VectorStoreError,
 } from '../errors/index.js'
 
@@ -139,6 +141,18 @@ export const createEmbeddingErrorHandler = (
         Effect.map(() => null as BuildEmbeddingsResult | null),
       ),
     ApiKeyInvalidError: (e: ApiKeyInvalidError) =>
+      logErrorUnlessSilent(`\n${e.message}`, silent).pipe(
+        Effect.map(() => null as BuildEmbeddingsResult | null),
+      ),
+    // Provider runtime errors - capability or registry lookup failed.
+    // Render the actionable message (e.g. "voyage does not support
+    // generateText. Use one of: openai, ...") instead of silently
+    // dropping the failure into a generic "Unexpected error" branch.
+    CapabilityNotSupported: (e: CapabilityNotSupported) =>
+      logErrorUnlessSilent(`\n${e.message}`, silent).pipe(
+        Effect.map(() => null as BuildEmbeddingsResult | null),
+      ),
+    ProviderNotFound: (e: ProviderNotFound) =>
       logErrorUnlessSilent(`\n${e.message}`, silent).pipe(
         Effect.map(() => null as BuildEmbeddingsResult | null),
       ),

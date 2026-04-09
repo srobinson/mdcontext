@@ -1,11 +1,10 @@
 /**
- * Provider Constants
+ * Embedding model dimension helpers.
  *
- * Centralized constants for embedding providers to avoid duplication
- * and maintain a single source of truth.
+ * Dimension validation lives at the embedding layer, not the provider runtime.
+ * The runtime is use-case agnostic; knowing that text-embedding-3-small supports
+ * Matryoshka reduction is an embedding concern, not a provider concern.
  */
-
-import type { EmbeddingProviderName } from '../config/schema.js'
 
 // ============================================================================
 // Model Dimension Defaults
@@ -121,86 +120,4 @@ export const validateModelDimensions = (
   }
 
   return { isValid: true }
-}
-
-// ============================================================================
-// Provider Base URLs
-// ============================================================================
-
-/**
- * Default base URLs for each embedding provider.
- *
- * - openai: Uses SDK default (https://api.openai.com/v1)
- * - ollama: Local Ollama server
- * - lm-studio: Local LM Studio server
- * - openrouter: OpenRouter API gateway
- * - voyage: Voyage AI API (uses native SDK, not OpenAI-compatible)
- */
-export const PROVIDER_BASE_URLS: Record<
-  EmbeddingProviderName,
-  string | undefined
-> = {
-  openai: undefined, // Use OpenAI SDK default
-  ollama: 'http://localhost:11434/v1',
-  'lm-studio': 'http://localhost:1234/v1',
-  openrouter: 'https://openrouter.ai/api/v1',
-  voyage: 'https://api.voyageai.com/v1', // Native API, handled by VoyageProvider
-} as const
-
-// ============================================================================
-// Port Detection Utilities
-// ============================================================================
-
-/**
- * Extract port number from a URL string.
- * Returns the port if found, undefined otherwise.
- */
-const extractPortFromUrl = (url: string): number | undefined => {
-  const match = url.match(/:(\d+)\//)
-  if (!match?.[1]) return undefined
-  return parseInt(match[1], 10)
-}
-
-/**
- * Provider port mappings derived from PROVIDER_BASE_URLS.
- * Used to detect which provider an error originated from based on port number.
- */
-export const PROVIDER_PORTS: Record<string, number> = (() => {
-  const ports: Record<string, number> = {}
-  for (const [provider, url] of Object.entries(PROVIDER_BASE_URLS)) {
-    if (url) {
-      const port = extractPortFromUrl(url)
-      if (port) ports[provider] = port
-    }
-  }
-  return ports
-})()
-
-// ============================================================================
-// Provider Inference
-// ============================================================================
-
-/**
- * Infer the provider name from a base URL.
- * Uses PROVIDER_BASE_URLS as the source of truth.
- *
- * @param baseURL - The base URL to check
- * @returns The inferred provider name, or 'openai' as default
- */
-export const inferProviderFromUrl = (
-  baseURL: string | undefined,
-): EmbeddingProviderName => {
-  if (!baseURL) return 'openai'
-
-  // Check each provider's base URL
-  for (const [provider, providerUrl] of Object.entries(PROVIDER_BASE_URLS)) {
-    if (providerUrl && baseURL.includes(providerUrl.replace('/v1', ''))) {
-      return provider as EmbeddingProviderName
-    }
-  }
-
-  // Fallback check for partial URL matches (e.g., custom ports)
-  if (baseURL.includes('openrouter')) return 'openrouter'
-
-  return 'openai'
 }

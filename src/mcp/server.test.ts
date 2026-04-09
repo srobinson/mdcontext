@@ -13,7 +13,7 @@ import { Effect } from 'effect'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { defaultConfig } from '../config/schema.js'
 import { buildIndex } from '../index/indexer.js'
-import { createServer, resolveAndValidatePath } from './server.js'
+import { resolveAndValidatePath, startMcpServer } from './server.js'
 
 // ============================================================================
 // Fixtures
@@ -32,11 +32,14 @@ const getText = (result: Record<string, unknown>): string => {
 // ============================================================================
 
 /**
- * Create a connected MCP client/server pair for testing.
- * Uses InMemoryTransport so no real I/O occurs.
+ * Create a connected MCP client/server pair for testing. Uses
+ * `startMcpServer` (matching the production entrypoint) so the provider
+ * runtime is bootstrapped before the tightened `md_search` regression
+ * test runs, rather than depending on the import-time side effect of
+ * `main()`. InMemoryTransport keeps it stdio-free.
  */
 const createTestClientServer = async (rootPath: string) => {
-  const server = createServer(rootPath, defaultConfig)
+  const server = await startMcpServer(rootPath, defaultConfig)
   const [clientTransport, serverTransport] =
     InMemoryTransport.createLinkedPair()
 
@@ -333,17 +336,26 @@ describe('MCP Server', () => {
   // ==========================================================================
 
   describe('md_search', () => {
-    it('should return results or error (requires embeddings)', async () => {
+    it('does not surface the "(none registered)" registry-empty regression (ALP-1713)', async () => {
+      // Before the fix, the MCP entrypoint never called
+      // `registerDefaultProviders()`, so `md_search` resolved its
+      // embedding client from an empty registry and returned
+      // `Provider "openai" is not registered. Known providers: (none
+      // registered).`
+      //
+      // Without tightening, the old "any string is success" assertion
+      // accepted that error as a valid outcome and hid the regression.
+      // The new assertion rejects the specific failure text while still
+      // tolerating legitimate downstream errors (missing embeddings,
+      // missing credentials, upstream provider faults).
       const result = await client.callTool({
         name: 'md_search',
         arguments: { query: 'getting started guide' },
       })
-
-      // Semantic search requires embeddings which may not be built.
-      // The handler catches all errors, so we just verify the response structure.
       const text = getText(result)
-      expect(text).toBeDefined()
       expect(typeof text).toBe('string')
+      expect(text).not.toMatch(/\(none registered\)/)
+      expect(text).not.toMatch(/is not registered\. Known providers:/)
     })
   })
 

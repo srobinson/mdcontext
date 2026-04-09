@@ -29,7 +29,7 @@
  */
 
 import type { EmbeddingProviderName } from '../config/schema.js'
-import { PROVIDER_PORTS } from './provider-constants.js'
+import { inferProviderFromErrorMessage } from '../providers/index.js'
 
 // ============================================================================
 // Provider Error Types
@@ -69,26 +69,6 @@ export interface ProviderError {
 }
 
 // ============================================================================
-// Port Detection
-// ============================================================================
-
-/**
- * Detect which provider an error is from based on port number.
- * Uses PROVIDER_PORTS from provider-constants.ts as single source of truth.
- */
-const detectProviderFromPort = (
-  error: Error,
-): EmbeddingProviderName | undefined => {
-  const message = error.message
-  for (const [provider, port] of Object.entries(PROVIDER_PORTS)) {
-    if (port && message.includes(String(port))) {
-      return provider as EmbeddingProviderName
-    }
-  }
-  return undefined
-}
-
-// ============================================================================
 // Ollama Error Detection
 // ============================================================================
 
@@ -106,11 +86,11 @@ const detectOllamaError = (error: unknown): ProviderError | null => {
     message.includes('connect econnrefused') ||
     message.includes('connection refused')
   ) {
-    // Check if it's Ollama's port
-    if (
-      error.message.includes('11434') ||
-      error.message.includes('localhost:11434')
-    ) {
+    // Confirm the connection-refused error came from ollama's default
+    // port via the runtime port-to-provider map. Avoids hardcoding
+    // `11434` here so adding a new openai-compatible provider in
+    // PROVIDER_CONFIGS automatically extends this check.
+    if (inferProviderFromErrorMessage(error.message) === 'ollama') {
       return {
         type: 'daemon-not-running',
         provider: 'ollama',
@@ -176,10 +156,11 @@ const detectLMStudioError = (error: unknown): ProviderError | null => {
     message.includes('connect econnrefused') ||
     message.includes('connection refused')
   ) {
-    if (
-      error.message.includes('1234') ||
-      error.message.includes('localhost:1234')
-    ) {
+    // Confirm the connection-refused error came from lm-studio's
+    // default port via the runtime port-to-provider map. Avoids
+    // hardcoding `1234` here so adding a new openai-compatible
+    // provider in PROVIDER_CONFIGS automatically extends this check.
+    if (inferProviderFromErrorMessage(error.message) === 'lm-studio') {
       return {
         type: 'gui-not-running',
         provider: 'lm-studio',
@@ -386,12 +367,18 @@ export const detectProviderError = (
 
 /**
  * Auto-detect provider from error (for cases where provider context is lost)
+ *
+ * Delegates to the runtime-layer `inferProviderFromErrorMessage` so the
+ * port-to-provider mapping stays in a single place. Only local
+ * providers with explicit ports in their baseURL (ollama, lm-studio)
+ * can be identified this way; remote providers use implicit standard
+ * ports and are naturally excluded.
  */
 export const detectProviderFromError = (
   error: unknown,
 ): EmbeddingProviderName | undefined => {
   if (error instanceof Error) {
-    return detectProviderFromPort(error)
+    return inferProviderFromErrorMessage(error.message)
   }
   return undefined
 }
@@ -474,7 +461,6 @@ export const getProviderSuggestions = (error: ProviderError): string[] => {
       return [
         'Get an API key: https://openrouter.ai/keys',
         'Set the key: export OPENROUTER_API_KEY=sk-or-...',
-        'Or set: export OPENAI_API_KEY=sk-or-...',
         'Note: OpenRouter keys start with sk-or-',
       ]
 

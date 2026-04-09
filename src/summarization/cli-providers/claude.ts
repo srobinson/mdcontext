@@ -8,12 +8,12 @@
  */
 
 import { spawn } from 'node:child_process'
+import { SummarizationError } from '../../errors/index.js'
 import type {
   StreamingSummarizer,
   StreamOptions,
   SummaryResult,
 } from '../types.js'
-import { SummarizationError } from '../types.js'
 
 /**
  * Claude CLI provider for summarization.
