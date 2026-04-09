@@ -8,6 +8,12 @@
 import { Data } from 'effect'
 import type { Capability, ProviderId } from './runtime.js'
 
+// Error codes are mirrored as string literals (not imported from
+// `src/errors/index.ts`) because `errors/index.ts` re-exports these
+// classes into `MdmError`, and importing `ErrorCode` back from there
+// would create a circular module load. See `ErrorCode` in
+// `src/errors/index.ts` for the canonical registry.
+
 export class CapabilityNotSupported extends Data.TaggedError(
   'CapabilityNotSupported',
 )<{
@@ -15,6 +21,9 @@ export class CapabilityNotSupported extends Data.TaggedError(
   readonly capability: Capability
   readonly supportedAlternatives: readonly ProviderId[]
 }> {
+  get code(): string {
+    return 'E321'
+  }
   get message(): string {
     const alternatives =
       this.supportedAlternatives.length > 0
@@ -37,6 +46,9 @@ export class ProviderNotFound extends Data.TaggedError('ProviderNotFound')<{
   readonly id: string
   readonly known: readonly ProviderId[]
 }> {
+  get code(): string {
+    return 'E320'
+  }
   get message(): string {
     const knownList =
       this.known.length > 0 ? this.known.join(', ') : '(none registered)'

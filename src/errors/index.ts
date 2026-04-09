@@ -105,6 +105,8 @@ export const ErrorCode = {
   EMBEDDING_NETWORK: 'E312',
   EMBEDDING_MODEL: 'E313',
   EMBEDDING_UNKNOWN: 'E319',
+  PROVIDER_NOT_FOUND: 'E320',
+  CAPABILITY_NOT_SUPPORTED: 'E321',
 
   // Index errors (E4xx)
   INDEX_NOT_FOUND: 'E400',
@@ -533,6 +535,26 @@ export type FileSystemError =
  */
 export type ApiError = ApiKeyMissingError | ApiKeyInvalidError | EmbeddingError
 
+// Provider runtime errors are owned by `src/providers/errors.ts` but
+// surface at the CLI boundary through `MdmError`, so the CLI error
+// handler can render actionable remediation for them alongside the
+// other tagged errors.
+export {
+  CapabilityNotSupported,
+  ProviderNotFound,
+} from '../providers/errors.js'
+
+import type {
+  CapabilityNotSupported,
+  ProviderNotFound,
+} from '../providers/errors.js'
+
+/**
+ * Provider runtime errors that can surface at the CLI boundary when
+ * the registry rejects a capability lookup.
+ */
+export type ProviderRuntimeError = CapabilityNotSupported | ProviderNotFound
+
 /**
  * All index-related errors
  */
@@ -557,6 +579,7 @@ export type MdmError =
   | FileSystemError
   | ParseError
   | ApiError
+  | ProviderRuntimeError
   | IndexError
   | SearchError
   | VectorStoreError
@@ -564,3 +587,60 @@ export type MdmError =
   | WatchError
   | CliValidationError
   | SummarizationError
+
+// ============================================================================
+// MdmError Type Guard
+// ============================================================================
+
+/**
+ * The full set of `_tag` discriminants that belong to `MdmError`.
+ *
+ * The `ReadonlySet<MdmError['_tag']>` type enforces that every string
+ * literal in the set is a valid `MdmError` tag. TypeScript does NOT
+ * catch omissions from this set on its own, but the companion
+ * `formatError` in `src/cli/error-handler.ts` uses `Match.tagsExhaustive`
+ * and will fail to compile if a new `MdmError` variant is added
+ * without a handler, giving us a drift alarm via the formatter. When
+ * you add a new `MdmError` variant, update both this set and
+ * `formatError`.
+ */
+const MDM_ERROR_TAGS: ReadonlySet<MdmError['_tag']> = new Set<MdmError['_tag']>(
+  [
+    'FileReadError',
+    'FileWriteError',
+    'DirectoryCreateError',
+    'DirectoryWalkError',
+    'ParseError',
+    'ApiKeyMissingError',
+    'ApiKeyInvalidError',
+    'EmbeddingError',
+    'CapabilityNotSupported',
+    'ProviderNotFound',
+    'IndexNotFoundError',
+    'IndexCorruptedError',
+    'IndexBuildError',
+    'DocumentNotFoundError',
+    'EmbeddingsNotFoundError',
+    'DimensionMismatchError',
+    'VectorStoreError',
+    'ConfigError',
+    'WatchError',
+    'CliValidationError',
+    'SummarizationError',
+  ],
+)
+
+/**
+ * Runtime type guard that narrows `unknown` to `MdmError`.
+ *
+ * Used at the CLI boundary in `src/cli/main.ts` to route typed
+ * domain errors through `formatError`/`displayError` for actionable
+ * remediation instead of the generic `Unexpected error` fallback.
+ */
+export const isMdmError = (error: unknown): error is MdmError => {
+  if (error === null || typeof error !== 'object') {
+    return false
+  }
+  const tag = (error as { readonly _tag?: unknown })._tag
+  return typeof tag === 'string' && MDM_ERROR_TAGS.has(tag as MdmError['_tag'])
+}

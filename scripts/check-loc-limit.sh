@@ -31,7 +31,6 @@ BASELINE=$(cat <<'EOF'
 841	src/errors/errors.test.ts
 823	src/embeddings/vector-store.ts
 713	src/cli/help.ts
-704	src/cli/error-handler.ts
 EOF
 )
 

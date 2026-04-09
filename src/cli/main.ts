@@ -32,6 +32,7 @@ import { CliConfig, Command } from '@effect/cli'
 import { NodeContext, NodeRuntime } from '@effect/platform-node'
 import { Effect, Layer } from 'effect'
 import type { ConfigService } from '../config/service.js'
+import { isMdmError } from '../errors/index.js'
 import { registerDefaultProviders } from '../providers/index.js'
 import { preprocessArgv } from './argv-preprocessor.js'
 import {
@@ -51,7 +52,8 @@ import { makeCliConfigLayer } from './config-layer.js'
 import {
   formatEffectCliError,
   isEffectCliValidationError,
-} from './error-handler.js'
+} from './effect-cli-errors.js'
+import { displayError, formatError } from './error-handler.js'
 import {
   checkBareSubcommandHelp,
   checkSubcommandHelp,
@@ -134,15 +136,33 @@ Effect.suspend(() =>
       setImmediate(() => process.exit(0))
     }),
   ),
-  Effect.catchAll((error: unknown) =>
-    Effect.sync(() => {
-      if (isEffectCliValidationError(error)) {
+  Effect.catchAll((error: unknown) => {
+    if (isEffectCliValidationError(error)) {
+      return Effect.sync(() => {
         const message = formatEffectCliError(error)
         console.error(`\nError: ${message}`)
         console.error('\nRun "mdm --help" for usage information.')
         process.exit(1)
-      }
-      // Handle all other unexpected errors instead of rethrowing
+      })
+    }
+
+    // Typed domain errors get actionable remediation via formatError +
+    // displayError instead of the generic "Unexpected error" dump. This
+    // is where provider runtime failures (CapabilityNotSupported,
+    // ProviderNotFound) surface as user-facing messages with
+    // suggestions, alongside every other MdmError variant.
+    if (isMdmError(error)) {
+      const formatted = formatError(error)
+      return displayError(formatted).pipe(
+        Effect.flatMap(() =>
+          Effect.sync(() => process.exit(formatted.exitCode)),
+        ),
+      )
+    }
+
+    // Truly unexpected errors (non-MdmError, non-CLI-validation) fall
+    // through to the diagnostic dump path.
+    return Effect.sync(() => {
       console.error('\nUnexpected error:')
       if (error instanceof Error) {
         console.error(`  ${error.message}`)
@@ -154,7 +174,7 @@ Effect.suspend(() =>
         console.error(util.inspect(error, { depth: null }))
       }
       process.exit(2)
-    }),
-  ),
+    })
+  }),
   NodeRuntime.runMain,
 )

@@ -3,8 +3,14 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { EmbeddingError } from '../errors/index.js'
-import { formatEffectCliError, formatError } from './error-handler.js'
+import {
+  CapabilityNotSupported,
+  EmbeddingError,
+  isMdmError,
+  ProviderNotFound,
+} from '../errors/index.js'
+import { formatEffectCliError } from './effect-cli-errors.js'
+import { formatError } from './error-handler.js'
 
 describe('formatEffectCliError', () => {
   let originalArgv: string[]
@@ -271,5 +277,160 @@ describe('security: API key redaction in formatError output', () => {
     const suggestionsStr = JSON.stringify(formatted.suggestions)
     expect(suggestionsStr).not.toContain('sk-secret-token')
     expect(suggestionsStr).not.toContain('my-password')
+  })
+})
+
+// ============================================================================
+// Provider runtime errors at the CLI boundary (ALP-1715)
+//
+// These tests pin the actionable-remediation contract for provider
+// runtime failures. Before ALP-1715, `CapabilityNotSupported` and
+// `ProviderNotFound` escaped `src/embeddings/semantic-search*.ts` and
+// fell through `main.ts` into the generic `Unexpected error` branch.
+// The tests below assert that `formatError` now produces typed,
+// user-facing output for both shapes, and that `isMdmError` correctly
+// classifies them so main.ts can route them through the formatter.
+// ============================================================================
+
+describe('formatError: CapabilityNotSupported (ALP-1715)', () => {
+  it('renders actionable message with alternatives (voyage + HyDE scenario)', () => {
+    // The spec's canonical example: voyage is requested for HyDE but
+    // voyage only supports embed, not generateText.
+    const error = new CapabilityNotSupported({
+      provider: 'voyage',
+      capability: 'generateText',
+      supportedAlternatives: ['openai', 'ollama', 'lm-studio'],
+    })
+
+    const formatted = formatError(error)
+
+    expect(formatted.code).toBe('E321')
+    expect(formatted.message).toBe('voyage does not support generateText')
+    expect(formatted.suggestions).toEqual([
+      'Use one of: openai, ollama, lm-studio',
+      'Switch provider: --provider openai',
+    ])
+    // Capability mismatches are user errors — the user chose the wrong
+    // provider — not system faults, so exit code is USER_ERROR.
+    expect(formatted.exitCode).toBe(1)
+  })
+
+  it('renders remediation when no alternatives exist', () => {
+    const error = new CapabilityNotSupported({
+      provider: 'voyage',
+      capability: 'generateText',
+      supportedAlternatives: [],
+    })
+
+    const formatted = formatError(error)
+
+    expect(formatted.code).toBe('E321')
+    expect(formatted.message).toBe('voyage does not support generateText')
+    expect(formatted.suggestions).toEqual([
+      'No providers currently support generateText',
+      'Check your provider configuration',
+    ])
+    expect(formatted.exitCode).toBe(1)
+  })
+
+  it('does not fall through to the generic Unexpected error branch', () => {
+    const error = new CapabilityNotSupported({
+      provider: 'voyage',
+      capability: 'generateText',
+      supportedAlternatives: ['openai'],
+    })
+
+    // The FormattedError must carry a real code and suggestions — the
+    // "Unexpected error" path produces neither.
+    const formatted = formatError(error)
+    expect(formatted.code).toMatch(/^E\d{3}$/)
+    expect(formatted.suggestions).toBeDefined()
+    expect(formatted.suggestions?.length).toBeGreaterThan(0)
+  })
+})
+
+describe('formatError: ProviderNotFound (ALP-1715)', () => {
+  it('renders remediation listing known providers', () => {
+    const error = new ProviderNotFound({
+      id: 'cohere',
+      known: ['openai', 'voyage', 'ollama'],
+    })
+
+    const formatted = formatError(error)
+
+    expect(formatted.code).toBe('E320')
+    expect(formatted.message).toBe('Provider "cohere" is not registered')
+    expect(formatted.details).toBe('Known providers: openai, voyage, ollama')
+    expect(formatted.suggestions).toEqual([
+      'Use one of: openai, voyage, ollama',
+    ])
+    expect(formatted.exitCode).toBe(1)
+  })
+
+  it('renders unbootstrapped-registry hint when known is empty', () => {
+    // This is the shape an unbootstrapped registry returns — the
+    // ALP-1713/ALP-1714 regression. The CLI must still render
+    // actionable remediation pointing at the bootstrap step, not
+    // dump a generic "Unexpected error".
+    const error = new ProviderNotFound({
+      id: 'openai',
+      known: [],
+    })
+
+    const formatted = formatError(error)
+
+    expect(formatted.code).toBe('E320')
+    expect(formatted.message).toBe('Provider "openai" is not registered')
+    expect(formatted.details).toBe('No providers are registered')
+    expect(formatted.suggestions).toEqual([
+      'Ensure provider runtime bootstrap ran before this call',
+    ])
+    expect(formatted.exitCode).toBe(1)
+  })
+})
+
+describe('isMdmError: CLI boundary type guard (ALP-1715)', () => {
+  it('classifies CapabilityNotSupported as an MdmError', () => {
+    const error = new CapabilityNotSupported({
+      provider: 'voyage',
+      capability: 'generateText',
+      supportedAlternatives: ['openai'],
+    })
+    expect(isMdmError(error)).toBe(true)
+  })
+
+  it('classifies ProviderNotFound as an MdmError', () => {
+    const error = new ProviderNotFound({ id: 'missing', known: [] })
+    expect(isMdmError(error)).toBe(true)
+  })
+
+  it('classifies EmbeddingError as an MdmError', () => {
+    const error = new EmbeddingError({
+      reason: 'RateLimit',
+      message: 'Too many requests',
+    })
+    expect(isMdmError(error)).toBe(true)
+  })
+
+  it('rejects plain Error instances', () => {
+    expect(isMdmError(new Error('boom'))).toBe(false)
+  })
+
+  it('rejects untagged objects', () => {
+    expect(isMdmError({ message: 'boom' })).toBe(false)
+  })
+
+  it('rejects objects with unknown tags', () => {
+    // A tagged error from outside the MdmError union (e.g. an Effect
+    // CLI ValidationError) must not be misclassified — main.ts routes
+    // those through a separate branch.
+    expect(isMdmError({ _tag: 'ValidationError' })).toBe(false)
+  })
+
+  it('rejects null and primitives', () => {
+    expect(isMdmError(null)).toBe(false)
+    expect(isMdmError(undefined)).toBe(false)
+    expect(isMdmError('string')).toBe(false)
+    expect(isMdmError(42)).toBe(false)
   })
 })
