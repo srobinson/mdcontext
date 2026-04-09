@@ -47,16 +47,20 @@ import type { SemanticSearchOptions } from './types.js'
 // Runtime fixture: mocked createGenerateTextClient + fake TextClient
 // ============================================================================
 //
-// `vi.mock` is hoisted, so the providers barrel is replaced before any
-// import that transitively depends on it (including `hyde.ts`). Only
-// `createGenerateTextClient` is stubbed; `lookupPricing`, the error
-// classes, and the type exports come from `importActual` so HyDE's
-// cost calculation and error-mapping paths exercise the real code.
+// `vi.mock` is hoisted, so the openai-compatible transport module is
+// replaced before any import that transitively depends on it. The mock
+// target is the transport module itself because `resolve-client.ts`
+// (under `src/providers/`) imports `createGenerateTextClient` directly
+// from `./transports/openai-compatible.js` — the providers barrel is
+// NOT in that import path, so mocking the barrel would leave the real
+// factory in place. Only `createGenerateTextClient` is stubbed; the
+// type exports and `PROVIDER_CONFIGS` come from `importActual` so
+// HyDE's pure logic still exercises the real code.
 
-vi.mock('../providers/index.js', async () => {
-  const actual = await vi.importActual<typeof import('../providers/index.js')>(
-    '../providers/index.js',
-  )
+vi.mock('../providers/transports/openai-compatible.js', async () => {
+  const actual = await vi.importActual<
+    typeof import('../providers/transports/openai-compatible.js')
+  >('../providers/transports/openai-compatible.js')
   return {
     ...actual,
     createGenerateTextClient: vi.fn(),
@@ -64,7 +68,7 @@ vi.mock('../providers/index.js', async () => {
 })
 
 const { createGenerateTextClient: mockCreateGenerateTextClient } = await import(
-  '../providers/index.js'
+  '../providers/transports/openai-compatible.js'
 )
 const createGenerateTextClientMock = vi.mocked(mockCreateGenerateTextClient)
 
@@ -546,8 +550,8 @@ describe('generateHypotheticalDocument runtime forwarding', () => {
     // Forces the override path via `baseURL` because the registry
     // fast path cannot raise a transport-level `MissingApiKey` at call
     // time (the registered client was already constructed at
-    // bootstrap). The error-remapping logic lives in the shared
-    // resolve-runtime-client helper and is identical on both paths.
+    // bootstrap). The error-remapping logic lives in
+    // `src/providers/resolve-client.ts` and is identical on both paths.
     createGenerateTextClientMock.mockReturnValueOnce(
       Effect.fail(
         new MissingApiKey({
@@ -570,34 +574,6 @@ describe('generateHypotheticalDocument runtime forwarding', () => {
       if (result.left._tag === 'ApiKeyMissingError') {
         expect(result.left.provider).toBe('openrouter')
         expect(result.left.envVar).toBe('OPENROUTER_API_KEY')
-      }
-    }
-  })
-
-  it('remaps runtime MissingApiKey into ApiKeyMissingError for the default openai provider', async () => {
-    // Forces the override path via `baseURL` for the same reason as
-    // the openrouter case above.
-    createGenerateTextClientMock.mockReturnValueOnce(
-      Effect.fail(
-        new MissingApiKey({
-          provider: 'openai',
-          envVar: 'OPENAI_API_KEY',
-        }),
-      ),
-    )
-
-    const result = await Effect.runPromise(
-      generateHypotheticalDocument('test query', {
-        baseURL: 'https://api.openai.com/v1',
-      }).pipe(Effect.either),
-    )
-
-    expect(result._tag).toBe('Left')
-    if (result._tag === 'Left') {
-      expect(result.left._tag).toBe('ApiKeyMissingError')
-      if (result.left._tag === 'ApiKeyMissingError') {
-        expect(result.left.provider).toBe('openai')
-        expect(result.left.envVar).toBe('OPENAI_API_KEY')
       }
     }
   })

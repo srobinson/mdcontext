@@ -50,6 +50,8 @@ export {
   registerDefaultProviders,
   registerProvider,
 } from './registry.js'
+// Runtime entry point (capability resolution with optional overrides)
+export { resolveClient } from './resolve-client.js'
 // Runtime types
 export type {
   Capability,
@@ -58,10 +60,18 @@ export type {
   ProviderRuntime,
 } from './runtime.js'
 // Transports
+//
+// `createEmbedClient` and `createGenerateTextClient` are intentionally
+// NOT re-exported here. After the ALP-1709 refactor the transport
+// factories are an implementation detail of the runtime boundary:
+// the only code that legitimately calls them is `registry.ts` (for
+// default registration) and `resolve-client.ts` (for the override
+// path), both of which import from `./transports/openai-compatible.js`
+// directly. Consumers route through `resolveClient` so they cannot
+// accidentally bypass the registry fast path or the `MissingApiKey`
+// remap by reaching into the transport layer.
 export {
   type ClientOverrides,
-  createEmbedClient,
-  createGenerateTextClient,
   getEffectiveBaseURL,
   getProviderBaseURL,
   getProviderEnvVar,

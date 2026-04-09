@@ -30,15 +30,14 @@ import {
 import {
   type CapabilityNotSupported,
   type ClientOverrides,
-  createGenerateTextClient,
   hasAnyRemoteApiKey,
   lookupPricing,
   type OpenAICompatibleProviderId,
   type ProviderNotFound,
+  resolveClient,
   type TextClient,
   type TextGenerationError,
 } from '../providers/index.js'
-import { resolveCapabilityClient } from './resolve-runtime-client.js'
 
 // ============================================================================
 // Types
@@ -223,13 +222,13 @@ const toConsumerError = (error: TextGenerationError): ConsumerEmbeddingError =>
 
 /**
  * Resolve a `TextClient` for the given HyDE provider through the
- * shared runtime-resolution helper.
+ * runtime-layer `resolveClient` entry point.
  *
  * No overrides → registry fast path; the client registered at startup
  * via `registerDefaultProviders()` is returned. With overrides the
  * openai-compatible transport is invoked directly so the caller's
  * `baseURL` / `apiKey` reach the SDK. Error remapping
- * (`MissingApiKey` → `ApiKeyMissingError`) lives in the shared helper
+ * (`MissingApiKey` → `ApiKeyMissingError`) lives in `resolveClient`
  * so embed and HyDE produce the same consumer error surface.
  */
 const createHydeClient = (
@@ -238,13 +237,7 @@ const createHydeClient = (
 ): Effect.Effect<
   TextClient,
   ApiKeyMissingError | CapabilityNotSupported | ProviderNotFound
-> =>
-  resolveCapabilityClient(
-    id,
-    'generateText',
-    createGenerateTextClient,
-    overrides,
-  )
+> => resolveClient('generateText', id, overrides)
 
 // ============================================================================
 // Cost calculation

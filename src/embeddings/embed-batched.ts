@@ -29,14 +29,13 @@ import {
 import {
   type CapabilityNotSupported,
   type ClientOverrides,
-  createEmbedClient,
   type EmbeddingClient,
   type EmbeddingResult,
   type ProviderId,
   type ProviderNotFound,
   type EmbeddingError as RuntimeEmbeddingError,
+  resolveClient,
 } from '../providers/index.js'
-import { resolveCapabilityClient } from './resolve-runtime-client.js'
 
 // ============================================================================
 // Types
@@ -235,9 +234,9 @@ const embedBatchWithRetry = (
 /**
  * Resolve an `EmbeddingClient` for the given provider id.
  *
- * Thin wrapper over the shared `resolveCapabilityClient` helper so both
- * embed and HyDE consumers go through a single resolution mechanism.
- * See `resolve-runtime-client.ts` for the full fast-path vs
+ * Thin wrapper over the runtime-layer `resolveClient` entry point so
+ * the embed consumer does not own any provider-dispatch logic. See
+ * `src/providers/resolve-client.ts` for the full fast-path vs
  * override-path contract.
  */
 export const createEmbeddingClient = (
@@ -246,7 +245,7 @@ export const createEmbeddingClient = (
 ): Effect.Effect<
   EmbeddingClient,
   ApiKeyMissingError | CapabilityNotSupported | ProviderNotFound
-> => resolveCapabilityClient(id, 'embed', createEmbedClient, overrides)
+> => resolveClient('embed', id, overrides)
 
 // ============================================================================
 // Public API
