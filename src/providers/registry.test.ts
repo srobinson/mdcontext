@@ -88,7 +88,7 @@ describe('getCapability', () => {
     }
   })
 
-  it('populates supportedAlternatives from the live registry', () => {
+  it('populates supportedAlternatives from the live registry in insertion order', () => {
     const voyage = Effect.runSync(getProvider('voyage'))
     const result = Effect.runSync(
       Effect.either(getCapability(voyage, 'generateText')),
@@ -100,9 +100,15 @@ describe('getCapability', () => {
       result.left instanceof CapabilityNotSupported
     ) {
       // All four OpenAI-compatible providers registered cleanly because
-      // every env var was set in beforeEach.
-      const sorted = [...result.left.supportedAlternatives].sort()
-      expect(sorted).toEqual(['lm-studio', 'ollama', 'openai', 'openrouter'])
+      // every env var was set in beforeEach. The order is the insertion
+      // order from `registerDefaultProviders`, which is also the order
+      // the rendered error message lists alternatives in.
+      expect(result.left.supportedAlternatives).toEqual([
+        'openai',
+        'openrouter',
+        'ollama',
+        'lm-studio',
+      ])
     }
   })
 

@@ -1,11 +1,27 @@
 /**
  * HyDE (Hypothetical Document Embeddings) Tests
  *
- * Tests for HyDE query expansion functionality.
+ * Tests for HyDE query expansion functionality. Runtime-forwarding
+ * tests drive `generateHypotheticalDocument` through a fake
+ * `TextClient` installed by mocking `createGenerateTextClient` on the
+ * providers barrel. The test operates at the runtime boundary — the
+ * `TextClient` interface — rather than the OpenAI SDK boundary, so a
+ * refactor of the transport cannot silently regress HyDE's contract.
+ *
+ * Tests that exercise the pure HyDE logic (query pattern detection,
+ * options types, exports) do not interact with the mock and continue
+ * to run unchanged.
  */
 
 import { Effect, Redacted } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  type GenerateTextOptions,
+  MissingApiKey,
+  type OpenAICompatibleProviderId,
+  type TextClient,
+  type TextGenerationResult,
+} from '../providers/index.js'
 import {
   generateHypotheticalDocument,
   type HydeOptions,
@@ -14,80 +30,73 @@ import {
   isHydeAvailable,
   shouldUseHyde,
 } from './hyde.js'
+import { resolveHydeOptions } from './hyde-options.js'
 import type { SemanticSearchOptions } from './types.js'
 
 // ============================================================================
-// OpenAI client mock
+// Runtime fixture: mocked createGenerateTextClient + fake TextClient
 // ============================================================================
 //
-// `vi.mock` calls are hoisted by vitest, so this runs before any import of
-// `openai`. The mock captures the constructor args and the chat.completions
-// .create payload so individual tests can introspect what hyde.ts forwards
-// to the SDK without making real network calls.
+// `vi.mock` is hoisted, so the providers barrel is replaced before any
+// import that transitively depends on it (including `hyde.ts`). Only
+// `createGenerateTextClient` is stubbed; `lookupPricing`, the error
+// classes, and the type exports come from `importActual` so HyDE's
+// cost calculation and error-mapping paths exercise the real code.
 
-interface MockChatCreatePayload {
-  model: string
-  messages: Array<{ role: string; content: string }>
-  max_tokens: number
-  temperature: number
-}
-
-interface MockChatCompletionsCreate {
-  (
-    payload: MockChatCreatePayload,
-  ): Promise<{
-    model: string
-    choices: Array<{ message: { content: string } }>
-    usage: { prompt_tokens: number; completion_tokens: number }
-  }>
-  mock: { calls: MockChatCreatePayload[][] }
-  mockClear: () => void
-}
-
-interface MockOpenAIConstructorArgs {
-  apiKey?: string
-  baseURL?: string
-}
-
-// Echo the requested model back in the response so the runtime's
-// `result.model` matches what the consumer asked for. Real OpenAI
-// responses always include a `model` field.
-const mockChatCreate = vi.fn(async (payload: MockChatCreatePayload) => ({
-  model: payload.model,
-  choices: [{ message: { content: 'mock hypothetical document' } }],
-  usage: { prompt_tokens: 10, completion_tokens: 20 },
-})) as unknown as MockChatCompletionsCreate
-
-const mockConstructorCalls: MockOpenAIConstructorArgs[] = []
-
-vi.mock('openai', () => {
-  // Minimal stub of the OpenAI client surface that the runtime's
-  // `openai-compatible` transport touches when HyDE goes through it.
-  class MockOpenAI {
-    chat: { completions: { create: MockChatCompletionsCreate } }
-    embeddings: { create: () => Promise<unknown> }
-    constructor(args: MockOpenAIConstructorArgs) {
-      mockConstructorCalls.push(args)
-      this.chat = { completions: { create: mockChatCreate } }
-      // Embeddings is unused by HyDE but the transport's surface expects
-      // both clients to exist on the same OpenAI instance.
-      this.embeddings = { create: async () => ({ data: [] }) }
-    }
-  }
-
-  // Static error classes are exposed for any caller that still relies on
-  // `instanceof OpenAI.RateLimitError`. The runtime catches errors via
-  // string-matching on `error.message`, so an empty subclass is enough.
-  class MockBaseError extends Error {}
-
+vi.mock('../providers/index.js', async () => {
+  const actual = await vi.importActual<typeof import('../providers/index.js')>(
+    '../providers/index.js',
+  )
   return {
-    default: Object.assign(MockOpenAI, {
-      RateLimitError: MockBaseError,
-      BadRequestError: MockBaseError,
-      APIConnectionError: MockBaseError,
-    }),
+    ...actual,
+    createGenerateTextClient: vi.fn(),
   }
 })
+
+const { createGenerateTextClient: mockCreateGenerateTextClient } = await import(
+  '../providers/index.js'
+)
+const createGenerateTextClientMock = vi.mocked(mockCreateGenerateTextClient)
+
+interface ClientConstructionCall {
+  readonly id: OpenAICompatibleProviderId
+  readonly overrides:
+    | Readonly<{
+        baseURL?: string | undefined
+        apiKey?: string | undefined
+      }>
+    | undefined
+}
+
+interface GenerateTextCall {
+  readonly prompt: string
+  readonly options: Readonly<GenerateTextOptions> | undefined
+}
+
+const clientConstructionCalls: ClientConstructionCall[] = []
+const generateTextCalls: GenerateTextCall[] = []
+
+// The fake client echoes the requested model back so HyDE's cost
+// calculation runs against the real model name the caller pinned.
+// Token counts are fixed across every call so assertions on
+// `tokensUsed` and `cost` stay deterministic.
+const fakeTextClient: TextClient = {
+  generateText: (prompt, options) => {
+    generateTextCalls.push({ prompt, options })
+    return Effect.succeed({
+      text: 'mock hypothetical document',
+      model: options?.model ?? 'unknown',
+      usage: { inputTokens: 10, outputTokens: 20 },
+    } satisfies TextGenerationResult)
+  },
+}
+
+const installFakeClient = (): void => {
+  createGenerateTextClientMock.mockImplementation((id, overrides) => {
+    clientConstructionCalls.push({ id, overrides })
+    return Effect.succeed(fakeTextClient)
+  })
+}
 
 describe('HyDE Query Expansion', () => {
   describe('shouldUseHyde detection', () => {
@@ -276,30 +285,6 @@ describe('HyDE Query Expansion', () => {
     })
   })
 
-  describe('generateHypotheticalDocument error handling', () => {
-    it('should fail with ApiKeyMissingError when no API key', async () => {
-      // Save and clear the environment variable
-      const originalKey = process.env.OPENAI_API_KEY
-      delete process.env.OPENAI_API_KEY
-
-      try {
-        const result = await Effect.runPromise(
-          generateHypotheticalDocument('test query').pipe(Effect.either),
-        )
-
-        expect(result._tag).toBe('Left')
-        if (result._tag === 'Left') {
-          expect(result.left._tag).toBe('ApiKeyMissingError')
-        }
-      } finally {
-        // Restore the environment variable
-        if (originalKey) {
-          process.env.OPENAI_API_KEY = originalKey
-        }
-      }
-    })
-  })
-
   describe('Query pattern detection', () => {
     describe('question patterns', () => {
       it('should detect "how" questions', () => {
@@ -359,45 +344,31 @@ describe('HyDE Query Expansion', () => {
 })
 
 describe('generateHypotheticalDocument runtime forwarding', () => {
-  let originalOpenAiKey: string | undefined
-  let originalOpenrouterKey: string | undefined
-
   beforeEach(() => {
-    mockChatCreate.mockClear()
-    mockConstructorCalls.length = 0
-    originalOpenAiKey = process.env.OPENAI_API_KEY
-    originalOpenrouterKey = process.env.OPENROUTER_API_KEY
-    process.env.OPENAI_API_KEY = 'sk-env-fallback'
-    process.env.OPENROUTER_API_KEY = 'sk-or-env-fallback'
+    clientConstructionCalls.length = 0
+    generateTextCalls.length = 0
+    createGenerateTextClientMock.mockReset()
+    installFakeClient()
   })
 
   afterEach(() => {
-    if (originalOpenAiKey === undefined) {
-      delete process.env.OPENAI_API_KEY
-    } else {
-      process.env.OPENAI_API_KEY = originalOpenAiKey
-    }
-    if (originalOpenrouterKey === undefined) {
-      delete process.env.OPENROUTER_API_KEY
-    } else {
-      process.env.OPENROUTER_API_KEY = originalOpenrouterKey
-    }
+    createGenerateTextClientMock.mockReset()
   })
 
-  it('uses openai defaults when no provider override is set', async () => {
+  it('constructs a generateText client for the default openai provider', async () => {
     const result = await Effect.runPromise(
       generateHypotheticalDocument('how do I configure auth'),
     )
 
     expect(result.hypotheticalDocument).toBe('mock hypothetical document')
-    expect(mockConstructorCalls).toHaveLength(1)
-    // openai default baseURL is undefined so the SDK uses its built-in.
-    expect(mockConstructorCalls[0]?.baseURL).toBeUndefined()
-    expect(mockConstructorCalls[0]?.apiKey).toBe('sk-env-fallback')
+    expect(clientConstructionCalls).toHaveLength(1)
+    expect(clientConstructionCalls[0]?.id).toBe('openai')
+    // With no overrides, the transport applies its own per-provider
+    // defaults for baseURL and credential resolution.
+    expect(clientConstructionCalls[0]?.overrides).toEqual({})
 
-    expect(mockChatCreate.mock.calls).toHaveLength(1)
-    const payload = mockChatCreate.mock.calls[0]?.[0]
-    expect(payload?.model).toBe('gpt-4o-mini')
+    expect(generateTextCalls).toHaveLength(1)
+    expect(generateTextCalls[0]?.options?.model).toBe('gpt-4o-mini')
   })
 
   it('routes through ollama defaults when provider=ollama', async () => {
@@ -405,8 +376,9 @@ describe('generateHypotheticalDocument runtime forwarding', () => {
       generateHypotheticalDocument('configure ollama', { provider: 'ollama' }),
     )
 
-    expect(mockConstructorCalls[0]?.baseURL).toBe('http://localhost:11434/v1')
-    expect(mockChatCreate.mock.calls[0]?.[0]?.model).toBe('llama3.2')
+    expect(clientConstructionCalls[0]?.id).toBe('ollama')
+    expect(clientConstructionCalls[0]?.overrides).toEqual({})
+    expect(generateTextCalls[0]?.options?.model).toBe('llama3.2')
   })
 
   it('routes through lm-studio defaults when provider=lm-studio', async () => {
@@ -416,8 +388,9 @@ describe('generateHypotheticalDocument runtime forwarding', () => {
       }),
     )
 
-    expect(mockConstructorCalls[0]?.baseURL).toBe('http://localhost:1234/v1')
-    expect(mockChatCreate.mock.calls[0]?.[0]?.model).toBe('local-model')
+    expect(clientConstructionCalls[0]?.id).toBe('lm-studio')
+    expect(clientConstructionCalls[0]?.overrides).toEqual({})
+    expect(generateTextCalls[0]?.options?.model).toBe('local-model')
   })
 
   it('routes through openrouter defaults when provider=openrouter', async () => {
@@ -427,13 +400,12 @@ describe('generateHypotheticalDocument runtime forwarding', () => {
       }),
     )
 
-    expect(mockConstructorCalls[0]?.baseURL).toBe(
-      'https://openrouter.ai/api/v1',
-    )
-    expect(mockChatCreate.mock.calls[0]?.[0]?.model).toBe('openai/gpt-4o-mini')
+    expect(clientConstructionCalls[0]?.id).toBe('openrouter')
+    expect(clientConstructionCalls[0]?.overrides).toEqual({})
+    expect(generateTextCalls[0]?.options?.model).toBe('openai/gpt-4o-mini')
   })
 
-  it('explicit baseURL overrides the per-provider default', async () => {
+  it('forwards an explicit baseURL override to the runtime factory', async () => {
     await Effect.runPromise(
       generateHypotheticalDocument('custom host query', {
         provider: 'ollama',
@@ -441,9 +413,9 @@ describe('generateHypotheticalDocument runtime forwarding', () => {
       }),
     )
 
-    expect(mockConstructorCalls[0]?.baseURL).toBe(
-      'http://my-private-ollama:9999/v1',
-    )
+    expect(clientConstructionCalls[0]?.overrides).toEqual({
+      baseURL: 'http://my-private-ollama:9999/v1',
+    })
   })
 
   it('explicit model overrides the per-provider default', async () => {
@@ -454,24 +426,22 @@ describe('generateHypotheticalDocument runtime forwarding', () => {
       }),
     )
 
-    expect(mockChatCreate.mock.calls[0]?.[0]?.model).toBe('qwen2.5:7b')
+    expect(generateTextCalls[0]?.options?.model).toBe('qwen2.5:7b')
   })
 
-  it('forwards a custom systemPrompt to the chat call', async () => {
+  it('forwards a custom systemPrompt to the runtime generateText call', async () => {
     await Effect.runPromise(
       generateHypotheticalDocument('what is x', {
         systemPrompt: 'You are a strict reviewer who answers in one sentence.',
       }),
     )
 
-    const payload = mockChatCreate.mock.calls[0]?.[0]
-    expect(payload?.messages?.[0]?.role).toBe('system')
-    expect(payload?.messages?.[0]?.content).toBe(
+    expect(generateTextCalls[0]?.options?.systemPrompt).toBe(
       'You are a strict reviewer who answers in one sentence.',
     )
   })
 
-  it('forwards maxTokens and temperature to the chat call', async () => {
+  it('forwards maxTokens and temperature to the runtime generateText call', async () => {
     await Effect.runPromise(
       generateHypotheticalDocument('tuned generation', {
         maxTokens: 512,
@@ -479,9 +449,8 @@ describe('generateHypotheticalDocument runtime forwarding', () => {
       }),
     )
 
-    const payload = mockChatCreate.mock.calls[0]?.[0]
-    expect(payload?.max_tokens).toBe(512)
-    expect(payload?.temperature).toBe(0.7)
+    expect(generateTextCalls[0]?.options?.maxTokens).toBe(512)
+    expect(generateTextCalls[0]?.options?.temperature).toBe(0.7)
   })
 
   it('uses an explicit string apiKey when provided', async () => {
@@ -491,50 +460,56 @@ describe('generateHypotheticalDocument runtime forwarding', () => {
       }),
     )
 
-    expect(mockConstructorCalls[0]?.apiKey).toBe('sk-explicit-string')
+    expect(clientConstructionCalls[0]?.overrides?.apiKey).toBe(
+      'sk-explicit-string',
+    )
   })
 
-  it('unwraps a Redacted apiKey before passing it to OpenAI', async () => {
+  it('unwraps a Redacted apiKey before passing it to the runtime factory', async () => {
     await Effect.runPromise(
       generateHypotheticalDocument('redacted key', {
         apiKey: Redacted.make('sk-redacted'),
       }),
     )
 
-    expect(mockConstructorCalls[0]?.apiKey).toBe('sk-redacted')
+    expect(clientConstructionCalls[0]?.overrides?.apiKey).toBe('sk-redacted')
   })
 
-  it('falls back to OPENAI_API_KEY env var when apiKey is unset', async () => {
-    process.env.OPENAI_API_KEY = 'sk-env-only'
-
-    await Effect.runPromise(generateHypotheticalDocument('no explicit key'))
-
-    expect(mockConstructorCalls[0]?.apiKey).toBe('sk-env-only')
-  })
-
-  it('uses OPENROUTER_API_KEY for openrouter without needing OPENAI_API_KEY (finding #1)', async () => {
+  it('passes no apiKey override when none is supplied (finding #1)', async () => {
     // Finding #1: HyDE used to read OPENAI_API_KEY unconditionally, so a
     // caller running with provider=openrouter and only OPENROUTER_API_KEY
-    // set would crash with ApiKeyMissingError pointing at the wrong env var.
-    // The runtime now resolves the credential from the provider's actual
-    // env var.
-    delete process.env.OPENAI_API_KEY
-    process.env.OPENROUTER_API_KEY = 'sk-or-only'
-
+    // set would crash with ApiKeyMissingError pointing at the wrong env
+    // var. The new path hands the provider id to the runtime factory
+    // without any apiKey override, so the transport resolves the
+    // credential from the provider's actual env var
+    // (OPENROUTER_API_KEY for openrouter).
     await Effect.runPromise(
       generateHypotheticalDocument('routed via openrouter', {
         provider: 'openrouter',
       }),
     )
 
-    expect(mockConstructorCalls[0]?.apiKey).toBe('sk-or-only')
-    expect(mockConstructorCalls[0]?.baseURL).toBe(
-      'https://openrouter.ai/api/v1',
-    )
+    expect(clientConstructionCalls[0]?.id).toBe('openrouter')
+    expect(clientConstructionCalls[0]?.overrides?.apiKey).toBeUndefined()
+    // No baseURL override either — the transport uses
+    // https://openrouter.ai/api/v1 on its own.
+    expect(clientConstructionCalls[0]?.overrides?.baseURL).toBeUndefined()
   })
 
-  it('fails with ApiKeyMissingError pointing at OPENROUTER_API_KEY when openrouter has no key', async () => {
-    delete process.env.OPENROUTER_API_KEY
+  it('remaps runtime MissingApiKey into ApiKeyMissingError labeled with the pinned provider (finding #1)', async () => {
+    // Finding #1 error-labeling regression guard. When the runtime
+    // factory fails with MissingApiKey for openrouter, HyDE must
+    // surface the CLI-facing `ApiKeyMissingError` carrying the
+    // openrouter label and OPENROUTER_API_KEY env var — never the
+    // openai fallback.
+    createGenerateTextClientMock.mockReturnValueOnce(
+      Effect.fail(
+        new MissingApiKey({
+          provider: 'openrouter',
+          envVar: 'OPENROUTER_API_KEY',
+        }),
+      ),
+    )
 
     const result = await Effect.runPromise(
       generateHypotheticalDocument('no key for openrouter', {
@@ -546,9 +521,62 @@ describe('generateHypotheticalDocument runtime forwarding', () => {
     if (result._tag === 'Left') {
       expect(result.left._tag).toBe('ApiKeyMissingError')
       if (result.left._tag === 'ApiKeyMissingError') {
+        expect(result.left.provider).toBe('openrouter')
         expect(result.left.envVar).toBe('OPENROUTER_API_KEY')
       }
     }
+  })
+
+  it('remaps runtime MissingApiKey into ApiKeyMissingError for the default openai provider', async () => {
+    createGenerateTextClientMock.mockReturnValueOnce(
+      Effect.fail(
+        new MissingApiKey({
+          provider: 'openai',
+          envVar: 'OPENAI_API_KEY',
+        }),
+      ),
+    )
+
+    const result = await Effect.runPromise(
+      generateHypotheticalDocument('test query').pipe(Effect.either),
+    )
+
+    expect(result._tag).toBe('Left')
+    if (result._tag === 'Left') {
+      expect(result.left._tag).toBe('ApiKeyMissingError')
+      if (result.left._tag === 'ApiKeyMissingError') {
+        expect(result.left.provider).toBe('openai')
+        expect(result.left.envVar).toBe('OPENAI_API_KEY')
+      }
+    }
+  })
+
+  it('forwards a custom baseURL through the full resolveHydeOptions pipeline (finding #2)', async () => {
+    // Finding #2: the embedding side is pointed at a custom ollama host
+    // via providerConfig.baseURL, and the caller pins hydeOptions.provider
+    // to the same provider. The old resolver gated baseURL inheritance on
+    // `hydeOptions?.provider === undefined`, silently dropping the custom
+    // host the moment the caller named the provider. The new resolver
+    // inherits the baseURL when the providers match, and HyDE forwards it
+    // verbatim to `createGenerateTextClient`. End-to-end: the runtime
+    // factory receives the custom host, not localhost.
+    const options: SemanticSearchOptions = {
+      providerConfig: {
+        provider: 'ollama',
+        baseURL: 'http://my-host:11434/v1',
+      },
+      hydeOptions: { provider: 'ollama' },
+    }
+
+    const resolved = await Effect.runPromise(resolveHydeOptions(options))
+    await Effect.runPromise(
+      generateHypotheticalDocument('finding #2 query', resolved),
+    )
+
+    expect(clientConstructionCalls[0]?.id).toBe('ollama')
+    expect(clientConstructionCalls[0]?.overrides?.baseURL).toBe(
+      'http://my-host:11434/v1',
+    )
   })
 
   it('reports cost: 0 for a model that is not in the pricing table (finding #3)', async () => {
@@ -565,14 +593,17 @@ describe('generateHypotheticalDocument runtime forwarding', () => {
 
     expect(result.cost).toBe(0)
     expect(result.model).toBe('completely-unknown-custom-model')
-    // The token counts still come back from the mock, so the consumer
-    // sees real usage data alongside the zero cost.
+    // The token counts still come back from the fake client, so the
+    // consumer sees real usage data alongside the zero cost.
     expect(result.tokensUsed).toBe(30)
   })
 
-  it('reports cost: 0 for the local ollama provider', async () => {
-    // Local providers are absent from the pricing table by design. The
-    // computeCost path returns 0 cleanly rather than throwing.
+  it('reports cost: 0 for the local ollama provider with its default model (finding #3)', async () => {
+    // Finding #3 companion test for the local-provider path. The
+    // per-provider default model for ollama (`llama3.2`) is absent from
+    // the pricing table by design — local models have zero hosted cost.
+    // The computeCost path returns 0 cleanly rather than throwing or
+    // fabricating a cost from a remote model's rates.
     const result = await Effect.runPromise(
       generateHypotheticalDocument('local ollama query', {
         provider: 'ollama',
@@ -580,6 +611,18 @@ describe('generateHypotheticalDocument runtime forwarding', () => {
     )
 
     expect(result.cost).toBe(0)
+    expect(result.model).toBe('llama3.2')
+  })
+
+  it('reports cost: 0 for the local lm-studio provider with its default model (finding #3)', async () => {
+    const result = await Effect.runPromise(
+      generateHypotheticalDocument('local lm-studio query', {
+        provider: 'lm-studio',
+      }),
+    )
+
+    expect(result.cost).toBe(0)
+    expect(result.model).toBe('local-model')
   })
 })
 
