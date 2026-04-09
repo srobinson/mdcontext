@@ -191,8 +191,10 @@ describe('HyDE Query Expansion', () => {
   })
 
   describe('isHydeAvailable', () => {
-    it('should check if OPENAI_API_KEY is set', () => {
-      // This test reflects the actual environment state
+    it('should report whether any remote provider credential is set', () => {
+      // Delegates to hasAnyRemoteApiKey, so any of OPENAI_API_KEY or
+      // OPENROUTER_API_KEY being set flips this to true. This test
+      // reflects the actual environment state.
       const result = isHydeAvailable()
       expect(typeof result).toBe('boolean')
     })
