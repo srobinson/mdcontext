@@ -45,6 +45,28 @@ const MCP_VERSION: string = packageJson.version
 // MCP Server Setup
 // ============================================================================
 
+/**
+ * Bootstrap the provider runtime, then build the MCP server.
+ *
+ * Splits the bootstrap-and-create pair out of `main()` so the server
+ * entrypoint's runtime initialization is directly reachable from
+ * tests without wiring `StdioServerTransport`. `main()` is the
+ * production caller and connects the returned server to stdio.
+ *
+ * Mirrors the CLI entrypoint (`src/cli/main.ts:122-126`) which runs
+ * `registerDefaultProviders` before dispatching any command. The
+ * bootstrap never fails: missing credentials produce skipped
+ * registrations that surface as actionable `MissingApiKey` at
+ * tool-invocation time rather than `ProviderNotFound`.
+ */
+export const startMcpServer = async (
+  rootPath: string,
+  config: MdmConfig,
+): Promise<Server> => {
+  await Effect.runPromise(registerDefaultProviders())
+  return createServer(rootPath, config)
+}
+
 export const createServer = (rootPath: string, config: MdmConfig) => {
   const server = new Server(
     {
@@ -121,14 +143,11 @@ const main = async () => {
   // Load config: env vars > config file > defaults
   const config = await loadConfig(rootPath)
 
-  // Bootstrap the provider runtime before any tool handler can run.
-  // Mirrors the CLI entrypoint (src/cli/main.ts) so md_search reaches
-  // a populated registry. Never fails: missing credentials produce
-  // skipped registrations that surface as actionable MissingApiKey at
-  // tool-invocation time rather than ProviderNotFound.
-  await Effect.runPromise(registerDefaultProviders())
-
-  const server = createServer(rootPath, config)
+  // Bootstrap provider runtime and construct the server. The helper
+  // is the tested unit (src/mcp/server.test.ts) so the regression
+  // that produced ALP-1713 (empty registry → ProviderNotFound on
+  // md_search) cannot return silently.
+  const server = await startMcpServer(rootPath, config)
   const transport = new StdioServerTransport()
 
   await server.connect(transport)

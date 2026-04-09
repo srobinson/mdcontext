@@ -333,17 +333,26 @@ describe('MCP Server', () => {
   // ==========================================================================
 
   describe('md_search', () => {
-    it('should return results or error (requires embeddings)', async () => {
+    it('does not surface the "(none registered)" registry-empty regression (ALP-1713)', async () => {
+      // Before the fix, the MCP entrypoint never called
+      // `registerDefaultProviders()`, so `md_search` resolved its
+      // embedding client from an empty registry and returned
+      // `Provider "openai" is not registered. Known providers: (none
+      // registered).`
+      //
+      // Without tightening, the old "any string is success" assertion
+      // accepted that error as a valid outcome and hid the regression.
+      // The new assertion rejects the specific failure text while still
+      // tolerating legitimate downstream errors (missing embeddings,
+      // missing credentials, upstream provider faults).
       const result = await client.callTool({
         name: 'md_search',
         arguments: { query: 'getting started guide' },
       })
-
-      // Semantic search requires embeddings which may not be built.
-      // The handler catches all errors, so we just verify the response structure.
       const text = getText(result)
-      expect(text).toBeDefined()
       expect(typeof text).toBe('string')
+      expect(text).not.toMatch(/\(none registered\)/)
+      expect(text).not.toMatch(/is not registered\. Known providers:/)
     })
   })
 
