@@ -39,6 +39,7 @@ import {
   contextCommand,
   duplicatesCommand,
   embeddingsCommand,
+  fixCommand,
   indexCommand,
   initCommand,
   linksCommand,
@@ -64,6 +65,7 @@ const mainCommand = Command.make('mdm').pipe(
   Command.withSubcommands([
     initCommand,
     indexCommand,
+    fixCommand,
     searchCommand,
     contextCommand,
     treeCommand,
