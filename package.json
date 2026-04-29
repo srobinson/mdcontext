@@ -1,11 +1,11 @@
 {
   "name": "markdown-matters",
-  "version": "0.3.2",
+  "version": "0.3.4",
   "description": "Token-efficient markdown analysis tool for LLM consumption",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/srobinson/markdown-matters.git"
+    "url": "git+https://github.com/srobinson/markdown-matters.git"
   },
   "publishConfig": {
     "access": "public",
