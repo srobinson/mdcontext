@@ -71,6 +71,9 @@ importers:
       wink-bm25-text-search:
         specifier: ^3.1.2
         version: 3.1.2
+      yaml:
+        specifier: ^2.8.0
+        version: 2.8.3
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.4.10

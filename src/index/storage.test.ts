@@ -11,6 +11,7 @@ import * as path from 'node:path'
 import { Effect, Exit } from 'effect'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import {
+  clearIndexCache,
   computeHash,
   createEmptyDocumentIndex,
   createEmptyLinkIndex,
@@ -491,5 +492,98 @@ describe('large index handling', () => {
     expect(loaded!.documents['doc-0']!.title).toBe('Document 0')
     expect(loaded!.documents['doc-9999']!.title).toBe('Document 9999')
     expect(loaded!.documents['doc-5000']!.tokenCount).toBe(5100)
+  })
+})
+
+describe('atomic writes', () => {
+  let storage: ReturnType<typeof createStorage>
+
+  beforeEach(async () => {
+    const dir = await createTempDir()
+    storage = createStorage(dir)
+  })
+
+  it('leaves no .tmp files in the index directory after a successful save', async () => {
+    const index = createEmptyDocumentIndex(storage.rootPath)
+    await run(saveDocumentIndex(storage, index))
+
+    const dir = path.dirname(storage.paths.documents)
+    const entries = await fs.readdir(dir)
+    const tmps = entries.filter((f) => f.endsWith('.tmp'))
+    expect(tmps).toEqual([])
+  })
+
+  it('a stale .tmp file does not affect reads or block subsequent saves', async () => {
+    const v1: DocumentIndex = {
+      version: INDEX_VERSION,
+      rootPath: storage.rootPath,
+      documents: {
+        'doc-1': {
+          id: 'doc-1',
+          path: 'a.md',
+          title: 'A',
+          mtime: 0,
+          hash: 'hash-a',
+          tokenCount: 0,
+          sectionCount: 0,
+        },
+      },
+    }
+    await run(saveDocumentIndex(storage, v1))
+
+    // Drop a stale, truncated .tmp simulating a previously killed save.
+    const dir = path.dirname(storage.paths.documents)
+    const staleTmp = path.join(
+      dir,
+      `${path.basename(storage.paths.documents)}.99999.deadbeef.tmp`,
+    )
+    await fs.writeFile(staleTmp, '{"truncated":')
+
+    // Clear the in-memory cache so the next load goes to disk.
+    clearIndexCache()
+
+    const loadedV1 = await run(loadDocumentIndex(storage))
+    expect(Object.keys(loadedV1!.documents)).toHaveLength(1)
+
+    // A new save succeeds (unique tmp names — stale tmp does not collide).
+    const v2: DocumentIndex = {
+      version: INDEX_VERSION,
+      rootPath: storage.rootPath,
+      documents: {
+        'doc-1': v1.documents['doc-1']!,
+        'doc-2': {
+          id: 'doc-2',
+          path: 'b.md',
+          title: 'B',
+          mtime: 0,
+          hash: 'hash-b',
+          tokenCount: 0,
+          sectionCount: 0,
+        },
+      },
+    }
+    await run(saveDocumentIndex(storage, v2))
+
+    clearIndexCache()
+    const loadedV2 = await run(loadDocumentIndex(storage))
+    expect(Object.keys(loadedV2!.documents)).toHaveLength(2)
+
+    // Cleanup the stale tmp so afterEach's rm doesn't race anything.
+    await fs.unlink(staleTmp).catch(() => undefined)
+  })
+
+  it('cleans up the .tmp file when rename fails', async () => {
+    // Make the target path an existing directory so fs.rename over it fails
+    // with EISDIR (Linux) / ENOTEMPTY (macOS) / EPERM (Windows).
+    await fs.mkdir(storage.paths.documents, { recursive: true })
+
+    const index = createEmptyDocumentIndex(storage.rootPath)
+    const exit = await runExit(saveDocumentIndex(storage, index))
+    expect(Exit.isFailure(exit)).toBe(true)
+
+    const dir = path.dirname(storage.paths.documents)
+    const entries = await fs.readdir(dir)
+    const tmps = entries.filter((f) => f.endsWith('.tmp'))
+    expect(tmps).toEqual([])
   })
 })

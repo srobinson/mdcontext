@@ -6,6 +6,7 @@
 QUICK REFERENCE
   mdm init [options]              Initialize mdm in a directory
   mdm index [path] [options]      Index markdown files (add --embed for semantic search)
+  mdm fix [path] [options]        Repair malformed YAML frontmatter
   mdm search <query> [options]    Search by meaning or structure
   mdm context <files...>          Get LLM-ready summary
   mdm tree [path]                 Show files or document outline
@@ -28,6 +29,7 @@ mdm extracts *structure* instead of dumping *text*. The result: **80%+ fewer tok
 ```bash
 npm install -g markdown-matters
 mdm index .                     # Index your docs
+mdm fix .                       # Preview malformed frontmatter repairs
 mdm search "authentication"     # Find by meaning
 mdm context README.md           # Get LLM-ready summary
 ```
@@ -78,6 +80,23 @@ mdm index --no-gitignore        # Ignore .gitignore file
 ```
 
 By default, mdm respects `.gitignore` and `.mdmignore` patterns. Use `--exclude` to add CLI-level patterns (highest priority).
+
+### fix
+
+Repair malformed YAML frontmatter in markdown files.
+
+```bash
+mdm fix                         # Preview repairs in current directory
+mdm fix ./docs                  # Preview repairs in a directory
+mdm fix docs/broken.md          # Preview repairs for one file
+mdm fix ./docs --write          # Apply repairs
+mdm fix ./docs --write --force  # Apply even when tracked files are modified
+mdm fix ./docs --json           # Output structured report
+```
+
+By default, `mdm fix` is a dry run. It lists files that would change and shows line-level `-` and `+` diffs for repaired frontmatter lines. Use `--write` to apply repairs.
+
+When writing, mdm skips tracked files with uncommitted modifications and prints `skipped (uncommitted changes): <path>`. Untracked files, clean tracked files, and files outside git repositories proceed normally. Use `--force` to bypass the dirty-file guard.
 
 ### search
 

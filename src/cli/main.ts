@@ -8,6 +8,7 @@
  *
  * CORE COMMANDS
  *   mdm index [path]           Index markdown files (default: .)
+ *   mdm fix [path]             Repair malformed YAML frontmatter
  *   mdm search <query> [path]  Search by meaning or structure
  *   mdm context <files...>     Get LLM-ready summary
  *   mdm tree [path|file]       Show files or document outline
@@ -39,6 +40,7 @@ import {
   contextCommand,
   duplicatesCommand,
   embeddingsCommand,
+  fixCommand,
   indexCommand,
   initCommand,
   linksCommand,
@@ -64,6 +66,7 @@ const mainCommand = Command.make('mdm').pipe(
   Command.withSubcommands([
     initCommand,
     indexCommand,
+    fixCommand,
     searchCommand,
     contextCommand,
     treeCommand,
