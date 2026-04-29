@@ -242,17 +242,35 @@ const writeJsonFile = <T>(
   data: T,
 ): Effect.Effect<void, DirectoryCreateError | FileWriteError> =>
   Effect.gen(function* () {
-    const dir = path.dirname(filePath)
-    yield* ensureDir(dir)
-    yield* Effect.tryPromise({
-      try: () => fs.writeFile(filePath, JSON.stringify(data)),
-      catch: (e) =>
-        new FileWriteError({
-          path: filePath,
-          message: e instanceof Error ? e.message : String(e),
-          cause: e,
-        }),
-    })
+    yield* ensureDir(path.dirname(filePath))
+
+    const tmpPath = `${filePath}.${process.pid}.${crypto.randomBytes(4).toString('hex')}.tmp`
+
+    yield* Effect.gen(function* () {
+      yield* Effect.tryPromise({
+        try: () => fs.writeFile(tmpPath, JSON.stringify(data)),
+        catch: (e) =>
+          new FileWriteError({
+            path: filePath,
+            message: e instanceof Error ? e.message : String(e),
+            cause: e,
+          }),
+      })
+      yield* Effect.tryPromise({
+        try: () => fs.rename(tmpPath, filePath),
+        catch: (e) =>
+          new FileWriteError({
+            path: filePath,
+            message: e instanceof Error ? e.message : String(e),
+            cause: e,
+          }),
+      })
+    }).pipe(
+      Effect.tapError(() =>
+        // Best-effort cleanup. The .catch is required: Effect.promise needs a never-rejecting promise.
+        Effect.promise(() => fs.unlink(tmpPath).catch(() => undefined)),
+      ),
+    )
   })
 
 // ============================================================================
