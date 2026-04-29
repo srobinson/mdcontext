@@ -19,6 +19,32 @@ interface FileReport {
   readonly changed: boolean
   readonly resolved: boolean
   readonly remainingErrors: ReadonlyArray<{ line: number; message: string }>
+  readonly diffLines: readonly string[]
+}
+
+const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---/
+
+const extractFrontmatterLines = (content: string): readonly string[] => {
+  const match = FRONTMATTER_RE.exec(content)
+  return (match?.[1] ?? '').split(/\r?\n/)
+}
+
+export const formatFrontmatterDiff = (
+  original: string,
+  fixed: string,
+): readonly string[] => {
+  const before = extractFrontmatterLines(original)
+  const after = extractFrontmatterLines(fixed)
+  const max = Math.max(before.length, after.length)
+  const lines: string[] = []
+
+  for (let i = 0; i < max; i++) {
+    if (before[i] === after[i]) continue
+    if (before[i] !== undefined) lines.push(`    - ${before[i]}`)
+    if (after[i] !== undefined) lines.push(`    + ${after[i]}`)
+  }
+
+  return lines
 }
 
 const collectFiles = async (target: string): Promise<readonly string[]> => {
@@ -41,6 +67,9 @@ const processFile = async (filePath: string): Promise<FileReport | null> => {
     changed: result.changed,
     resolved: result.resolved,
     remainingErrors: result.remainingErrors,
+    diffLines: result.changed
+      ? formatFrontmatterDiff(content, result.fixedContent)
+      : [],
   }
 }
 
@@ -144,6 +173,11 @@ export const fixCommand = Command.make(
           const rel = path.relative(process.cwd(), r.path)
           const suffix = r.resolved ? '' : '  (errors remain)'
           yield* Console.log(`  ${rel}${suffix}`)
+          if (!write) {
+            for (const line of r.diffLines) {
+              yield* Console.log(line)
+            }
+          }
         }
       }
 
