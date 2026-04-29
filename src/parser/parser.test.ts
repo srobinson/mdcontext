@@ -80,8 +80,44 @@ This should still parse.
 
       const result = await Effect.runPromise(parse(content))
 
-      // Should not throw, should parse with empty frontmatter
-      expect(result.frontmatter).toEqual({})
+      expect(result.frontmatter).toMatchObject({
+        title: 'Valid Start',
+      })
+      expect(result.title).toBe('Actual Content')
+    })
+
+    it('strips malformed frontmatter before parsing body sections', async () => {
+      const content = `---
+title: Broken
+# Frontmatter Comment
+broken: [unterminated
+---
+
+# Actual Content
+
+This should still parse.
+`
+
+      const result = await Effect.runPromise(parse(content))
+
+      expect(result.title).toBe('Actual Content')
+      expect(result.sections[0]?.heading).toBe('Actual Content')
+    })
+
+    it('partially recovers malformed frontmatter keys with tolerant YAML parsing', async () => {
+      const content = `---
+title: Foo: Bar
+status: ok
+broken: [unterminated
+---
+
+# Actual Content
+`
+
+      const result = await Effect.runPromise(parse(content))
+
+      expect(result.frontmatter).not.toEqual({})
+      expect(result.frontmatter).toHaveProperty('title')
       expect(result.title).toBe('Actual Content')
     })
 

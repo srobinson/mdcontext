@@ -20,6 +20,7 @@ import remarkGfm from 'remark-gfm'
 import remarkParse from 'remark-parse'
 import { unified } from 'unified'
 import { visit } from 'unist-util-visit'
+import { parseDocument } from 'yaml'
 
 import type {
   DocumentMetadata,
@@ -37,6 +38,24 @@ import { countTokensApprox, countWords } from '../utils/tokens.js'
 // ============================================================================
 
 const processor = unified().use(remarkParse).use(remarkGfm)
+
+const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---/
+
+const recoverFrontmatter = (yaml: string): Record<string, unknown> => {
+  try {
+    const recovered = parseDocument(yaml, { logLevel: 'silent' }).toJSON()
+    if (
+      recovered &&
+      typeof recovered === 'object' &&
+      !Array.isArray(recovered)
+    ) {
+      return recovered as Record<string, unknown>
+    }
+  } catch {
+    return {}
+  }
+  return {}
+}
 
 // ============================================================================
 // Helper Functions
@@ -314,7 +333,11 @@ export const parse = (
       frontmatter = parsed.data
       markdownContent = parsed.content
     } catch (error) {
-      // Malformed frontmatter - treat entire content as markdown
+      const frontmatterMatch = FRONTMATTER_RE.exec(content)
+      if (frontmatterMatch) {
+        frontmatter = recoverFrontmatter(frontmatterMatch[1] ?? '')
+        markdownContent = content.slice(frontmatterMatch[0].length)
+      }
       const msg = error instanceof Error ? error.message : String(error)
       yield* Effect.logWarning(formatMalformedFrontmatterWarning(path, msg))
     }
