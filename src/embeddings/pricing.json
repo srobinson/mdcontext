@@ -1,17 +1,24 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Model pricing data, nested by capability. Prices are USD per 1M tokens. Update quarterly from provider pricing pages.",
-  "lastUpdated": "2026-01",
+  "lastUpdated": "2026-04",
   "sources": {
-    "openai": "https://platform.openai.com/docs/pricing",
+    "openai": "https://developers.openai.com/api/docs/pricing",
     "voyage": "https://docs.voyageai.com/docs/pricing"
   },
   "embed": {
     "text-embedding-3-small": { "input": 0.02 },
     "text-embedding-3-large": { "input": 0.13 },
     "text-embedding-ada-002": { "input": 0.1 },
+    "voyage-4-large": { "input": 0.12 },
+    "voyage-4": { "input": 0.06 },
+    "voyage-4-lite": { "input": 0.02 },
+    "voyage-context-3": { "input": 0.18 },
+    "voyage-3-large": { "input": 0.18 },
+    "voyage-3.5": { "input": 0.06 },
     "voyage-3.5-lite": { "input": 0.02 },
     "voyage-3": { "input": 0.06 },
+    "voyage-3-lite": { "input": 0.02 },
     "voyage-code-3": { "input": 0.18 },
     "voyage-2": { "input": 0.1 },
     "voyage-large-2": { "input": 0.12 },

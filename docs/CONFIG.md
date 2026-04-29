@@ -997,20 +997,29 @@ Default weights (no configuration needed):
 
 ## Pricing Data Maintenance
 
-mdm uses hardcoded OpenAI pricing for embedding cost estimates. Prices change rarely for embedding models.
+mdm uses checked-in pricing data for cost estimates. The pricing table covers hosted embedding models and hosted chat models used by HyDE. Local providers such as Ollama and LM Studio are intentionally absent and report zero hosted cost.
 
 ### Current Pricing
 
-View current pricing data in `src/embeddings/openai-provider.ts`:
+View current pricing data in `src/embeddings/pricing.json`:
 
-```typescript
-export const PRICING_DATA = {
-  lastUpdated: '2024-09',  // YYYY-MM format
-  source: 'https://platform.openai.com/docs/pricing',
-  prices: {
-    'text-embedding-3-small': 0.02,  // per 1M tokens
-    'text-embedding-3-large': 0.13,
-    'text-embedding-ada-002': 0.10,
+```json
+{
+  "lastUpdated": "2026-04",
+  "sources": {
+    "openai": "https://developers.openai.com/api/docs/pricing",
+    "voyage": "https://docs.voyageai.com/docs/pricing"
+  },
+  "embed": {
+    "text-embedding-3-small": { "input": 0.02 },
+    "text-embedding-3-large": { "input": 0.13 },
+    "text-embedding-ada-002": { "input": 0.1 },
+    "voyage-4": { "input": 0.06 },
+    "voyage-4-lite": { "input": 0.02 }
+  },
+  "generateText": {
+    "gpt-4o-mini": { "input": 0.15, "output": 0.6 },
+    "gpt-4o": { "input": 2.5, "output": 10 }
   }
 }
 ```
@@ -1020,8 +1029,8 @@ export const PRICING_DATA = {
 Cost estimates show warning if pricing data is >90 days old:
 
 ```
-Estimated cost: ~$0.0200 (pricing as of 2024-09)
-⚠ Pricing data is 147 days old. May not reflect current rates.
+Estimated cost: ~$0.0200 (pricing as of 2026-01)
+⚠ Pricing data is 118 days old. May not reflect current rates.
 ```
 
 Warnings are non-blocking - operations proceed normally.
@@ -1030,10 +1039,12 @@ Warnings are non-blocking - operations proceed normally.
 
 **Quarterly check process:**
 
-1. Visit https://platform.openai.com/docs/pricing
-2. Update `PRICING_DATA.lastUpdated` to current YYYY-MM
-3. Update `PRICING_DATA.prices` if prices changed
-4. Commit: `git commit -m "chore: update OpenAI pricing data"`
-5. Release new version
+1. Visit https://developers.openai.com/api/docs/pricing
+2. Visit https://docs.voyageai.com/docs/pricing
+3. Update `src/embeddings/pricing.json` if prices or listed hosted models changed
+4. Update `lastUpdated` to current `YYYY-MM`
+5. Run `pnpm test src/providers/pricing.test.ts -- --runInBand`
+6. Commit: `git commit -m "chore: update pricing data"`
+7. Release new version
 
-**Why manual:** Embedding API pricing changes infrequently (checked quarterly is sufficient). No reliable free API exists for automated updates.
+**Why manual:** Hosted model prices change infrequently and provider pages are the source of truth. No reliable free API exists for automated updates.

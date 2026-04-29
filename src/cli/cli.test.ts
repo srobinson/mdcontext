@@ -85,6 +85,7 @@ describe.concurrent('mdm CLI e2e', () => {
     it('shows help with all commands', async () => {
       const output = await run('--help')
       expect(output).toContain('index')
+      expect(output).toContain('fix')
       expect(output).toContain('search')
       expect(output).toContain('context')
       expect(output).toContain('tree')
@@ -97,6 +98,7 @@ describe.concurrent('mdm CLI e2e', () => {
   describe('subcommand --help', () => {
     const subcommands = [
       'index',
+      'fix',
       'search',
       'context',
       'tree',
