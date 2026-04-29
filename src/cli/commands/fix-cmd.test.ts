@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatFrontmatterDiff } from './fix-cmd.js'
+import { formatFrontmatterDiff, parseGitDirtyStatus } from './fix-cmd.js'
 
 describe('formatFrontmatterDiff', () => {
   it('returns only changed frontmatter lines with dry-run indentation', () => {
@@ -24,5 +24,17 @@ describe('formatFrontmatterDiff', () => {
       '    - title: Bad: Title',
       "    + title: 'Bad: Title'",
     ])
+  })
+})
+
+describe('parseGitDirtyStatus', () => {
+  it('treats modified tracked files as dirty', () => {
+    expect(parseGitDirtyStatus(' M note.md\n')).toBe(true)
+    expect(parseGitDirtyStatus('MM note.md\n')).toBe(true)
+  })
+
+  it('allows clean files and untracked files', () => {
+    expect(parseGitDirtyStatus('')).toBe(false)
+    expect(parseGitDirtyStatus('?? note.md\n')).toBe(false)
   })
 })

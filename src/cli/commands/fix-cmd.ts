@@ -8,11 +8,15 @@
 
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import { Args, Command, Options } from '@effect/cli'
 import { Console, Effect } from 'effect'
 import { fixFrontmatter } from '../../parser/frontmatter-fix.js'
 import { jsonOption, prettyOption } from '../options.js'
 import { formatJson, isMarkdownFile, walkDir } from '../utils.js'
+
+const execFileAsync = promisify(execFile)
 
 interface FileReport {
   readonly path: string
@@ -45,6 +49,33 @@ export const formatFrontmatterDiff = (
   }
 
   return lines
+}
+
+export const parseGitDirtyStatus = (status: string): boolean =>
+  status
+    .split('\n')
+    .filter(Boolean)
+    .some((line) => !line.startsWith('??') && line.slice(0, 2).includes('M'))
+
+const isDirtyTrackedFile = async (filePath: string): Promise<boolean> => {
+  try {
+    const { stdout } = await execFileAsync(
+      'git',
+      ['status', '--porcelain', '--', path.basename(filePath)],
+      { cwd: path.dirname(filePath) },
+    )
+    return parseGitDirtyStatus(stdout)
+  } catch (e) {
+    if (
+      e &&
+      typeof e === 'object' &&
+      'code' in e &&
+      (e.code === 'ENOENT' || e.code === 128)
+    ) {
+      return false
+    }
+    return false
+  }
 }
 
 const collectFiles = async (target: string): Promise<readonly string[]> => {
@@ -95,8 +126,13 @@ export const fixCommand = Command.make(
     ),
     json: jsonOption,
     pretty: prettyOption,
+    force: Options.boolean('force').pipe(
+      Options.withAlias('f'),
+      Options.withDescription('Write even when tracked files are modified'),
+      Options.withDefault(false),
+    ),
   },
-  ({ path: target, write, json, pretty }) =>
+  ({ path: target, write, json, pretty, force }) =>
     Effect.gen(function* () {
       const resolved = path.resolve(target)
 
@@ -121,9 +157,20 @@ export const fixCommand = Command.make(
       }
 
       let written = 0
+      const skippedDirty = new Set<string>()
       if (write) {
         for (const report of reports) {
           if (!report.changed) continue
+          if (!force) {
+            const dirty = yield* Effect.tryPromise({
+              try: () => isDirtyTrackedFile(report.path),
+              catch: () => false,
+            })
+            if (dirty) {
+              skippedDirty.add(report.path)
+              continue
+            }
+          }
           const ok = yield* Effect.tryPromise({
             try: () => writeIfChanged(report.path),
             catch: (e) =>
@@ -155,6 +202,9 @@ export const fixCommand = Command.make(
 
       const changed = reports.filter((r) => r.changed)
       const unresolved = reports.filter((r) => !r.resolved)
+      const writtenReports = write
+        ? changed.filter((r) => !skippedDirty.has(r.path))
+        : changed
 
       yield* Console.log(
         `Scanned ${files.length} file${files.length === 1 ? '' : 's'} under ${path.relative(process.cwd(), resolved) || '.'}`,
@@ -166,10 +216,10 @@ export const fixCommand = Command.make(
       }
 
       const verb = write ? 'Fixed' : 'Would fix'
-      if (changed.length > 0) {
+      if (writtenReports.length > 0) {
         yield* Console.log('')
-        yield* Console.log(`${verb} ${changed.length}:`)
-        for (const r of changed) {
+        yield* Console.log(`${verb} ${writtenReports.length}:`)
+        for (const r of writtenReports) {
           const rel = path.relative(process.cwd(), r.path)
           const suffix = r.resolved ? '' : '  (errors remain)'
           yield* Console.log(`  ${rel}${suffix}`)
@@ -178,6 +228,14 @@ export const fixCommand = Command.make(
               yield* Console.log(line)
             }
           }
+        }
+      }
+
+      if (skippedDirty.size > 0) {
+        yield* Console.log('')
+        for (const skipped of skippedDirty) {
+          const rel = path.relative(process.cwd(), skipped)
+          yield* Console.log(`skipped (uncommitted changes): ${rel}`)
         }
       }
 
