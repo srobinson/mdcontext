@@ -8,6 +8,7 @@ Complete command reference and workflows for mdm.
 - [Quick Start](#quick-start)
 - [Commands](#commands)
   - [index](#index)
+  - [fix](#fix)
   - [search](#search)
   - [context](#context)
   - [tree](#tree)
@@ -44,6 +45,10 @@ npx markdown-matters --help
 ```bash
 # 1. Index your markdown files
 mdm index ./docs
+
+# Repair malformed frontmatter if index warnings suggest it
+mdm fix ./docs                  # Preview repairs
+mdm fix ./docs --write          # Apply repairs
 
 # 2. View structure
 mdm tree ./docs                 # File list
@@ -119,6 +124,54 @@ mdm index --force
 ```
 
 **Index location:** `.mdm/indexes/`
+
+---
+
+### fix
+
+Repair malformed YAML frontmatter in markdown files.
+
+```bash
+mdm fix [path] [options]
+```
+
+**Arguments:**
+
+| Argument | Description                                      |
+| -------- | ------------------------------------------------ |
+| `path`   | File or directory to repair (default: current directory) |
+
+**Options:**
+
+| Option        | Description                                      |
+| ------------- | ------------------------------------------------ |
+| `-w, --write` | Apply repairs. Default is dry-run preview.       |
+| `-f, --force` | Write even when tracked files are modified       |
+| `--json`      | Output report as JSON                            |
+| `--pretty`    | Pretty-print JSON                                |
+
+**Examples:**
+
+```bash
+# Preview repairs in the current directory
+mdm fix
+
+# Preview repairs in a directory
+mdm fix ./docs
+
+# Preview repairs for one file
+mdm fix docs/broken.md
+
+# Apply repairs
+mdm fix ./docs --write
+
+# Apply repairs even when tracked files have uncommitted changes
+mdm fix ./docs --write --force
+```
+
+Dry-run output shows each changed frontmatter line with `-` and `+` prefixes, so you can review exactly what `--write` will apply.
+
+When writing, mdm skips tracked files with uncommitted modifications and prints `skipped (uncommitted changes): <path>`. Untracked files, clean tracked files, and files outside git repositories proceed normally. Use `--force` to bypass this guard.
 
 ---
 
@@ -512,6 +565,21 @@ mdm index --watch
 # Force full rebuild after major changes
 mdm index --force
 ```
+
+### Repairing Malformed Frontmatter
+
+```bash
+# Preview repairs after mdm index reports malformed frontmatter
+mdm fix ./docs
+
+# Apply reviewed repairs
+mdm fix ./docs --write
+
+# Override dirty tracked file protection
+mdm fix ./docs --write --force
+```
+
+`mdm index` strips malformed frontmatter from the indexed body and recovers usable keys where possible. `mdm fix` repairs the source files so future indexing can parse the frontmatter normally.
 
 ### Setting Up Semantic Search
 

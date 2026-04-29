@@ -153,6 +153,36 @@ export const helpContent: Record<string, CommandHelp> = {
       '--force and --all are orthogonal: --force controls HOW (bypass cache), --all controls WHAT (all sources).',
     ],
   },
+  fix: {
+    description: 'Repair malformed YAML frontmatter in markdown files',
+    usage: 'mdm fix [path] [options]',
+    examples: [
+      'mdm fix                      # Preview repairs in current directory',
+      'mdm fix docs/                # Preview repairs in docs/',
+      'mdm fix note.md              # Preview repairs for one file',
+      'mdm fix docs/ --write        # Apply repairs',
+      'mdm fix docs/ --write --force # Apply even if tracked files are modified',
+      'mdm fix docs/ --json         # Output structured report',
+    ],
+    options: [
+      {
+        name: '-w, --write',
+        description: 'Apply repairs. Default is dry-run preview.',
+      },
+      {
+        name: '-f, --force',
+        description: 'Write even when tracked files have uncommitted changes',
+      },
+      { name: '--json', description: 'Output report as JSON' },
+      { name: '--pretty', description: 'Pretty-print JSON output' },
+    ],
+    notes: [
+      'Dry-run output shows line-level -/+ changes for each repaired frontmatter block.',
+      'By default, --write skips modified tracked files to avoid overwriting local work.',
+      'Untracked files, clean tracked files, and files outside git repos can be written.',
+      'Use this when mdm index reports malformed frontmatter warnings.',
+    ],
+  },
   search: {
     description: 'Search markdown content by meaning or heading pattern',
     usage: 'mdm search [options] <query> [path]',
@@ -595,6 +625,7 @@ ${c.bold('mdm')} - Token-efficient markdown analysis for LLMs
 ${c.yellow('COMMANDS')}
   init                      Initialize mdm in a directory
   index [path]              Index markdown files (default: .)
+  fix [path]                Repair malformed YAML frontmatter
   search <query> [path]     Search by meaning or structure
   context <files>...        Get LLM-ready summary
   tree [path]               Show files or document outline
@@ -610,6 +641,7 @@ ${c.yellow('EXAMPLES')}
   mdm tree README.md               # Show document outline
   mdm index                        # Index current directory
   mdm index --embed                # Index with semantic embeddings
+  mdm fix                          # Preview frontmatter repairs
   mdm search "auth"                # Simple term search
   mdm search "auth AND deploy"     # Boolean AND (both required)
   mdm search "error OR bug"        # Boolean OR (either matches)
@@ -636,6 +668,9 @@ ${c.yellow('WORKFLOWS')}
 
   ${c.dim('# Set up project')}
   mdm init && mdm index
+
+  ${c.dim('# Repair malformed frontmatter')}
+  mdm fix docs/ && mdm fix docs/ --write
 
 ${c.yellow('GLOBAL OPTIONS')}
   --json               Output as JSON

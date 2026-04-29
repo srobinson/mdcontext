@@ -8,6 +8,7 @@
  *
  * CORE COMMANDS
  *   mdm index [path]           Index markdown files (default: .)
+ *   mdm fix [path]             Repair malformed YAML frontmatter
  *   mdm search <query> [path]  Search by meaning or structure
  *   mdm context <files...>     Get LLM-ready summary
  *   mdm tree [path|file]       Show files or document outline

@@ -19,6 +19,7 @@ describe('showMainHelp color suppression', () => {
       // Verify content is still present
       expect(output).toContain('mdm')
       expect(output).toContain('COMMANDS')
+      expect(output).toContain('fix [path]')
     } finally {
       consoleSpy.mockRestore()
     }
