@@ -290,6 +290,12 @@ export interface ParseOptions {
   readonly lastModified?: Date
 }
 
+export const formatMalformedFrontmatterWarning = (
+  path: string,
+  message: string,
+): string =>
+  `Malformed frontmatter in ${path}, skipping: ${message.split('\n')[0]} (run \`mdm fix --write ${path}\` to repair)`
+
 export const parse = (
   content: string,
   options: ParseOptions = {},
@@ -310,9 +316,7 @@ export const parse = (
     } catch (error) {
       // Malformed frontmatter - treat entire content as markdown
       const msg = error instanceof Error ? error.message : String(error)
-      yield* Effect.logWarning(
-        `Malformed frontmatter in ${path}, skipping: ${msg.split('\n')[0]}`,
-      )
+      yield* Effect.logWarning(formatMalformedFrontmatterWarning(path, msg))
     }
 
     // Parse markdown to AST

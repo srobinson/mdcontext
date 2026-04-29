@@ -1,6 +1,6 @@
 import { Effect } from 'effect'
 import { describe, expect, it } from 'vitest'
-import { parse } from './parser.js'
+import { formatMalformedFrontmatterWarning, parse } from './parser.js'
 
 describe('markdown parser', () => {
   describe('basic parsing', () => {
@@ -83,6 +83,15 @@ This should still parse.
       // Should not throw, should parse with empty frontmatter
       expect(result.frontmatter).toEqual({})
       expect(result.title).toBe('Actual Content')
+    })
+
+    it('suggests mdm fix when frontmatter is malformed', () => {
+      expect(
+        formatMalformedFrontmatterWarning(
+          'notes/bad.md',
+          'Nested mappings are not allowed in compact mappings',
+        ),
+      ).toContain('mdm fix --write notes/bad.md')
     })
   })
 
