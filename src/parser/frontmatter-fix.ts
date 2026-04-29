@@ -110,8 +110,10 @@ const repairLine = (line: string): string | null => {
 
 const isAlreadyQuoted = (v: string): boolean => {
   if (v.length < 2) return false
-  if (v.startsWith("'") && v.endsWith("'") && balancedSingleQuoted(v)) return true
-  if (v.startsWith('"') && v.endsWith('"') && balancedDoubleQuoted(v)) return true
+  if (v.startsWith("'") && v.endsWith("'") && balancedSingleQuoted(v))
+    return true
+  if (v.startsWith('"') && v.endsWith('"') && balancedDoubleQuoted(v))
+    return true
   return false
 }
 
@@ -142,5 +144,4 @@ const balancedDoubleQuoted = (v: string): boolean => {
 // outer single-quote wrap will handle escaping.
 const stripBrokenWrappingQuotes = (v: string): string => v
 
-const singleQuote = (value: string): string =>
-  `'${value.replace(/'/g, "''")}'`
+const singleQuote = (value: string): string => `'${value.replace(/'/g, "''")}'`

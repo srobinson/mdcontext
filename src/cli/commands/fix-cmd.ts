@@ -6,9 +6,9 @@
  * Default is dry-run: prints what would change. Pass --write to apply.
  */
 
+import { execFile } from 'node:child_process'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { Args, Command, Options } from '@effect/cli'
 import { Console, Effect } from 'effect'
@@ -257,5 +257,7 @@ export const fixCommand = Command.make(
       }
     }),
 ).pipe(
-  Command.withDescription('Repair malformed YAML frontmatter in markdown files'),
+  Command.withDescription(
+    'Repair malformed YAML frontmatter in markdown files',
+  ),
 )

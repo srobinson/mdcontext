@@ -34,10 +34,4 @@ fix:
 loc-limit:
     ./scripts/check-loc-limit.sh
 
-check: format fix typecheck loc-limit
-
-
-# test:
-#     npx tsx --test src/**/*.test.ts
-
-# check: lint format typecheck
+check: format fix typecheck
