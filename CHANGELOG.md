@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Features
+
+* Add `mdm fix` for repairing malformed YAML frontmatter, including dry-run diffs, guarded writes, and parser hints when indexing encounters broken frontmatter.
+* Recover usable frontmatter keys during indexing with tolerant YAML parsing while stripping malformed frontmatter blocks from the indexed markdown body.
+
 ### Breaking Changes
 
 * The OpenRouter provider no longer accepts `OPENAI_API_KEY` as a fallback credential. Selecting `provider: 'openrouter'` requires `OPENROUTER_API_KEY` to be set; the runtime fails fast with a missing-key error otherwise. Migration: set `OPENROUTER_API_KEY=sk-or-...` in your environment, or switch to `provider: 'openai'` if you intended to use OpenAI directly.

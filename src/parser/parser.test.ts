@@ -1,6 +1,6 @@
 import { Effect } from 'effect'
 import { describe, expect, it } from 'vitest'
-import { parse } from './parser.js'
+import { formatMalformedFrontmatterWarning, parse } from './parser.js'
 
 describe('markdown parser', () => {
   describe('basic parsing', () => {
@@ -80,9 +80,54 @@ This should still parse.
 
       const result = await Effect.runPromise(parse(content))
 
-      // Should not throw, should parse with empty frontmatter
-      expect(result.frontmatter).toEqual({})
+      expect(result.frontmatter).toMatchObject({
+        title: 'Valid Start',
+      })
       expect(result.title).toBe('Actual Content')
+    })
+
+    it('strips malformed frontmatter before parsing body sections', async () => {
+      const content = `---
+title: Broken
+# Frontmatter Comment
+broken: [unterminated
+---
+
+# Actual Content
+
+This should still parse.
+`
+
+      const result = await Effect.runPromise(parse(content))
+
+      expect(result.title).toBe('Actual Content')
+      expect(result.sections[0]?.heading).toBe('Actual Content')
+    })
+
+    it('partially recovers malformed frontmatter keys with tolerant YAML parsing', async () => {
+      const content = `---
+title: Foo: Bar
+status: ok
+broken: [unterminated
+---
+
+# Actual Content
+`
+
+      const result = await Effect.runPromise(parse(content))
+
+      expect(result.frontmatter).not.toEqual({})
+      expect(result.frontmatter).toHaveProperty('title')
+      expect(result.title).toBe('Actual Content')
+    })
+
+    it('suggests mdm fix when frontmatter is malformed', () => {
+      expect(
+        formatMalformedFrontmatterWarning(
+          'notes/bad.md',
+          'Nested mappings are not allowed in compact mappings',
+        ),
+      ).toContain('mdm fix --write notes/bad.md')
     })
   })
 
