@@ -31,8 +31,19 @@ describe('lookupPricing', () => {
     })
 
     it('returns input-only pricing for Voyage embedding models', () => {
+      expect(lookupPricing('embed', 'voyage-4-large')).toEqual({ input: 0.12 })
+      expect(lookupPricing('embed', 'voyage-4')).toEqual({ input: 0.06 })
+      expect(lookupPricing('embed', 'voyage-4-lite')).toEqual({ input: 0.02 })
+      expect(lookupPricing('embed', 'voyage-context-3')).toEqual({
+        input: 0.18,
+      })
+      expect(lookupPricing('embed', 'voyage-3-large')).toEqual({
+        input: 0.18,
+      })
+      expect(lookupPricing('embed', 'voyage-3.5')).toEqual({ input: 0.06 })
       expect(lookupPricing('embed', 'voyage-3.5-lite')).toEqual({ input: 0.02 })
       expect(lookupPricing('embed', 'voyage-3')).toEqual({ input: 0.06 })
+      expect(lookupPricing('embed', 'voyage-3-lite')).toEqual({ input: 0.02 })
       expect(lookupPricing('embed', 'voyage-code-3')).toEqual({ input: 0.18 })
       expect(lookupPricing('embed', 'voyage-2')).toEqual({ input: 0.1 })
       expect(lookupPricing('embed', 'voyage-large-2')).toEqual({ input: 0.12 })
